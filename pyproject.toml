@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sigma-framework"
+version = "1.0.0"
+authors = [{ name = "Alfredo Vallejo Martín" }]
+description = "A Hardware-Adaptive Non-Markovian Cryptographic Architecture"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: OS Independent",
+    "Topic :: Security :: Cryptography",
+    "Intended Audience :: Science/Research",
+]
+
+[project.scripts]
+sigmahash = "sigma.cli:main"

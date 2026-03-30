@@ -57,18 +57,22 @@ Sigma exposes four distinct execution modes tailored to specific hardware and se
 4. **realtime (Twisted Ring Accumulator):** Built for network packet inspection and high-frequency telemetry. It continuously absorbs unpadded bitstreams into a pre-warmed state matrix, yielding execution latencies in the microsecond domain.
 
 ---
-
 ## Installation
 
 ### Prerequisites
 - Python 3.8 or higher.
-- A Linux environment is recommended for deep Hardware PMU profiling (via the "perf" tool), though the core algorithms and CLI are fully cross-platform (Windows/macOS/Linux).
+- A Linux environment is recommended for deep Hardware PMU profiling, though the core algorithms and CLI are fully cross-platform (Windows/macOS/Linux).
 
 ### Standard Installation
-Clone the repository and install it in editable mode (indentation denotes commands):
+Execute the following commands one by one in your terminal:
 
+Step 1. Clone the repository:
     git clone [https://github.com/alfredoVallejoM/sigma-framework.git](https://github.com/alfredoVallejoM/sigma-framework.git)
+
+Step 2. Navigate into the directory:
     cd sigma-framework
+
+Step 3. Install it in editable mode:
     pip install -e .
 
 *Note: The "-e" flag allows you to modify the source code without reinstalling the package.*
@@ -81,31 +85,16 @@ Once installed, the framework registers a global command-line interface ("sigmah
 
 ### Command Line Interface (CLI)
 
-Hash a file using the paranoid topology:
+Execute these commands directly in your terminal:
 
+Hash a file using the paranoid topology:
     sigmahash -m paranoid target_file.bin
 
 Enable benchmarking to measure throughput:
-
     sigmahash -m simultaneous --benchmark large_database.sql
 
 Set computational depth for Proof-of-Work (PoW):
-
     sigmahash -m paranoid -r 500 password_dump.txt
-
-### Python API
-You can effortlessly integrate Sigma into your Python applications via the SigmaFactory.
-
-    from sigma.factory import SigmaFactory
-
-    # Hash a file using the Lightweight topology
-    file_digest = SigmaFactory.hash_file("data.csv", mode="lightweight")
-    print(f"File Digest: {file_digest}")
-
-    # Hash in-memory bytes using the RealTime ring accumulator
-    raw_telemetry = b"\x00\x01\x02\x03\x04"
-    stream_digest = SigmaFactory.hash_bytes(raw_telemetry, mode="realtime")
-    print(f"Stream Digest: {stream_digest}")
 
 ---
 

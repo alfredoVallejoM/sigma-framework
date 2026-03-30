@@ -81,20 +81,98 @@ Step 3. Install it in editable mode:
 
 ## Usage (CLI & API)
 
-Once installed, the framework registers a global command-line interface ("sigmahash") and exposes the "SigmaFactory" for Python integrations.
+The Sigma Framework is designed for frictionless integration. It exposes a UNIX-like Command Line Interface for shell scripting and system administration, alongside a fully typed Python API for deep software integration.
 
-### Command Line Interface (CLI)
+### 1. Command Line Interface (CLI): "sigmahash"
 
-Execute these commands directly in your terminal:
+Upon installation, the `sigmahash` command is registered globally in your environment. It supports standard POSIX flags and outputs deterministic hex digests.
 
-Hash a file using the paranoid topology:
-    sigmahash -m paranoid target_file.bin
+**Basic File Hashing (Default Lightweight Mode)**
+For standard file integrity verification where memory efficiency is paramount:
 
-Enable benchmarking to measure throughput:
+    sigmahash target_file.bin
+
+**Orthogonal Algorithm Stacking (Paranoid Mode)**
+For cold-storage wallets or high-value targets, force the framework to execute the payload through four heterogeneous algorithms simultaneously:
+
+    sigmahash -m paranoid wallet_backup.dat
+
+**Symmetric Multiprocessing (Simultaneous Mode)**
+When processing massive datasets (e.g., ISO images or SQL dumps), utilize all available CPU cores to saturate the storage bus:
+
+    sigmahash -m simultaneous ubuntu-server.iso
+
+**Proof-of-Work (PoW) and KDF Depth**
+By default, the $\Psi$ core executes 12 cryptographic rounds. You can scale the thermodynamic cost linearly by increasing the round depth (R) via the `-r` flag. This is essential for Key Derivation:
+
+    sigmahash -m paranoid -r 50000 user_password_dump.txt
+
+**Raw Text String Hashing**
+You can hash short strings directly from the terminal without creating temporary files by using the `-t` or `--text` flag:
+
+    sigmahash -t "Sigma Non-Markovian Architecture" -m realtime
+
+**Benchmarking and Profiling**
+To measure the exact execution latency and macroscopic throughput (MB/s) on your specific hardware, append the `--benchmark` flag:
+
     sigmahash -m simultaneous --benchmark large_database.sql
 
-Set computational depth for Proof-of-Work (PoW):
-    sigmahash -m paranoid -r 500 password_dump.txt
+### 2. Python Developer API (SigmaFactory)
+
+For developers building applications, consensus nodes, or forensic tools, the `SigmaFactory` class acts as the universal entry point. It abstracts the complex macroscopic routing and provides a clean, thread-safe interface.
+
+Below is a comprehensive, copy-pasteable Python script demonstrating the API's full capabilities. Save this as `sigma_example.py` and execute it:
+
+    import os
+    from sigma.factory import SigmaFactory
+
+    def demonstrate_sigma_api():
+        print("--- Sigma Framework API Demonstration ---")
+
+        # 1. Hashing In-Memory Bytes (RealTime Mode)
+        # Ideal for micro-payloads, network packets, or raw telemetry.
+        # Yields execution latencies in the microsecond domain.
+        raw_telemetry = b"\x00\x01\x02\x03\x04\x05\x06\x07"
+        stream_digest = SigmaFactory.hash_bytes(
+            data=raw_telemetry, 
+            mode="realtime", 
+            rounds=12
+        )
+        print(f"[RealTime] Telemetry Digest: {stream_digest}")
+
+        # 2. Hashing Strings for KDFs (Paranoid Mode)
+        # Ideal for password hashing. We scale the rounds to 25,000 
+        # to maximize the thermodynamic cost against brute-force attacks.
+        user_password = "correct-horse-battery-staple"
+        kdf_digest = SigmaFactory.hash_string(
+            text=user_password, 
+            mode="paranoid", 
+            rounds=25000
+        )
+        print(f"[Paranoid] KDF Password Digest: {kdf_digest}")
+
+        # 3. Hashing Files (Lightweight Mode)
+        # Create a dummy file for demonstration
+        filename = "temp_sensor_data.csv"
+        with open(filename, "w") as f:
+            f.write("timestamp,temperature,humidity\n1625097600,22.5,45.2")
+
+        # The hash_file method automatically chunks the file to maintain 
+        # a strict O(1) memory footprint (RAM) during execution.
+        file_digest = SigmaFactory.hash_file(
+            filepath=filename, 
+            mode="lightweight"
+        )
+        print(f"[Lightweight] Sensor File Digest: {file_digest}")
+        
+        # Cleanup
+        os.remove(filename)
+
+    if __name__ == "__main__":
+        demonstrate_sigma_api()
+
+**Return Types:**
+All high-level methods in the `SigmaFactory` return the final 256-bit state matrix serialized as a standard, lowercase 64-character hexadecimal string, ensuring immediate compatibility with standard database schemas and JSON REST APIs.
 
 ---
 

@@ -1,0 +1,15 @@
+{
+  "anchor_multipliers": [1, 2],
+  "attackers": ["random-search", "exhaustive", "inversion-table"],
+  "campaign": "pilot-v2-2",
+  "constructions": ["simple", "reinjected", "deep-vector"],
+  "experiment": "EXP-20",
+  "games": ["preimage", "second-preimage", "multi-target"],
+  "master_seed": "sigma-v2-2-exp20r-pilot-2026-09-03",
+  "max_candidates": 1024,
+  "repetitions": 4,
+  "state_counts": [1, 2],
+  "target_counts": [1, 4],
+  "target_kinds": ["regular-image", "uniform"],
+  "widths": [3, 5]
+}

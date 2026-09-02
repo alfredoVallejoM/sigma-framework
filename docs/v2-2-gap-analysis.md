@@ -152,6 +152,13 @@ en hosts controlados antes de cerrar R4.
 - EXP-19 reduce sólo el evento Sigma reutilizable, nunca Ed25519; distingue firma
   de un estado, segmento y ancla+segmento, y publica anchura firmada, cuello de
   botella conservador, consultas de búsqueda y coste de recomputación completa.
+- EXP-20R mantiene separados preimagen, segunda preimagen y multiobjetivo, con
+  targets regulares/uniformes, búsqueda aleatoria/exhaustiva/tabla y streams de
+  seed independientes. Publica censura, RMST, memoria y consultas de ancla y
+  ronda, y ajusta exponentes por juego en lugar de reutilizar la ley de colisión.
+  Con sólo anchos 3/5 y cuatro repeticiones, las pendientes piloto son inestables
+  (incluida una pendiente negativa en segunda preimagen); sirven para validar
+  el análisis, no para sostener exponentes empíricos.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

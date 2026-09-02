@@ -120,7 +120,8 @@ en hosts controlados antes de cerrar R4.
   producción ni permiten congelar el tamaño confirmatorio.
 - EXP-08R ya evita concatenar estados o dominios en un mismo stream y publica
   calibración agregada de p-values frente a SHA-512/BLAKE2b. El piloto interno
-  no sustituye NIST SP 800-22, PractRand ni TestU01: sus ejecutables no están
+  exporta 120 streams binarios con hashes y transformación fijada, pero no
+  sustituye NIST SP 800-22, PractRand ni TestU01: sus ejecutables no están
   instalados en este entorno y la campaña externa permanece como gate visible.
 - EXP-09R separa hash en memoria, archivo caliente, ancla, rondas precalculadas,
   serialización y verificación completa/local para los tres modos v2-2; registra

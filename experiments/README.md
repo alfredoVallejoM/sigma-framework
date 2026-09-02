@@ -90,6 +90,19 @@ multicollision attackers; EXP-21 still needs the complete instrumented oracle
 input matrix. Their absence remains visible in the preregistration rather than
 being inferred from a passing smoke run.
 
+Prepare independent EXP-08 streams for external batteries without changing
+their byte or bit order:
+
+```console
+python -m scripts.export_distribution_streams EXP08_RUN BATTERY_EXPORT
+```
+
+The export manifest commits to the source config/observations and every binary
+stream, records the exact transform, and reports NIST SP 800-22, PractRand and
+TestU01 executables as available or unavailable. It does not claim a battery
+was executed; full commands, versions and stdout/stderr belong in the archived
+external campaign.
+
 Each new run embeds a canonical `config.json`. To execute all ten smoke
 configurations and regenerate the complete figure set in one operation, use:
 

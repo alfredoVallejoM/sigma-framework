@@ -113,7 +113,8 @@ en hosts controlados antes de cerrar R4.
   la fase de rondas con ancla precalculada ya están separadas; falta ejecución
   multihost controlada.
 - EXP-07R cubre capas y componentes de Wide/Deep/DeepVector, calcula peor sesgo
-  con radio simultáneo y correlación BIC muestreada. El piloto de 4 288 filas es
+  con radio simultáneo, correlación BIC muestreada y velocidad por ronda/rama.
+  El piloto de 4 288 filas es
   deliberadamente insuficiente (`16` frente a `566–677` muestras requeridas por
   bit de entrada), por lo que correlaciones máximas altas no son un hallazgo de
   producción ni permiten congelar el tamaño confirmatorio.

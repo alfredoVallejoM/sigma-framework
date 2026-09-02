@@ -56,3 +56,7 @@ def test_revised_sac_separates_modes_in_summary() -> None:
         "paranoid-deep-vector-v2-2",
     }
     assert any(str(group["layer"]).startswith("round-") for group in groups)
+    round_groups = [group for group in groups if str(group["layer"]).startswith("round-")]
+    assert all(group["diffusion_round"] is not None for group in round_groups)
+    assert all(group["diffusion_velocity"] is not None for group in round_groups)
+    assert all(group["sample_requirement_met"] is False for group in groups)

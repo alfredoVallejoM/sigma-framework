@@ -1,5 +1,6 @@
 import hashlib
 import math
+import re
 import statistics
 from typing import Any
 
@@ -182,6 +183,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "planned_detectable_bias": detectable_bias,
                 "power_target_met": samples >= required_samples,
                 "required_samples_per_input_bit": required_samples,
+                "sample_requirement_met": samples >= required_samples,
                 "samples_per_input_bit": samples,
                 "significant_cells_bonferroni": significant,
                 "structural_coverage": sum(value > 0 for value in counts.values()) / len(counts),
@@ -189,4 +191,22 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 **({"preset": key[1]} if revised else {}),
             }
         )
+    round_pattern = re.compile(r"^round-(\d+)-branch-(\d+)$")
+    diffusion_groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for item in summaries:
+        match = round_pattern.match(str(item["layer"]))
+        if match is None:
+            item["diffusion_round"] = None
+            item["diffusion_velocity"] = None
+            continue
+        round_index, branch = map(int, match.groups())
+        item["diffusion_round"] = round_index
+        diffusion_groups.setdefault((str(item.get("preset", "legacy")), branch), []).append(item)
+    for group in diffusion_groups.values():
+        ordered = sorted(group, key=lambda item: int(item["diffusion_round"]))
+        previous = 0.0
+        for item in ordered:
+            probability = float(item["mean_flip_probability"])
+            item["diffusion_velocity"] = probability - previous
+            previous = probability
     return summaries

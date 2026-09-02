@@ -1,0 +1,19 @@
+{
+  "experiment": "EXP-05",
+  "master_seed": "sigma-exp05r-modes-pilot-v1",
+  "message_bytes": 2,
+  "samples": 1,
+  "input_bit_stride": 4,
+  "component_bit_stride": 128,
+  "target_round": 2,
+  "state_count": 2,
+  "include_round_components": true,
+  "execution": {
+    "timeout_seconds": 300,
+    "tasks": [
+      {"label": "wide", "overrides": {"preset": "paranoid-wide-v2-2"}},
+      {"label": "deep", "overrides": {"preset": "paranoid-deep-v2-2"}},
+      {"label": "vector", "overrides": {"preset": "paranoid-deep-vector-v2-2"}}
+    ]
+  }
+}

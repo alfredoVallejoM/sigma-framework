@@ -14,7 +14,17 @@ def _roots(
     if fault == "constant-first":
         values[0] = 0
     elif fault == "correlated-first-two":
+        if branches < 2:
+            raise ValueError("correlated fault requires at least two branches")
         values[1] = values[0]
+    elif fault == "truncated-first":
+        values[0] &= (1 << max(1, n // 2)) - 1
+    elif fault == "collidable-first":
+        values[0] = oracle.query("branch-0-collidable", max(1, n // 2), message)
+    elif fault == "permuted":
+        values.reverse()
+    elif fault == "omitted-last":
+        values.pop()
     elif fault != "normal":
         raise ValueError(f"unsupported branch fault: {fault}")
     return tuple(values)
@@ -33,6 +43,16 @@ def _anchor(
     framed = _framed(roots, n)
     if construction == "psi-compressed":
         return (oracle.query("psi-compressed", n, framed),)
+    if construction == "single-branch":
+        return roots[:1]
+    if construction == "single-fold":
+        return (oracle.query("single-fold", n, framed),)
+    if construction == "narrow-fold":
+        return (oracle.query("narrow-fold", max(1, n // 2), framed),)
+    if construction == "constant-fold":
+        return (0,)
+    if construction == "deep-vector":
+        return tuple(oracle.query(f"deep-vector-{index}", n, framed) for index in range(len(roots)))
     connections = tuple(oracle.query(f"cross-{index}", n, framed) for index in range(len(roots)))
     if construction == "concat-wide":
         return roots
@@ -66,7 +86,9 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     master_seed = str(config["master_seed"])
     repetitions = int(config.get("repetitions", 8))
     maximum = int(config.get("max_candidates", 1_000_000))
-    constructions = ("psi-compressed", "concat-wide", "cross-wide", "cross-only")
+    constructions = config.get(
+        "constructions", ("psi-compressed", "concat-wide", "cross-wide", "cross-only")
+    )
     for n_value in config["widths"]:
         n = int(n_value)
         for branch_value in config["branch_counts"]:
@@ -112,6 +134,13 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                 "censored": collision is None,
                                 "components_equal": collision[1] if collision else None,
                                 "construction": construction,
+                                "conservative_bits": (
+                                    0
+                                    if construction == "constant-fold"
+                                    else max(1, n // 2)
+                                    if construction == "narrow-fold"
+                                    else n
+                                ),
                                 "digest_collision": collision[2] if collision else None,
                                 "fault": fault,
                                 "log2_candidates": math.log2(
@@ -119,6 +148,21 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                 ),
                                 "repetition": repetition,
                                 "state_bits": n,
+                                "physical_bits": (
+                                    0
+                                    if construction == "constant-fold"
+                                    else max(1, n // 2)
+                                    if construction == "narrow-fold"
+                                    else len(
+                                        _anchor(
+                                            oracle,
+                                            str(construction),
+                                            _roots(oracle, 0, n, branches, str(fault)),
+                                            n,
+                                        )
+                                    )
+                                    * n
+                                ),
                             }
                         )
                 if fault == "normal":
@@ -153,12 +197,26 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                         for left, right in zip(left_roots, right_roots, strict=True)
                                     ),
                                     "construction": construction,
+                                    "conservative_bits": (
+                                        0
+                                        if construction == "constant-fold"
+                                        else max(1, n // 2)
+                                        if construction == "narrow-fold"
+                                        else n
+                                    ),
                                     "digest_collision": _segment(oracle, left_anchor, n, 1, 2)
                                     == _segment(oracle, right_anchor, n, 1, 2),
                                     "fault": fault,
                                     "log2_candidates": math.log2(queries),
                                     "repetition": repetition,
                                     "state_bits": n,
+                                    "physical_bits": (
+                                        0
+                                        if construction == "constant-fold"
+                                        else max(1, n // 2)
+                                        if construction == "narrow-fold"
+                                        else len(left_anchor) * n
+                                    ),
                                 }
                             )
     # A control demonstrating why variable-length components require canonical framing.
@@ -179,11 +237,13 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                 "censored": False,
                 "components_equal": 0,
                 "construction": construction,
+                "conservative_bits": 0,
                 "digest_collision": None,
                 "fault": "normal",
                 "log2_candidates": 1.0,
                 "repetition": 0,
                 "state_bits": 0,
+                "physical_bits": 0,
             }
         )
     return records
@@ -202,10 +262,12 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "anchor_collisions": sum(bool(item["anchor_collision"]) for item in group),
                 "censored": sum(bool(item["censored"]) for item in group),
                 "digest_collisions": sum(item["digest_collision"] is True for item in group),
+                "conservative_bits": group[0]["conservative_bits"],
                 "median_log2_candidates": statistics.median(
                     float(item["log2_candidates"]) for item in group
                 ),
                 "observations": len(group),
+                "physical_bits": group[0]["physical_bits"],
             }
         )
     return result

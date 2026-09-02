@@ -3,8 +3,9 @@ from typing import Any
 
 from sigma.anchors import CrossWide, CrossWideEvidence
 from sigma.experimental import PsiKernel
-from sigma.presets import paranoid_wide_v2
-from sigma.rounds import WideOnce
+from sigma.presets import get_preset, paranoid_wide_v2
+from sigma.rounds import Deep, DeepVector, WideOnce
+from sigma.spec.ids import RoundProfileId
 from sigma.suites import get_suite
 
 from .common import derived_random
@@ -36,8 +37,18 @@ def _difference(
     }
 
 
-def _outputs(evidence: CrossWideEvidence, context) -> dict[str, bytes]:
-    digest, transcript = WideOnce(context).evaluate(evidence)
+def _engine(context):
+    return {
+        RoundProfileId.WIDE_ONCE: WideOnce,
+        RoundProfileId.DEEP: Deep,
+        RoundProfileId.DEEP_VECTOR: DeepVector,
+    }[context.round_profile](context)
+
+
+def _outputs(
+    evidence: CrossWideEvidence, context, *, include_round_components: bool = False
+) -> dict[str, bytes]:
+    digest, transcript = _engine(context).evaluate(evidence)
     result = {f"root-{index}": value for index, value in enumerate(evidence.roots)}
     result.update({f"cross-{index}": value for index, value in enumerate(evidence.cross_roots)})
     result["anchor"] = evidence.to_bytes()
@@ -45,15 +56,27 @@ def _outputs(evidence: CrossWideEvidence, context) -> dict[str, bytes]:
     result["first-transition"] = transcript.states[1]
     result["digest"] = b"".join(digest.states)
     result["psi-experimental"] = PsiKernel.compute_anchor(*evidence.roots)
+    if include_round_components:
+        for level, row in zip(
+            transcript.branch_output_indices, transcript.branch_outputs, strict=True
+        ):
+            for position, value in enumerate(row):
+                result[f"round-{level}-branch-{position}"] = value
     return result
 
 
 def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    context = paranoid_wide_v2(
-        target_round=int(config.get("target_round", 2)),
-        state_count=int(config.get("state_count", 2)),
+    parameters = {
+        "target_round": int(config.get("target_round", 2)),
+        "state_count": int(config.get("state_count", 2)),
+    }
+    context = (
+        get_preset(str(config["preset"]), **parameters)
+        if "preset" in config
+        else paranoid_wide_v2(**parameters)
     )
+    include_round_components = bool(config.get("include_round_components", False))
     rng = derived_random(str(config["master_seed"]), "EXP-05/messages")
     message_bytes = int(config.get("message_bytes", 4))
     samples = int(config.get("samples", 1))
@@ -62,9 +85,13 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     for sample in range(samples):
         message = rng.randbytes(message_bytes)
         evidence = CrossWide.compute(context, (message,))
-        baseline = _outputs(evidence, context)
+        baseline = _outputs(evidence, context, include_round_components=include_round_components)
         for bit in range(0, len(message) * 8, input_stride):
-            changed = _outputs(CrossWide.compute(context, (_flip(message, bit),)), context)
+            changed = _outputs(
+                CrossWide.compute(context, (_flip(message, bit),)),
+                context,
+                include_round_components=include_round_components,
+            )
             for component in baseline:
                 records.append(
                     _difference(
@@ -87,8 +114,11 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                     tuple(components[: len(evidence.roots)]),
                     tuple(components[len(evidence.roots) :]),
                     evidence.message_length,
+                    evidence.suite_id,
                 )
-                altered_outputs = _outputs(altered, context)
+                altered_outputs = _outputs(
+                    altered, context, include_round_components=include_round_components
+                )
                 source = (
                     f"root-{component_index}"
                     if component_index < len(evidence.roots)
@@ -106,7 +136,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                         )
                     )
 
-        engine = WideOnce(context)
+        engine = _engine(context)
         state = baseline["initial-state"]
         for bit in range(0, len(state) * 8, component_stride):
             records.append(
@@ -147,10 +177,15 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                     "perturbation": perturbation,
                     "sample": sample,
                     "source_bit": 0,
+                    **({"invariant_match": rejected} if "preset" in config else {}),
                 }
             )
         modified_context = replace(context, application_context=b"EXP-05-context-change")
-        modified = _outputs(CrossWide.compute(modified_context, (message,)), modified_context)
+        modified = _outputs(
+            CrossWide.compute(modified_context, (message,)),
+            modified_context,
+            include_round_components=include_round_components,
+        )
         records.append(
             _difference(
                 "context",
@@ -161,17 +196,25 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                 sample,
             )
         )
+    if "preset" in config:
+        for record in records:
+            record["preset"] = config["preset"]
     return records
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    revised = any("preset" in record for record in records)
+    grouped: dict[tuple[str, ...], list[dict[str, Any]]] = {}
     for record in records:
-        grouped.setdefault((str(record["perturbation"]), str(record["component"])), []).append(
-            record
+        key = (
+            str(record["perturbation"]),
+            str(record["component"]),
+            *((str(record["preset"]),) if revised else ()),
         )
+        grouped.setdefault(key, []).append(record)
     summaries = []
-    for (perturbation, component), group in sorted(grouped.items()):
+    for key, group in sorted(grouped.items()):
+        perturbation, component = key[:2]
         total_bits = sum(int(item["output_bits"]) for item in group)
         changed = sum(int(item["changed_bits"]) for item in group)
         covered_mask = 0
@@ -186,6 +229,12 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "observations": len(group),
                 "output_bit_coverage": covered_mask.bit_count() / output_bits,
                 "perturbation": perturbation,
+                **({"preset": key[2]} if revised else {}),
+                **(
+                    {"quality_control_passed": 0.0 <= covered_mask.bit_count() / output_bits <= 1.0}
+                    if revised
+                    else {}
+                ),
             }
         )
     return summaries

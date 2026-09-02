@@ -1,0 +1,17 @@
+{
+  "experiment": "EXP-04",
+  "master_seed": "sigma-exp04r-fault-pilot-v1",
+  "widths": [4],
+  "branch_counts": [3],
+  "faults": [
+    "normal", "constant-first", "collidable-first", "truncated-first",
+    "correlated-first-two", "permuted", "omitted-last"
+  ],
+  "constructions": [
+    "single-branch", "concat-wide", "cross-wide", "cross-only",
+    "psi-compressed", "single-fold", "narrow-fold", "constant-fold", "deep-vector"
+  ],
+  "max_candidates": 2048,
+  "repetitions": 2,
+  "execution": {"timeout_seconds": 300}
+}

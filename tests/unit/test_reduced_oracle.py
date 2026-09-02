@@ -130,3 +130,48 @@ def test_revised_persistence_separates_anchor_relation_and_transition_controls()
         for group in groups
     )
     assert all("saturated_deviance" in group for group in groups)
+
+
+def test_revised_anchor_fault_matrix_keeps_width_claims_separate() -> None:
+    records = run_anchors(
+        {
+            "branch_counts": [3],
+            "constructions": [
+                "single-branch",
+                "concat-wide",
+                "cross-wide",
+                "cross-only",
+                "single-fold",
+                "narrow-fold",
+                "constant-fold",
+                "deep-vector",
+            ],
+            "faults": [
+                "normal",
+                "constant-first",
+                "collidable-first",
+                "truncated-first",
+                "correlated-first-two",
+                "permuted",
+                "omitted-last",
+            ],
+            "master_seed": "fault-matrix",
+            "max_candidates": 512,
+            "repetitions": 1,
+            "widths": [4],
+        }
+    )
+    generic = [record for record in records if record["attack"] == "generic-birthday"]
+    assert {record["fault"] for record in generic} == {
+        "normal",
+        "constant-first",
+        "collidable-first",
+        "truncated-first",
+        "correlated-first-two",
+        "permuted",
+        "omitted-last",
+    }
+    constant = [record for record in generic if record["construction"] == "constant-fold"]
+    assert all(record["conservative_bits"] == 0 for record in constant)
+    vector = next(record for record in generic if record["construction"] == "deep-vector")
+    assert vector["physical_bits"] > vector["conservative_bits"]

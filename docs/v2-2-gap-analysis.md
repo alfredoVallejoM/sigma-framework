@@ -91,6 +91,16 @@ en hosts controlados antes de cerrar R4.
   cuatro modelos en EXP-02R, e intervalo exacto Clopper–Pearson, likelihoods y
   deviance en EXP-03R. Aún deben fijarse las cuadrículas/tamaños a partir de
   potencia y censura antes de congelar las configuraciones.
+- EXP-04R amplía el piloto a nueve construcciones y siete fallos, incluidos
+  truncado, colisionable, permutación, omisión, fold estrecho/constante y
+  DeepVector. Cada fila distingue `physical_bits` de `conservative_bits`; 146
+  observaciones locales cerraron sin error. Faltan cuadrícula/potencia y el
+  ataque de anclas relacionadas antes del prerregistro.
+- EXP-05R ejecuta Wide, Deep y DeepVector v2-2, conserva componentes por ronda y
+  trata ablación/permutación no rechazadas como fallo determinista. El piloto de
+  592 observaciones descubrió y corrigió una agregación entre estados de 512 y
+  2048 bits que producía coberturas imposibles mayores que uno; ahora el preset
+  forma parte de la clave y la cota `[0,1]` es control de calidad explícito.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

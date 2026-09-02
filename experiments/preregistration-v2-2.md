@@ -40,8 +40,8 @@ estimates and internal review. A publishable invocation uses
 | EXP-01R | byte divergences | exactly zero | suite × adapter × size × partition × workers × OS | six-suite local pilot integrated; large inputs and OS matrix pending |
 | EXP-02R | collision-work survival curve | registered model comparison and slope CI contains 0.5 | construction × n × a × k × repetition | four controls, KM/RMST, model RMSE and deterministic bootstrap slope implemented; sample grid pending |
 | EXP-03R | conditional persistence | exact interval/LR against the two registered probabilities | construction × anchor relation × n × length | four controls, independent trial oracles, exact interval/LR and Holm implemented; power grid pending |
-| EXP-04R | anchor/digest collision work | report bottleneck and reuse without additive CrossWide claim | construction × fault × n × branches × repetition | pilot partial; faults/DeepVector pending |
-| EXP-05R | invariant violations | exactly zero prohibited no-op or accepted malformed structure | intervention × source bit × layer × sample | first-order pilot; vector/context matrix pending |
+| EXP-04R | anchor/digest collision work | report bottleneck and reuse without additive CrossWide claim | construction × fault × n × branches × repetition | nine constructions × seven faults, physical/conservative widths and DeepVector pilot implemented; full grid pending |
+| EXP-05R | invariant violations | exactly zero prohibited no-op or accepted malformed structure | intervention × source bit × layer × sample | Wide/Deep/DeepVector first-order/component pilot implemented; full intervention matrix pending |
 | EXP-06R | work/span and time | exact count identities; timing effects with intervals | mode × t × k × candidates × workers × repetition | pilot partial |
 | EXP-07R | worst flip bias/BIC | interval-based, no zero-significance rule | layer × input family × output pair × sample | SAC pilot; BIC/power revision pending |
 | EXP-08R | calibrated battery anomaly | descriptive full-family report | construction × corpus × battery × stream | internal tests only; external tools gated |

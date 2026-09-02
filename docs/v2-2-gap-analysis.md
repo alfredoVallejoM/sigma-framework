@@ -142,6 +142,10 @@ en hosts controlados antes de cerrar R4.
   aplicación. Incluso las ramas incorporan dominio, descriptor y contexto; el
   auditor contabiliza excepciones especificadas y cualquier otra igualdad
   invalida el gate.
+- EXP-17 implementa seis atacantes reducidos diferenciados y registra consultas
+  offline/online, memoria, profundidad y reutilización para dos o más anclas.
+  Son modelos E2 de anchura reducida; rho/Hellman/rainbow no representan por sí
+  solos criptoanálisis completo de las primitivas de 512 bits.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

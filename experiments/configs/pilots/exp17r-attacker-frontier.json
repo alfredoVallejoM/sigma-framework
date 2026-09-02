@@ -1,0 +1,12 @@
+{
+  "anchor_counts": [2, 4],
+  "campaign": "pilot-v2-2",
+  "chain_length": 16,
+  "distinguished_bits": 3,
+  "experiment": "EXP-17",
+  "master_seed": "sigma-v2-2-exp17r-pilot-2026-09-03",
+  "repetitions": 8,
+  "strategies": ["direct-table", "distinguished-points", "rho", "hellman", "rainbow", "multicollision"],
+  "table_entries": 128,
+  "widths": [8, 12]
+}

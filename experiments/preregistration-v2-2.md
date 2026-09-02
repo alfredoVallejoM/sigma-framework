@@ -53,7 +53,7 @@ estimates and internal review. A publishable invocation uses
 | EXP-14R | detection/propagation | report detection rate and propagation levels; no DFA claim | fault × location × mode × repetition | bit, omission, reorder, index, repeat, truncation and fold/vector corruption matrix implemented; production grid pending |
 | EXP-15 | historical control | no production-security promotion | reduced Psi analysis cell | separate, partial |
 | EXP-16 | none | blocked until RTL/toolchain/corner exist | — | blocked by design |
-| EXP-17 | cross-anchor reuse/TM frontier | effect/interval for each registered attacker | attacker × n × anchors × memory × repetition | direct/distinguished pilot; rho/Hellman/rainbow/multicollision pending |
+| EXP-17 | cross-anchor reuse/TM frontier | effect/interval for each registered attacker | attacker × n × anchors × memory/chain × repetition | direct, distinguished, rho, Hellman, rainbow and multicollision reduced attackers implemented; scaled frontier pending |
 | EXP-18 | Fold/Vector collision work | separate physical width, conservative bound and joint model | mode × fault × n × branches × k × repetition | reduced runner implemented; pilot only |
 | EXP-19 | signed commitment reuse work | bound exactly the signed components | commitment × n × k × repetition | reduced runner implemented; Ed25519 not reduced |
 | EXP-20R | preimage-family search work | separate fits for preimage, second-preimage and multi-target | game × target kind × construction × a × n × k × targets × repetition | reduced runner implemented; pilot only |

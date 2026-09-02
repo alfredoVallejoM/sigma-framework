@@ -13,6 +13,42 @@ python -m experiments.reproduce \
   --output experiments/results/my-exp01-run
 ```
 
+The v2 scheduler executes every atomic task in a separate Python process. A
+task owns `tasks/<sha256>/config.json`, `result.json`, `stdout.log` and
+`stderr.log`; the deterministic identifier commits to the effective config,
+label and ordinal. Results are written atomically. An interrupted run can be
+continued without repeating or duplicating completed partitions:
+
+```console
+python -m experiments.runner CONFIG OUTPUT --resume
+```
+
+Legacy configurations remain one atomic `complete-config` task. New campaigns
+can partition cells without overloading an experiment's scientific
+`repetitions` parameter:
+
+```json
+{
+  "experiment": "EXP-01",
+  "master_seed": "public-seed",
+  "presets": ["reference-v2-2"],
+  "sizes": [],
+  "execution": {
+    "timeout_seconds": 3600,
+    "tasks": [
+      {"label": "empty", "overrides": {"sizes": [0]}},
+      {"label": "boundary-65", "overrides": {"sizes": [65]}}
+    ]
+  }
+}
+```
+
+`success`, `censored`, `error` and `timeout` are distinct task states.
+Right-censoring is a completed scientific observation. Summary v2 reports
+`execution_complete`, `invariants_passed`, `hypothesis_outcome` and
+`quality_controls_passed`; an unsupported statistical hypothesis does not turn
+an otherwise valid run into an execution failure.
+
 Committed `*-smoke-*` results only validate the pipeline at modest cost. They
 must not be described as the full experiment or as evidence at production
 width. Full paper datasets belong in a versioned archival release/DOI and must
@@ -53,7 +89,11 @@ to bounded-memory file generation above 16 MiB; EXP-02 records right-censoring
 at its declared candidate budget. These configs are a protocol, not a claim
 that the confirmatory campaign has already been executed.
 
-The manifest records a best-effort snapshot of host temperature, CPU frequency
-and governor. Missing or inaccessible measurements are represented as `null`;
-they are never inferred. A controlled EXP-09 release must still stabilize and
-record these conditions externally because a single snapshot is not a control.
+The manifest records exact commit/tag state, microcode, dependencies, command,
+seed derivation and artifact hashes. Each task records start/end temperature,
+CPU frequency and governor samples. Missing or inaccessible measurements are
+represented as `null`; they are never inferred. Use `--require-clean-tag` for
+a publishable run: it refuses execution unless the tree is clean, `HEAD` has an
+exact tag and `artifact_path` identifies the installed wheel/executable whose
+SHA-256 is recorded. Two endpoint samples expose drift but do not replace
+external host stabilization or a higher-frequency hardware logger.

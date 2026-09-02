@@ -60,6 +60,26 @@ def _host_measurement_state() -> dict[str, Any]:
     }
 
 
+def host_measurement_state() -> dict[str, Any]:
+    """Return a timestamped, best-effort snapshot of measurement controls."""
+    return {
+        **_host_measurement_state(),
+        "captured_utc": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _microcode_version() -> Optional[str]:
+    value = _optional_text(Path("/sys/devices/system/cpu/cpu0/microcode/version"))
+    if value is not None:
+        return value
+    cpuinfo = _optional_text(Path("/proc/cpuinfo"))
+    if cpuinfo is not None:
+        for line in cpuinfo.splitlines():
+            if line.lower().startswith("microcode") and ":" in line:
+                return line.split(":", 1)[1].strip() or None
+    return None
+
+
 def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str, Any]:
     dependencies: dict[str, Optional[str]] = {}
     for name in ("argon2-cffi", "matplotlib", "numpy", "scipy"):
@@ -73,6 +93,12 @@ def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str
     ram_bytes = None
     with suppress(AttributeError, OSError, ValueError):
         ram_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    git_tag = _git(["describe", "--tags", "--exact-match"])
+    dirty = _git(["status", "--porcelain"]) != ""
+    artifact_path = config.get("artifact_path")
+    artifact_sha256 = None
+    if isinstance(artifact_path, str) and Path(artifact_path).is_file():
+        artifact_sha256 = sha256_file(Path(artifact_path))
     return {
         "affinity": affinity,
         "command": command,
@@ -80,17 +106,24 @@ def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str
         "config_sha256": hashlib.sha256(canonical_json(config)).hexdigest(),
         "cpu_count": os.cpu_count(),
         "dependencies": dependencies,
-        "dirty": _git(["status", "--porcelain"]) != "",
+        "dirty": dirty,
         "executable": sys.executable,
         "experiment": config["experiment"],
         "git_commit": _git(["rev-parse", "HEAD"]),
+        "git_exact_tag": None if git_tag == "unavailable" else git_tag,
         "master_seed": config["master_seed"],
         "platform": platform.platform(),
         "processor": platform.processor(),
+        "microcode": _microcode_version(),
         "python": platform.python_version(),
         "ram_bytes": ram_bytes,
         "resource_policy": DEFAULT_RESOURCE_POLICY.as_dict(),
-        "host_measurement_state": _host_measurement_state(),
-        "schema": "sigma-experiment-manifest-v1",
+        "seed_derivation": "SHA-256('sigma-exp-v1\\0' || master_seed || '\\0' || label)",
+        "host_measurement_state": host_measurement_state(),
+        "release_artifact_sha256": artifact_sha256,
+        "publishable_source": not dirty
+        and git_tag != "unavailable"
+        and artifact_sha256 is not None,
+        "schema": "sigma-experiment-manifest-v2",
         "started_utc": datetime.now(timezone.utc).isoformat(),
     }

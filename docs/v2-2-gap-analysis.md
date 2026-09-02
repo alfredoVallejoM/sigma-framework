@@ -58,11 +58,13 @@ conjuntas se etiquetarán siempre como supuestos, no como bits sumados.
 
 ### EXP-00 v2
 
-El runner actual conserva config, semilla, entorno, CSV, resumen y hashes, pero
-ejecuta un experimento completo en memoria y en un directorio indivisible. Le
-faltan tareas deterministas por celda/repetición, append-only, resume sin
-duplicados, estados timeout/error/censura, stdout/stderr, tag/wheel y series de
-control del host. `passed` mezcla invariantes y resultados estadísticos.
+Implementado localmente: scheduler v2 con tareas deterministas aisladas por
+proceso, particiones atómicas, `--resume` sin duplicados, timeout duro y estados
+`success/error/timeout/censored`; conserva logs, commit/tag, hash de wheel,
+microcode y controles de host al inicio/fin de cada tarea. El resumen separa
+completitud, invariantes, hipótesis y controles de calidad. Falta subdividir y
+pilotar cada diseño EXP-01R..21R, congelar el prerregistro y validar la captura
+en hosts controlados antes de cerrar R4.
 
 ### EXP-01R..21R
 
@@ -112,6 +114,10 @@ vector, experimento falsable y limitación.
 Rehacer EXP-00 como scheduler por tareas, estimar CPU/RAM/disco, ejecutar
 pilotos separados, fijar tamaños muestrales, análisis, familias, censura y
 reglas de exclusión. Congelar configs sólo después de medir factibilidad.
+
+Estado: EXP-00 v2 implementado y probado; el diseño/prerregistro de las campañas
+R y sus estimaciones sigue abierto. Las configuraciones históricas continúan
+siendo smoke y no se han promovido silenciosamente a confirmatorias.
 
 ### C5 — Confirmatorio (R5)
 

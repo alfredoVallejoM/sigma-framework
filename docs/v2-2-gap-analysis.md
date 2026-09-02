@@ -259,3 +259,14 @@ y someter a reproducción y revisión criptográfica externas.
 - Hay equivalencia de digest y transcript con 1, 2, 4 y 8 workers, un backend
   de prueba que invierte finalizaciones y backends deliberadamente corruptos.
   La ruta normal sigue superando la regresión O(k) de memoria.
+
+### Tanda C2.5 — compromiso firmado LIB-09
+
+- `SigmaSignedCommitmentV2` autentica contexto, evidencia, estados, algoritmo e
+  ID de clave bajo un dominio nuevo, sin confundirse con `SigmaDigestV2`.
+- Ed25519 es el único algoritmo registrado. Se separan verificación de
+  atestación y verificación completa; un test firma deliberadamente una historia
+  falsa y prueba que sólo la segunda modalidad la detecta.
+- Codec estricto, prefijos truncados, límites de clave, alteraciones de firma y
+  vector congelado quedan cubiertos. Atheris incluye el octavo parser: 10.000
+  ejecuciones, cero crashes, `cov=301`, `ft=559`.

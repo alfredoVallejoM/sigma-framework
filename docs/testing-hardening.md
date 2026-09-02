@@ -8,7 +8,8 @@ resultados confirmatorios ni evidencia criptográfica.
 - Tests de ejemplo y vectores para comportamiento exacto.
 - Propiedades Hypothesis deterministas para contextos registrados, round-trip
   de digest/evidencia/KDF, bytes arbitrarios y rechazo sin coerciones.
-- Fuzzer mutacional reproducible (`scripts.fuzz_codecs`) sobre siete codecs.
+- Fuzzer mutacional reproducible (`scripts.fuzz_codecs`) sobre ocho codecs,
+  incluido el compromiso firmado.
 - Objetivo Atheris (`scripts.fuzz_atheris`) con selector de codec, límite de
   64 KiB, corpus canónico compartido y fallo ante aceptación no canónica.
 - Mutmut 3 configurado sobre `sigma/`, con tests unitarios y de propiedades en
@@ -29,6 +30,9 @@ python scripts/fuzz_atheris.py /tmp/sigma-v22-fuzz-corpus \
 Resultado: 10.000 ejecuciones, cero crashes, cobertura final comunicada por el
 motor `cov=265`, `ft=467`, corpus minimizado/ampliado a 54 entradas. Estas
 magnitudes sólo son comparables dentro del mismo build e instrumentación.
+
+Tras incorporar el compromiso firmado se repitieron 10.000 ejecuciones con
+ocho semillas válidas: cero crashes, `cov=301`, `ft=559` y 55 entradas finales.
 
 ### Mutmut 3.7.0 / codec TLV
 

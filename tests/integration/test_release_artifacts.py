@@ -28,6 +28,7 @@ def test_release_artifacts_contain_auditable_hashes(tmp_path: Path) -> None:
     properties = {item["name"]: item["value"] for item in sbom["metadata"]["properties"]}
     assert properties["sigma:context-wire-version"] == "2"
     assert properties["sigma:evidence-wire-version"] == "2"
+    assert properties["sigma:signed-commitment-wire-version"] == "2"
     assert properties["sigma:suite-families"] == "v2-1,v2-2"
     assert len(properties["sigma:git-commit"]) == 40
 

@@ -9,6 +9,7 @@ from sigma.version import (
     DIGEST_WIRE_VERSION,
     EVIDENCE_WIRE_VERSION,
     PACKAGE_VERSION,
+    SIGNED_COMMITMENT_WIRE_VERSION,
     SUPPORTED_SUITE_FAMILIES,
 )
 
@@ -21,7 +22,12 @@ def test_package_metadata_has_one_source_value() -> None:
 
 
 def test_version_axes_are_independent_and_declared() -> None:
-    assert (CONTEXT_WIRE_VERSION, DIGEST_WIRE_VERSION, EVIDENCE_WIRE_VERSION) == (2, 2, 2)
+    assert (
+        CONTEXT_WIRE_VERSION,
+        DIGEST_WIRE_VERSION,
+        EVIDENCE_WIRE_VERSION,
+        SIGNED_COMMITMENT_WIRE_VERSION,
+    ) == (2, 2, 2, 2)
     assert SUPPORTED_SUITE_FAMILIES == ("v2-1", "v2-2")
 
 

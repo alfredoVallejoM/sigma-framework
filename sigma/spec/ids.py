@@ -28,6 +28,10 @@ class EvidenceType(IntEnum):
     CROSS_WIDE = 0x0002
 
 
+class SignatureAlgorithmId(IntEnum):
+    ED25519 = 0x0001
+
+
 class AlgorithmId(IntEnum):
     SHA512 = 0x0001
     SHA3_512 = 0x0002
@@ -77,3 +81,4 @@ class DomainId(IntEnum):
     TREE_LEAF = 0x000A
     TREE_NODE = 0x000B
     TREE_EMPTY = 0x000C
+    SIGNED_COMMITMENT = 0x000D

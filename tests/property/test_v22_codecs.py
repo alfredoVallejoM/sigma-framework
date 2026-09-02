@@ -11,6 +11,7 @@ from sigma.applications.kdf_argon2id import (
     Argon2idParameters,
     SigmaKdfResult,
 )
+from sigma.applications.signed import SigmaSignedCommitmentV2
 from sigma.outputs import SigmaDigestV2
 from sigma.presets import lightweight_v2_2
 from sigma.spec import SigmaContextV2
@@ -60,6 +61,7 @@ def test_public_parsers_reject_arbitrary_bytes_without_unclassified_crashes(data
         SigmaDigestV2.from_bytes,
         lambda value: AnchorEvidence.from_bytes(value, context),
         SigmaKdfResult.from_bytes,
+        SigmaSignedCommitmentV2.from_bytes,
     )
     for parser in parsers:
         _never_crashes_unclassified(parser, data)

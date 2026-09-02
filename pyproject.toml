@@ -24,6 +24,7 @@ analysis = ["matplotlib>=3.8", "numpy>=1.26", "scipy>=1.12"]
 kdf = ["argon2-cffi>=23.1"]
 fuzz = ["atheris"]
 mutation = ["mutmut>=3"]
+signatures = ["cryptography>=44"]
 
 [project.scripts]
 sigmahash = "sigma.cli:main"

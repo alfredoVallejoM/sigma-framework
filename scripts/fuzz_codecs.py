@@ -12,10 +12,12 @@ from sigma.applications.kdf_argon2id import (
     SigmaKdfResult,
 )
 from sigma.applications.pow import PowParameters, PowPredicate
+from sigma.applications.signed import SigmaSignedCommitmentV2
 from sigma.outputs import SigmaDigestV2
 from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError
+from sigma.spec.ids import SignatureAlgorithmId
 from sigma.v2 import hash_bytes
 
 
@@ -71,6 +73,15 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
     wide_evidence = StreamWide.compute(wide_context, (b"fuzz-seed",))
     cross_context = paranoid_wide_v2_2()
     cross_evidence = CrossWide.compute(cross_context, (b"fuzz-seed",))
+    signed_digest = hash_bytes(b"fuzz-seed", wide_context)
+    signed = SigmaSignedCommitmentV2(
+        wide_context,
+        wide_evidence,
+        signed_digest.states,
+        SignatureAlgorithmId.ED25519,
+        b"fuzz-key",
+        b"\x00" * 64,
+    )
     return (
         ("context", context.to_bytes(), SigmaContextV2.from_bytes),
         ("digest", digest.to_bytes(), SigmaDigestV2.from_bytes),
@@ -87,6 +98,7 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
             cross_evidence.to_bytes(),
             lambda data: CrossWideEvidence.from_bytes(data, cross_context),
         ),
+        ("signed", signed.to_bytes(), SigmaSignedCommitmentV2.from_bytes),
     )
 
 

@@ -9,6 +9,7 @@ ellas no implica compatibilidad ni estabilidad.
 | contexto wire | `2` | framing binario de `SigmaContextV2` |
 | digest wire | `2` | framing binario de `SigmaDigestV2` |
 | evidencia wire | `2` | envelope tipado `SIGMAAE` de las suites v2-2 |
+| compromiso firmado wire | `2` | contenedor autenticado `SIGMASIG` |
 | familia de suite | `v2-1`, `v2-2` | construcción matemática y semántica interoperable |
 
 Las constantes se publican en `sigma.version`. `pyproject.toml` y

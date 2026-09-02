@@ -11,4 +11,5 @@ def test_codec_mutation_fuzz_harness_smoke() -> None:
         "kdf",
         "kdf-result",
         "pow",
+        "signed",
     }

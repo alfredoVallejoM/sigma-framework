@@ -23,6 +23,10 @@ def test_exp21_has_no_structural_violation() -> None:
     records = RUNNERS["EXP-21"](config)
     assert len(records) >= 100
     assert all(record["invariant_match"] is True for record in records)
+    instrumented = [record for record in records if record["case"] == "instrumented-oracle-matrix"]
+    assert instrumented
+    assert sum(int(record["checked"]) for record in instrumented) > 0
+    assert all(record["collisions"] == 0 for record in instrumented)
 
 
 def test_exp01r_pilot_exercises_independent_consumer_for_all_v22_suites() -> None:

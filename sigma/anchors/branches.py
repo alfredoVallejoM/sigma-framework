@@ -3,6 +3,7 @@
 import hashlib
 from typing import Any, Callable, Dict
 
+from sigma.instrumentation import active_capture, record_oracle_input
 from sigma.spec.ids import AlgorithmId
 
 
@@ -13,6 +14,7 @@ class BranchHasher:
         self.algorithm_id = algorithm_id
         self._hash: Any = _CONSTRUCTORS[algorithm_id]()
         self._finalized = False
+        self._trace_chunks: list[bytes] | None = [] if active_capture() is not None else None
 
     def update(self, data: bytes) -> None:
         if self._finalized:
@@ -20,11 +22,15 @@ class BranchHasher:
         if not isinstance(data, bytes):
             raise TypeError("hash input must be bytes")
         self._hash.update(data)
+        if self._trace_chunks is not None:
+            self._trace_chunks.append(data)
 
     def digest(self) -> bytes:
         if self._finalized:
             raise RuntimeError("hash branch is already finalized")
         self._finalized = True
+        if self._trace_chunks is not None:
+            record_oracle_input(self.algorithm_id, b"".join(self._trace_chunks))
         if self.algorithm_id is AlgorithmId.SHAKE256_512:
             return self._hash.digest(64)
         return self._hash.digest()
@@ -36,6 +42,7 @@ class BranchHasher:
         clone.algorithm_id = self.algorithm_id
         clone._hash = self._hash.copy()
         clone._finalized = False
+        clone._trace_chunks = None if self._trace_chunks is None else list(self._trace_chunks)
         return clone
 
 

@@ -137,6 +137,11 @@ en hosts controlados antes de cerrar R4.
   fold/vector sobre todos los modos finales, informa distancia y niveles de
   propagación y exige detección total en la matriz. Sigue siendo una campaña de
   propagación; no constituye un modelo ni un claim de resistencia DFA.
+- EXP-21R observa las entradas reales a cada primitiva mediante instrumentación
+  diagnóstica opt-in y cruza suite, dominio y variantes de salt/challenge/
+  aplicación. Incluso las ramas incorporan dominio, descriptor y contexto; el
+  auditor contabiliza excepciones especificadas y cualquier otra igualdad
+  invalida el gate.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

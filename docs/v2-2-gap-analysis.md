@@ -105,8 +105,9 @@ en hosts controlados antes de cerrar R4.
   inicialización y transición, work/span, CPU/wall, throughput, speedup y
   eficiencia. El piloto de 324 observaciones mostró speedup menor que uno con
   threads Python en este host, resultado negativo coherente con overhead/GIL y
-  que no se reinterpretará como paralelismo útil. Faltan regresión robusta,
-  ancla precalculada como operación separada y ejecución multihost controlada.
+  que no se reinterpretará como paralelismo útil. La regresión Theil–Sen y
+  la fase de rondas con ancla precalculada ya están separadas; falta ejecución
+  multihost controlada.
 - EXP-07R cubre capas y componentes de Wide/Deep/DeepVector, calcula peor sesgo
   con radio simultáneo y correlación BIC muestreada. El piloto de 4 288 filas es
   deliberadamente insuficiente (`16` frente a `566–677` muestras requeridas por

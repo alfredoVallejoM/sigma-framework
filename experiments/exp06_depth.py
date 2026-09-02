@@ -17,6 +17,18 @@ from sigma.v2 import _anchor_engine, _round_engine
 from .common import derived_random
 
 
+def _theil_sen(xs: list[float], ys: list[float]) -> tuple[float, float]:
+    slopes = [
+        (ys[right] - ys[left]) / (xs[right] - xs[left])
+        for left in range(len(xs))
+        for right in range(left + 1, len(xs))
+        if xs[right] != xs[left]
+    ]
+    slope = statistics.median(slopes) if slopes else 0.0
+    intercept = statistics.median(y - slope * x for x, y in zip(xs, ys, strict=True))
+    return intercept, slope
+
+
 def _evaluate(payload: bytes, context) -> tuple[bytes, int, int]:
     anchor_started = time.perf_counter_ns()
     anchor_engine = _anchor_engine(context)
@@ -96,6 +108,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                     "digests_sha256": hashlib.sha256(b"".join(digests)).hexdigest(),
                                     "elapsed_ns": elapsed,
                                     "implementation_round_span_queries": levels * per_level_queries,
+                                    "initial_queries": candidates * initial_queries,
                                     "model_parallel_round_span_queries": levels
                                     if profile in {"wide-once", "deep-vector"}
                                     else levels * 2,
@@ -146,10 +159,20 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "median_round_wall_ns_sum": int(
                     statistics.median(int(item["round_wall_ns_sum"]) for item in group)
                 ),
+                "median_precomputed_anchor_round_ns": int(
+                    statistics.median(int(item["round_wall_ns_sum"]) for item in group)
+                ),
                 "median_throughput_candidates_s": statistics.median(throughput),
                 "observations": len(group),
                 "round_queries": group[0]["round_queries"],
                 "total_primitive_queries": group[0]["total_primitive_queries"],
+                "quality_control_passed": all(
+                    int(item["total_primitive_queries"])
+                    == int(item["anchor_queries"])
+                    + int(item["round_queries"])
+                    + int(item["initial_queries"])
+                    for item in group
+                ),
             }
         )
     baselines = {
@@ -175,4 +198,23 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         item["parallel_efficiency"] = (
             speedup / int(item["candidate_workers"]) if speedup is not None else None
         )
+    regression_fields = ("profile", "state_count", "candidates", "candidate_workers")
+    regression_groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for item in summaries:
+        regression_groups.setdefault(
+            tuple(item[field] for field in regression_fields), []
+        ).append(item)
+    for group in regression_groups.values():
+        ordered = sorted(group, key=lambda item: int(item["critical_levels"]))
+        xs = [float(item["critical_levels"]) for item in ordered]
+        elapsed_fit = [float(item["median_elapsed_ns"]) for item in ordered]
+        round_fit = [float(item["median_precomputed_anchor_round_ns"]) for item in ordered]
+        elapsed_intercept, elapsed_slope = _theil_sen(xs, elapsed_fit)
+        round_intercept, round_slope = _theil_sen(xs, round_fit)
+        for item in group:
+            item["robust_elapsed_intercept_ns"] = elapsed_intercept
+            item["robust_elapsed_slope_ns_per_level"] = elapsed_slope
+            item["robust_precomputed_round_intercept_ns"] = round_intercept
+            item["robust_precomputed_round_slope_ns_per_level"] = round_slope
+            item["robust_regression_cells"] = len(group)
     return summaries

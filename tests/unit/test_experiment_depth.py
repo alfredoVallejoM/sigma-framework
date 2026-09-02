@@ -50,3 +50,6 @@ def test_revised_depth_counts_vector_work_span_and_speedup() -> None:
     assert all(group["speedup_vs_worker1"] is not None for group in groups)
     assert all(group["median_anchor_wall_ns_sum"] > 0 for group in groups)
     assert all(group["median_round_wall_ns_sum"] > 0 for group in groups)
+    assert all(group["quality_control_passed"] for group in groups)
+    assert all(group["robust_regression_cells"] >= 1 for group in groups)
+    assert all("robust_precomputed_round_slope_ns_per_level" in group for group in groups)

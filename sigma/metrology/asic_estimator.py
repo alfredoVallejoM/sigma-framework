@@ -1,17 +1,16 @@
 # sigma/metrology/asic_estimator.py
 import json
-from typing import Dict, Any
+from typing import Any, ClassVar, Dict
 
 
 class ASIC_Synthesis_Estimator:
     """
-    Analytical hardware synthesis engine.
-    Calculates the area in Gate Equivalents (GE) and the Critical Path Delay (CPD)
-    assuming a standard cell library (e.g., TSMC 45nm).
+    Legacy hand-count model, not synthesis and not a physical estimate.
+    Constants are historical assumptions and cannot support ASIC claims.
     """
 
     # Typical topological costs per 64-bit operator
-    GE_CONSTANTS = {
+    GE_CONSTANTS: ClassVar[Dict[str, float]] = {
         "ADD64": 400.0,  # Fast Carry-Lookahead Adder
         "SUB64": 420.0,  # CLA with inversion
         "XOR64": 192.0,  # 64 * ~3 GE per XOR gate
@@ -20,7 +19,7 @@ class ASIC_Synthesis_Estimator:
         "REG64": 384.0,  # 64 D-Flip-Flops for pipeline registers (iterative design)
     }
 
-    DELAY_CONSTANTS_NS = {
+    DELAY_CONSTANTS_NS: ClassVar[Dict[str, float]] = {
         "ADD64": 0.45,  # Carry delay in 45nm
         "SUB64": 0.48,
         "XOR64": 0.05,
@@ -32,7 +31,7 @@ class ASIC_Synthesis_Estimator:
         # Area of a NAND2 in um^2 for 45nm
         self.nand2_area_um2 = (target_node_nm / 45.0) * 1.41
 
-    def analyze_psi_256_round(self) -> Dict[str, float]:
+    def analyze_psi_256_round(self) -> Dict[str, Any]:
         """
         Performs the topological gate count for a single iteration of Psi_256.
         """
@@ -63,9 +62,7 @@ class ASIC_Synthesis_Estimator:
         # Critical Path Delay (CPD)
         # The deepest vertical path is A -> B -> C -> Pi
         # Approx: ADD -> XOR -> ADD -> XOR -> ADD -> XOR
-        cpd_ns = (3 * self.DELAY_CONSTANTS_NS["ADD64"]) + (
-            3 * self.DELAY_CONSTANTS_NS["XOR64"]
-        )
+        cpd_ns = (3 * self.DELAY_CONSTANTS_NS["ADD64"]) + (3 * self.DELAY_CONSTANTS_NS["XOR64"])
 
         return {
             "operations_per_round": ops,
@@ -75,9 +72,9 @@ class ASIC_Synthesis_Estimator:
 
     def project_unrolling_feasibility(self, rounds: int = 10000) -> Dict[str, Any]:
         """
-        Calculates the cost of attempting to parallelize the non-Markovian loop in physical silicon.
+        Applies the legacy arithmetic model to complete loop unrolling.
         """
-        print(f"\n[+] Analyzing ASIC Unrolling Feasibility (Loop Unrolling)")
+        print("\n[+] Analyzing ASIC Unrolling Feasibility (Loop Unrolling)")
         print(f"    Target Rounds (R): {rounds} | Lithographic Node: {self.node}nm")
 
         round_metrics = self.analyze_psi_256_round()
@@ -96,15 +93,14 @@ class ASIC_Synthesis_Estimator:
         print(
             f"    -> Estimated Physical Area: {unrolled_area_mm2:,.2f} mm² (Limit: {reticle_limit_mm2} mm²)"
         )
-        print(
-            f"    -> Pure Unrolling Feasibility: {'FEASIBLE' if is_feasible else 'PHYSICALLY IMPOSSIBLE'}"
-        )
+        print(f"    -> Below assumed model limit: {is_feasible} (not a synthesis result)")
 
         return {
             "round_metrics": round_metrics,
             "unrolled_ge": unrolled_ge,
             "unrolled_area_mm2": unrolled_area_mm2,
             "is_unrolling_feasible": is_feasible,
+            "model_only_not_synthesis": True,
         }
 
 

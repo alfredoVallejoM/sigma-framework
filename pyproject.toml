@@ -4,18 +4,50 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sigma-framework"
-version = "1.0.0"
+version = "2.0.0a1"
 authors = [{ name = "Alfredo Vallejo Martín" }]
-description = "A Hardware-Adaptive Non-Markovian Cryptographic Architecture"
+description = "Experimental framework for canonical wide-input hash combiners"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Operating System :: OS Independent",
     "Topic :: Security :: Cryptography",
     "Intended Audience :: Science/Research",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=8"]
+quality = ["mypy>=1.10", "ruff>=0.9", "build>=1.2"]
+analysis = ["matplotlib>=3.8", "numpy>=1.26", "scipy>=1.12"]
+kdf = ["argon2-cffi>=23.1"]
+
 [project.scripts]
 sigmahash = "sigma.cli:main"
+sigmahash-v2 = "sigma.cli_v2:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-config --strict-markers"
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["sigma*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "SIM", "RUF"]
+ignore = ["E501", "RUF002", "RUF003", "SIM115"]
+
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*", "argon2", "argon2.*"]
+ignore_missing_imports = true
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+warn_unused_ignores = true

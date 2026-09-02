@@ -1,17 +1,17 @@
 # sigma/metrology/microarch.py
+import contextlib
+import json
 import os
 import subprocess
-import tempfile
-import json
-import re
 import sys
-from typing import Dict, Any
+import tempfile
+from typing import Any, Dict
 
 
 class PMUInstrumenter:
     """
     Hardware Performance Monitoring Units (PMU) interface via Linux `perf`.
-    Designed to isolate the thermodynamics of the Psi core and the Sigma loop.
+    Collects scoped performance counters for the legacy Psi core and loop.
     """
 
     def __init__(self):
@@ -32,14 +32,14 @@ class PMUInstrumenter:
             return False
 
     def _run_perf_workload(self, command: list) -> Dict[str, float]:
-        """Executes a command under the thermodynamic microscope of perf stat."""
+        """Executes a command under Linux ``perf stat``."""
         if not self.perf_available:
             return {}
 
         # Events to measure: Cycles, Instructions, and L1 Data Cache Misses
         perf_events = "cycles,instructions,L1-dcache-loads,L1-dcache-load-misses"
 
-        perf_cmd = ["perf", "stat", "-e", perf_events, "-x", ";"] + command
+        perf_cmd = ["perf", "stat", "-e", perf_events, "-x", ";", *command]
 
         res = subprocess.run(perf_cmd, capture_output=True, text=True)
         metrics = {}
@@ -52,17 +52,14 @@ class PMUInstrumenter:
             if len(parts) >= 3:
                 value = parts[0]
                 event_name = parts[2]
-                try:
+                with contextlib.suppress(ValueError):
                     metrics[event_name] = float(value.replace(",", ""))
-                except ValueError:
-                    pass
 
         return metrics
 
     def profile_pow_l1_confinement(self, file_size_mb: float = 1.0) -> Dict[str, Any]:
         """
-        Empirical validation of the L1 Cache Confinement Theorem.
-        Measures the impact of increasing R on L1 Misses.
+        Exploratory measurement of L1 misses as rounds increase.
         """
         print(f"\n[+] Evaluating L1 Confinement Theorem ({file_size_mb} MB)")
         results = {}
@@ -81,7 +78,7 @@ class PMUInstrumenter:
                     f.write(
                         f"""
 import sys
-sys.path.insert(0, '{os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))}')
+sys.path.insert(0, '{os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))}')
 from sigma.factory import SigmaFactory
 SigmaFactory.hash_file('{test_file}', mode='paranoid', rounds={r})
 """
@@ -92,8 +89,7 @@ SigmaFactory.hash_file('{test_file}', mode='paranoid', rounds={r})
                 if metrics:
                     ipc = metrics.get("instructions", 0) / metrics.get("cycles", 1)
                     l1_miss_ratio = (
-                        metrics.get("L1-dcache-load-misses", 0)
-                        / metrics.get("L1-dcache-loads", 1)
+                        metrics.get("L1-dcache-load-misses", 0) / metrics.get("L1-dcache-loads", 1)
                     ) * 100
 
                     results[str(r)] = {
@@ -111,13 +107,13 @@ SigmaFactory.hash_file('{test_file}', mode='paranoid', rounds={r})
 
     def profile_crossover_phase(self) -> Dict[str, Any]:
         """
-        Identifies the thermodynamic intersection between Lightweight and RealTime
-        by sweeping from 2^6 (64B) up to 2^20 (1MB).
+        Measures the legacy Lightweight/RealTime timing crossover.
         """
         import time
+
         from sigma.factory import SigmaFactory
 
-        print(f"\n[+] Analyzing Phase Transition (Lightweight vs RealTime)")
+        print("\n[+] Analyzing Phase Transition (Lightweight vs RealTime)")
         sizes_bytes = [2**i for i in range(6, 21)]  # From 64B to 1MB
         results = {}
 
@@ -146,7 +142,7 @@ SigmaFactory.hash_file('{test_file}', mode='paranoid', rounds={r})
                 size <= 1024 or size == sizes_bytes[-1]
             ):  # Print only a subset to avoid saturating stdout
                 print(
-                    f"  -> Size: {size} B | L-Weight: {t_l*1e6:.2f} μs | R-Time: {t_r*1e6:.2f} μs | Faster: {winner}"
+                    f"  -> Size: {size} B | L-Weight: {t_l * 1e6:.2f} μs | R-Time: {t_r * 1e6:.2f} μs | Faster: {winner}"
                 )
 
         return results

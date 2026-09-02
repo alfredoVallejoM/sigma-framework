@@ -1,0 +1,80 @@
+"""Deterministic mutation fuzz harness for every public v2 binary parser."""
+
+import argparse
+import random
+from collections.abc import Callable
+from typing import Any
+
+from sigma.applications.kdf_argon2id import Argon2idParameters
+from sigma.applications.pow import PowParameters, PowPredicate
+from sigma.outputs import SigmaDigestV2
+from sigma.spec import SigmaContextV2
+from sigma.spec.encoding import DecodeError
+from sigma.v2 import hash_bytes
+
+
+def _mutate(rng: random.Random, data: bytes) -> bytes:
+    changed = bytearray(data)
+    operation = rng.randrange(4)
+    if operation == 0 and changed:
+        del changed[rng.randrange(len(changed)) :]
+    elif operation == 1 and changed:
+        changed[rng.randrange(len(changed))] ^= 1 << rng.randrange(8)
+    elif operation == 2:
+        changed.extend(rng.randbytes(rng.randrange(1, 9)))
+    else:
+        changed = bytearray(rng.randbytes(rng.randrange(0, len(changed) + 9)))
+    return bytes(changed)
+
+
+def _exercise(
+    rng: random.Random,
+    encoded: bytes,
+    parser: Callable[[bytes], Any],
+    serializer: Callable[[Any], bytes],
+    iterations: int,
+) -> int:
+    accepted = 0
+    for _ in range(iterations):
+        candidate = _mutate(rng, encoded)
+        try:
+            parsed = parser(candidate)
+        except DecodeError:
+            continue
+        assert serializer(parsed) == candidate, "parser accepted a non-canonical representation"
+        accepted += 1
+    return accepted
+
+
+def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
+    if iterations <= 0:
+        raise ValueError("iterations must be positive")
+    rng = random.Random(seed)
+    context = SigmaContextV2(salt=b"salt", challenge=b"challenge")
+    digest = hash_bytes(b"fuzz-seed", context)
+    pow_parameters = PowParameters(b"challenge", 2, 2, PowPredicate.DUAL_STATE, 3)
+    kdf_parameters = Argon2idParameters(1024, 2, 1)
+    cases = {
+        "context": (context.to_bytes(), SigmaContextV2.from_bytes),
+        "digest": (digest.to_bytes(), SigmaDigestV2.from_bytes),
+        "pow": (pow_parameters.to_bytes(), PowParameters.from_bytes),
+        "kdf": (kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
+    }
+    return {
+        name: _exercise(rng, encoded, parser, lambda value: value.to_bytes(), iterations)
+        for name, (encoded, parser) in cases.items()
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=0x51A6A)
+    parser.add_argument("--iterations", type=int, default=10_000)
+    args = parser.parse_args()
+    results = fuzz(args.seed, args.iterations)
+    print(f"completed {args.iterations} mutations per codec; accepted canonical cases: {results}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

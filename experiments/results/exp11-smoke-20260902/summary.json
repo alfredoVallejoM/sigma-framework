@@ -1,0 +1,39 @@
+{
+  "experiment": "EXP-11",
+  "failures": 0,
+  "groups": [
+    {
+      "compatible_geometric_4se": true,
+      "expected_mean_attempts": 16.0,
+      "mean_attempts": 18.515625,
+      "median_attempts": 13.0,
+      "median_mining_ns": 1345017.5,
+      "median_verification_ns": 120758.0,
+      "predicate": "concatenated",
+      "trials": 128
+    },
+    {
+      "compatible_geometric_4se": true,
+      "expected_mean_attempts": 16.0,
+      "mean_attempts": 17.03125,
+      "median_attempts": 10.0,
+      "median_mining_ns": 1063032.5,
+      "median_verification_ns": 121890.0,
+      "predicate": "dual_state",
+      "trials": 128
+    },
+    {
+      "compatible_geometric_4se": true,
+      "expected_mean_attempts": 16.0,
+      "mean_attempts": 17.9140625,
+      "median_attempts": 13.0,
+      "median_mining_ns": 1531733.5,
+      "median_verification_ns": 123071.0,
+      "predicate": "single_state",
+      "trials": 128
+    }
+  ],
+  "observations": 384,
+  "passed": true,
+  "schema": "sigma-experiment-summary-v1"
+}

@@ -1,21 +1,22 @@
 # sigma/core/psi.py
-from typing import Tuple, List
-from .types import Word64
+from typing import List
+
 from .primitives import BitwiseOps as B
 from .primitives import Codec
+from .types import Word64
 
 
 class PsiKernel:
     """
-    Reference implementation of the Psi Mixing Function (Sigma-Adaptive).
+    Legacy experimental implementation of the Psi mixing function.
+    It is not used by Sigma v2 and is not a permutation or root of trust.
     Architecture: G-SPN + Butterfly Diffusion Layer.
     """
 
     @staticmethod
     def _mix_column(v1: Word64, v2: Word64, v3: Word64, v4: Word64) -> Word64:
         """
-        VERTICAL CORE: Processes a 'slice' of the 4 hashes.
-        Phases A (Arithmetic) and B (Constant-Time Diffusion).
+        Legacy vertical core processing one slice of four inputs.
         """
         # --- PHASE A: Arithmetic Non-Linearity Injection (Unchanged) ---
         a1 = B.xor(B.add(v1, v3), B.rotl(v2, 13))
@@ -23,9 +24,8 @@ class PsiKernel:
         a3 = B.xor(B.sub(v3, v1), B.rotl(v4, 19))
         a4 = B.xor(B.sub(v4, v2), B.rotl(v1, 31))
 
-        # --- PHASE B: Constant-Time ARX Diffusion (Quarter-Round Topology) ---
-        # Guarantees immunity to side-channel attacks (Timing/Power)
-        # without sacrificing the thermodynamic avalanche of the bits.
+        # --- PHASE B: ARX diffusion (quarter-round topology) ---
+        # This Python code makes no timing, power, or side-channel guarantee.
 
         # Step 1
         b1 = B.add(a1, a2)
@@ -49,8 +49,7 @@ class PsiKernel:
     @staticmethod
     def _diffuse_horizontal(words: List[Word64]) -> List[Word64]:
         """
-        HORIZONTAL DIFFUSION LAYER (Bidirectional Sweep + Butterfly).
-        Guarantees Full-Width Propagation.
+        Legacy horizontal diffusion layer (bidirectional sweep + butterfly).
         """
         w = list(words)  # Mutable copy
 
@@ -63,7 +62,7 @@ class PsiKernel:
             w[i + 1] = B.xor(val, w[i])
 
         # 2. Backward Sweep (7 -> 0)
-        # The bounce guarantees the last bit affects the first one.
+        # The backward sweep is intended to increase cross-word diffusion.
         for i in range(7, 0, -1):
             # w[i-1] absorbs w[i]
             # We use a different prime rotation (29)
@@ -80,9 +79,7 @@ class PsiKernel:
         return w
 
     @staticmethod
-    def compute_anchor(
-        h1_bytes: bytes, h2_bytes: bytes, h3_bytes: bytes, h4_bytes: bytes
-    ) -> bytes:
+    def compute_anchor(h1_bytes: bytes, h2_bytes: bytes, h3_bytes: bytes, h4_bytes: bytes) -> bytes:
         """Computes the Master Anchor with global diffusion."""
 
         # 1. Decoding

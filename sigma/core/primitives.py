@@ -1,13 +1,14 @@
 # sigma/core/primitives.py
 import struct
 from typing import Tuple
+
 from .types import Word64
 
 
 class BitwiseOps:
     """
-    Secure implementation of ARX (Add-Rotate-Xor) operations
-    over 64-bit virtual registers.
+    Legacy ARX (Add-Rotate-Xor) operations over 64-bit virtual registers.
+    This pure-Python implementation makes no cryptographic or timing claim.
     """
 
     # Mask to enforce 64-bit arithmetic (0xFFFFFFFFFFFFFFFF)
@@ -35,12 +36,10 @@ class BitwiseOps:
     def rotl(x: Word64, k: int) -> Word64:
         """
         Bitwise Rotate Left.
-        k is taken modulo 64 for security.
+        k is reduced modulo 64 to define rotation semantics.
         """
         k &= 63  # k % 64
-        return Word64(
-            ((x << k) | (x >> (BitwiseOps.WORD_BITS - k))) & BitwiseOps.MASK_64
-        )
+        return Word64(((x << k) | (x >> (BitwiseOps.WORD_BITS - k))) & BitwiseOps.MASK_64)
 
     @staticmethod
     def rotr(x: Word64, k: int) -> Word64:
@@ -48,15 +47,13 @@ class BitwiseOps:
         Bitwise Rotate Right.
         """
         k &= 63
-        return Word64(
-            ((x >> k) | (x << (BitwiseOps.WORD_BITS - k))) & BitwiseOps.MASK_64
-        )
+        return Word64(((x >> k) | (x << (BitwiseOps.WORD_BITS - k))) & BitwiseOps.MASK_64)
 
 
 class Codec:
     """
     Endianness Encoder/Decoder.
-    Guarantees the system behaves identically on Intel (Little) and Mainframes (Big).
+    Uses explicit big-endian encoding for platform-independent values.
     """
 
     # Struct format: '>' (Big Endian), '8Q' (8 unsigned long long of 64 bits)

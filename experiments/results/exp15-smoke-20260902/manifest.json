@@ -1,0 +1,74 @@
+{
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "artifacts": {
+    "config.json": "e4733a9387de0dadfc06c829a7447cb25cd8a3169a204a5a5b221471e5f96547",
+    "observations.csv.gz": "b02f1364ec43121b667e21d81a1b5cd54b7f5f3c3d90b04d12b23aaefdbd945c",
+    "summary.json": "f9075e4c46c31e6940edfefcbf43e3fa2322b9829bb29b9ce272df7dd82ac1d8"
+  },
+  "command": [
+    "/home/alfred/Documentos/Proyectos/python/sigma/sigma-framework/experiments/runner.py",
+    "experiments/configs/exp15-smoke.json",
+    "experiments/results/exp15-smoke-20260902"
+  ],
+  "compiler": "GCC 14.3.0",
+  "config_sha256": "7c0b1a42026047d9ee99041eb9fb077d7006bf551748ed9140afa028edff607e",
+  "cpu_count": 24,
+  "dependencies": {
+    "argon2-cffi": null,
+    "matplotlib": "3.10.9",
+    "numpy": "2.4.4",
+    "scipy": "1.17.1"
+  },
+  "dirty": true,
+  "executable": "/home/alfred/miniforge3/bin/python",
+  "experiment": "EXP-15",
+  "git_commit": "9cf55bca43bea0da11994e820fcddaed0a8eb1c4",
+  "host_measurement_state": {
+    "cpu_frequency_khz_snapshot": 3799004,
+    "cpu_governor": "powersave",
+    "temperature_millicelsius": {
+      "thermal_zone0": 27800,
+      "thermal_zone1": 20000,
+      "thermal_zone2": 78050,
+      "thermal_zone3": 41050,
+      "thermal_zone4": 54050,
+      "thermal_zone5": 50050,
+      "thermal_zone6": 51050,
+      "thermal_zone7": 79050,
+      "thermal_zone8": 79000,
+      "thermal_zone9": 79000
+    }
+  },
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "platform": "Linux-6.18.7-76061807-generic-x86_64-with-glibc2.39",
+  "processor": "x86_64",
+  "python": "3.13.12",
+  "ram_bytes": 33341329408,
+  "schema": "sigma-experiment-manifest-v1",
+  "started_utc": "2026-09-02T18:07:24.448275+00:00"
+}

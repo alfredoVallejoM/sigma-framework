@@ -1,0 +1,55 @@
+{
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "artifacts": {
+    "observations.csv.gz": "a250e7bb1c5819d5f60a7905cd8e7abced832d059c37ece249f0d003f77732fd",
+    "summary.json": "a418ad84603c64676b9e29a43f3b12044da46412710cd68637afa964ce39e582"
+  },
+  "command": [
+    "/home/alfred/Documentos/Proyectos/python/sigma/sigma-framework/experiments/runner.py",
+    "experiments/configs/exp10-smoke.json",
+    "experiments/results/exp10-smoke-20260902"
+  ],
+  "config_sha256": "1d096d7aa1d00036a80f1f165a502cbe30e53765149b77a73b18115b027750f0",
+  "cpu_count": 24,
+  "dependencies": {
+    "matplotlib": "3.10.9",
+    "numpy": "2.4.4",
+    "scipy": "1.17.1"
+  },
+  "dirty": true,
+  "executable": "/home/alfred/miniforge3/bin/python",
+  "experiment": "EXP-10",
+  "git_commit": "9cf55bca43bea0da11994e820fcddaed0a8eb1c4",
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "platform": "Linux-6.18.7-76061807-generic-x86_64-with-glibc2.39",
+  "processor": "x86_64",
+  "python": "3.13.12",
+  "ram_bytes": 33341329408,
+  "schema": "sigma-experiment-manifest-v1",
+  "started_utc": "2026-09-02T17:49:33.786759+00:00"
+}

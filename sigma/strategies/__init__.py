@@ -4,15 +4,15 @@ Includes hardware-adaptive strategies for diverse physical constraints.
 """
 
 from .base import SigmaStrategy
-from .paranoid import ParanoidStrategy
-from .simultaneous import SimultaneousStrategy
 from .lightweight import LightweightStrategy
+from .paranoid import ParanoidStrategy
 from .realtime import RealTimeStrategy
+from .simultaneous import SimultaneousStrategy
 
 __all__ = [
-    "SigmaStrategy",
-    "ParanoidStrategy",
-    "SimultaneousStrategy",
     "LightweightStrategy",
+    "ParanoidStrategy",
     "RealTimeStrategy",
+    "SigmaStrategy",
+    "SimultaneousStrategy",
 ]

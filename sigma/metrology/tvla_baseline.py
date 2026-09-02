@@ -1,12 +1,13 @@
 # sigma/metrology/tvla_baseline.py
-import os
-import time
+import gc
 import math
+import os
 import random
 import statistics
 import struct
-import gc
-from typing import Dict, Tuple, List
+import time
+from typing import Dict, List, Tuple
+
 from sigma.core.primitives import BitwiseOps as B
 from sigma.core.types import Word64
 
@@ -52,9 +53,7 @@ class BaselineTVLAEngine:
             os.urandom(32),
         )
 
-    def _measure_dummy_execution(
-        self, is_fixed: bool, iterations_per_sample: int = 10
-    ) -> int:
+    def _measure_dummy_execution(self, is_fixed: bool, iterations_per_sample: int = 10) -> int:
         if is_fixed:
             h1, h2, h3, h4 = self.fixed_inputs
         else:
@@ -85,7 +84,7 @@ class BaselineTVLAEngine:
         return t_stat, mu_f, mu_r
 
     def run_baseline_assessment(self, total_samples: int = 200000) -> Dict[str, float]:
-        print(f"\n[+] Starting Baseline TVLA (Interpreter Noise Test)")
+        print("\n[+] Starting Baseline TVLA (Interpreter Noise Test)")
         print(f"    Samples: {total_samples} | Evaluating DummyKernel (Null Cipher)")
 
         fixed_times = []
@@ -114,7 +113,7 @@ class BaselineTVLAEngine:
 
         t_stat, mu_f, mu_r = self.compute_welch_t_statistic(fixed_times, random_times)
 
-        print(f"\n=== Baseline Results (Control Experiment) ===")
+        print("\n=== Baseline Results (Control Experiment) ===")
         print(f" -> Fixed Samples (Q0) : {len(fixed_times)} | Mean: {mu_f:.2f} ns")
         print(f" -> Random Samples (Q1): {len(random_times)} | Mean: {mu_r:.2f} ns")
         print(f" -> Welch's t-statistic: {t_stat:.5f}")

@@ -1,0 +1,12 @@
+{
+  "anchor_multipliers": [1, 2, 3, 4],
+  "campaign": "confirmatory-v1",
+  "experiment": "EXP-02",
+  "master_seed": "sigma-v2-confirmatory-seed-2026-09-02",
+  "max_candidates": 10000000,
+  "repetitions": 64,
+  "resource_note": "High-width cells may be right-censored at the declared candidate budget.",
+  "state_counts": [1, 2, 3],
+  "target_rounds": [1, 4, 16, 64],
+  "widths": [8, 12, 16, 20, 24]
+}

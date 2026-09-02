@@ -1,11 +1,12 @@
 # sigma/metrology/plotter.py
-import os
 import json
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+from typing import Any
+
 import matplotlib.lines as mlines
-from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
-from matplotlib.patches import ConnectionPatch
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import FormatStrFormatter, ScalarFormatter
 from scipy.stats import norm
 
 
@@ -78,9 +79,7 @@ class SigmaAcademicPlotter:
         plt.close(fig)
         print(f"  -> Generated: {pdf_path}")
 
-    def _create_global_legend(
-        self, include_ideal=False, ideal_label="Shannon Saturation"
-    ):
+    def _create_global_legend(self, include_ideal=False, ideal_label="Shannon Saturation"):
         """Forces Matplotlib to render a complete legend regardless of data occlusion."""
         handles = []
         for strat in ["paranoid", "simultaneous", "lightweight", "realtime"]:
@@ -118,7 +117,6 @@ class SigmaAcademicPlotter:
 
         # Generate ONE independent image per Strategy
         for strat, payloads in data.items():
-
             sorted_payloads = sorted(
                 list(payloads.keys()),
                 key=lambda x: int(x.split("_")[1].replace("B", "")),
@@ -131,15 +129,10 @@ class SigmaAcademicPlotter:
             cols = 3
             rows = (num_plots + cols - 1) // cols
 
-            fig, axes = plt.subplots(
-                rows, cols, figsize=(12, 3.5 * rows), sharey=True, sharex=True
-            )
+            fig, axes = plt.subplots(rows, cols, figsize=(12, 3.5 * rows), sharey=True, sharex=True)
             plt.subplots_adjust(wspace=0.08, hspace=0.3)
 
-            if num_plots == 1:
-                axes = [axes]
-            else:
-                axes = axes.flatten()
+            axes = [axes] if num_plots == 1 else axes.flatten()
 
             for idx, p_key in enumerate(sorted_payloads):
                 ax = axes[idx]
@@ -147,13 +140,9 @@ class SigmaAcademicPlotter:
                 t_bits = payloads[p_key]["target_bits"]
 
                 # Complete dataset without clipping
-                rounds = sorted([int(k.split("_")[1]) for k in rd.keys()])
-                diff = np.array(
-                    [rd[f"round_{r}"]["diffusion_percentage"] for r in rounds]
-                )
-                stdev = np.array(
-                    [rd[f"round_{r}"]["stdev_hamming_distance"] for r in rounds]
-                )
+                rounds = sorted([int(k.split("_")[1]) for k in rd])
+                diff = np.array([rd[f"round_{r}"]["diffusion_percentage"] for r in rounds])
+                stdev = np.array([rd[f"round_{r}"]["stdev_hamming_distance"] for r in rounds])
                 stdev_pct = (stdev / t_bits) * 100.0
 
                 # Use the current strategy's color
@@ -184,9 +173,7 @@ class SigmaAcademicPlotter:
 
                 # Subplot formatting
                 p_size = p_key.split("_")[1]
-                ax.set_title(
-                    f"Payload: {p_size}", fontsize=11, fontweight="bold", pad=10
-                )
+                ax.set_title(f"Payload: {p_size}", fontsize=11, fontweight="bold", pad=10)
                 ax.set_ylim(0, 100)
 
                 # LOGARITHMIC SCALE: Solves the wall effect without hiding rounds
@@ -235,17 +222,14 @@ class SigmaAcademicPlotter:
         fig, ax = plt.subplots(figsize=(7, 4.5))
 
         scaling_data = data["experiments"]["throughput_scaling"]
-        sizes = sorted([float(s) for s in scaling_data.keys()])
+        sizes = sorted([float(s) for s in scaling_data])
 
         strats = set()
         for s in scaling_data.values():
             strats.update(s.keys())
 
         for strat in sorted(list(strats)):
-            thr = [
-                scaling_data[str(s)].get(strat, {}).get("throughput_mb_s", 0)
-                for s in sizes
-            ]
+            thr = [scaling_data[str(s)].get(strat, {}).get("throughput_mb_s", 0) for s in sizes]
             color = self.colors.get(strat, "black")
             marker = self.styles.get(strat, {}).get("marker", "o")
             ls = self.styles.get(strat, {}).get("ls", "-")
@@ -280,7 +264,7 @@ class SigmaAcademicPlotter:
         fig, ax = plt.subplots(figsize=(7, 4.5))
 
         pow_data = data["experiments"]["pow_linearity"]
-        rounds = sorted([int(k) for k in pow_data.keys()])
+        rounds = sorted([int(k) for k in pow_data])
         times = [pow_data[str(r)] for r in rounds]
 
         ax.plot(
@@ -291,7 +275,7 @@ class SigmaAcademicPlotter:
             color=self.colors["paranoid"],
             lw=1.5,
         )
-        ax.set_title("Proof-of-Work Asymptotic Linearity $\mathcal{O}(R)$")
+        ax.set_title(r"Proof-of-Work Asymptotic Linearity $\mathcal{O}(R)$")
         ax.set_xlabel("Computational Rounds ($R$)")
         ax.set_ylabel("Execution Latency (Seconds)")
         self._save_plot(fig, "fig_3_pow_linearity")
@@ -322,9 +306,7 @@ class SigmaAcademicPlotter:
             alpha=0.7,
             linewidth=2,
         )
-        ax.scatter(
-            x_positions, entropies, color=colors, s=100, zorder=3, edgecolor="black"
-        )
+        ax.scatter(x_positions, entropies, color=colors, s=100, zorder=3, edgecolor="black")
 
         # Ideal line (White Noise)
         ax.axhline(
@@ -344,9 +326,9 @@ class SigmaAcademicPlotter:
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.5f"))
 
         # Exact annotations
-        for x, y in zip(x_positions, entropies):
+        for x, y in zip(x_positions, entropies, strict=False):
             ax.text(
-                x,
+                float(x),
                 y + 0.00001,
                 f"{y:.6f}",
                 ha="center",
@@ -446,9 +428,7 @@ class SigmaAcademicPlotter:
                 lw=1.5,
                 label="Random Payload",
             )
-            ax.fill_between(
-                x, norm.pdf(x, mu_random, sigma), color="#1f77b4", alpha=0.3
-            )
+            ax.fill_between(x, norm.pdf(x, mu_random, sigma), color="#1f77b4", alpha=0.3)
 
             ax.axvline(mu_fixed, color="#d62728", linestyle="--", alpha=0.8)
             ax.axvline(mu_random, color="#1f77b4", linestyle="--", alpha=0.8)
@@ -515,7 +495,7 @@ class SigmaAcademicPlotter:
         fig, ax = plt.subplots(figsize=(7, 4.5))
 
         crossover = data["crossover_phase"]
-        sizes = sorted([int(k) for k in crossover.keys()])
+        sizes = sorted([int(k) for k in crossover])
 
         lw_lat = [crossover[str(s)]["lightweight_s"] * 1e6 for s in sizes]
         rt_lat = [crossover[str(s)]["realtime_s"] * 1e6 for s in sizes]
@@ -570,7 +550,7 @@ class SigmaAcademicPlotter:
         op_colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
 
         # Create Donut Chart
-        wedges, texts, autotexts = ax.pie(
+        pie_result: Any = ax.pie(
             sizes,
             labels=labels,
             autopct="%1.1f%%",
@@ -578,6 +558,7 @@ class SigmaAcademicPlotter:
             colors=op_colors,
             wedgeprops=dict(width=0.4, edgecolor="w"),
         )
+        _wedges, _texts, autotexts = pie_result
 
         # --- CORRECTION HERE ---
         # Change 'white' to 'black' and increase size to 10
@@ -607,7 +588,7 @@ class SigmaAcademicPlotter:
 
         # Create aesthetic metadata table below the Donut
         table_data = [
-            ["Target Node", "TSMC 45nm"],
+            ["Historical assumed node", "nominal 45 nm (not synthesized)"],
             ["Combinational Area", f"{ge:,.0f} GE"],
             ["Fully Unrolled Area", f"{unrolled_ge:,.0f} GE"],
             ["Critical Path Delay", f"{delay} ns"],

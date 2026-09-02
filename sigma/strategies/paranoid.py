@@ -1,14 +1,13 @@
-from typing import List
 from sigma.core.psi import PsiKernel
-from sigma.strategies.base import SigmaStrategy
+from sigma.hash_engines.wrappers import SHAKEWrapper, StdLibHash
 from sigma.interfaces.i_stream import IDataStream
-
-from sigma.hash_engines.wrappers import StdLibHash, SHAKEWrapper
+from sigma.strategies.base import SigmaStrategy
 
 
 class ParanoidStrategy(SigmaStrategy):
     """
-    Family 1: Maximum Security (Algebraic Orthogonality).
+    Legacy v1 four-branch experimental profile. The branches are not assumed
+    independent or algebraically orthogonal.
     Engines: SHA-512, SHA3-512, BLAKE2b, SHAKE-256.
     """
 
@@ -16,7 +15,7 @@ class ParanoidStrategy(SigmaStrategy):
 
     def __init__(self, rounds: int = 20):
         super().__init__(rounds=rounds, recursion_alg="sha3_512")
-        # Define the 4 orthogonal engines
+        # Four heterogeneous engines; heterogeneity is not proof of independence.
         self.engines = [
             lambda: StdLibHash("sha512"),
             lambda: StdLibHash("sha3_512"),
@@ -41,8 +40,6 @@ class ParanoidStrategy(SigmaStrategy):
         digests = [h.digest() for h in active_hashers]
 
         # 4. Non-Linear Mix (Psi Kernel Phase 1)
-        anchor = PsiKernel.compute_anchor(
-            digests[0], digests[1], digests[2], digests[3]
-        )
+        anchor = PsiKernel.compute_anchor(digests[0], digests[1], digests[2], digests[3])
 
         return anchor

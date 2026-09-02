@@ -1,0 +1,8 @@
+{
+  "experiment": "EXP-11",
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "max_attempts": 100000,
+  "target_round": 1,
+  "total_difficulty_bits": 4,
+  "trials": 128
+}

@@ -1,0 +1,16 @@
+{
+  "constructions": [
+    "sha256",
+    "sha512",
+    "sha3-512",
+    "blake2b-512",
+    "sigma-wide",
+    "sigma-cross",
+    "sigma-deep"
+  ],
+  "corpora": ["counter", "adversarial-ff-tail", "adversarial-alternating"],
+  "experiment": "EXP-08",
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "message_bytes": 32,
+  "messages": 512
+}

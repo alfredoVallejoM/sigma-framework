@@ -1,19 +1,19 @@
 # sigma/metrology/tvla.py
-import os
-import time
+import gc
 import math
+import os
 import random
 import statistics
-import gc
+import time
 from typing import Dict, Tuple
+
 from sigma.core.psi import PsiKernel
 
 
 class TVLAEngine:
     """
-    Software-Level Test Vector Leakage Assessment (TVLA).
-    Applies the Welch's t-test to empirically demonstrate the Constant-Time
-    execution of the Psi mathematical core.
+    Legacy fixed-vs-random Python timing probe.
+    Interpreter timing cannot establish constant-time native execution.
     """
 
     def __init__(self):
@@ -26,9 +26,7 @@ class TVLAEngine:
             os.urandom(32),
         )
 
-    def _measure_psi_execution(
-        self, is_fixed: bool, iterations_per_sample: int = 10
-    ) -> int:
+    def _measure_psi_execution(self, is_fixed: bool, iterations_per_sample: int = 10) -> int:
         """
         Measures the execution time of the pure core in nanoseconds.
         Group executions to amortize the overhead of the Python function call.
@@ -71,8 +69,8 @@ class TVLAEngine:
         return t_stat, mu_f, mu_r
 
     def run_leakage_assessment(self, total_samples: int = 100000) -> Dict[str, float]:
-        print(f"\n[+] Starting Test Vector Leakage Assessment (TVLA)")
-        print(f"    Total samples: {total_samples} | Security target: |t| < 4.5")
+        print("\n[+] Starting Test Vector Leakage Assessment (TVLA)")
+        print(f"    Total samples: {total_samples} | Exploratory threshold: |t| < 4.5")
 
         fixed_times = []
         random_times = []
@@ -101,19 +99,15 @@ class TVLAEngine:
 
         t_stat, mu_f, mu_r = self.compute_welch_t_statistic(fixed_times, random_times)
 
-        print(f"\n=== TVLA Results (Constant-Time Verification) ===")
+        print("\n=== Legacy Python fixed-vs-random timing results ===")
         print(f" -> Fixed Samples (Q0) : {len(fixed_times)} | Mean: {mu_f:.2f} ns")
         print(f" -> Random Samples (Q1): {len(random_times)} | Mean: {mu_r:.2f} ns")
         print(f" -> Welch's t-statistic: {t_stat:.5f}")
 
         if abs(t_stat) > 4.5:
-            print(
-                "[ALERT] |t| > 4.5. Potential side-channel information leakage detected."
-            )
+            print("[ALERT] |t| > 4.5. Potential side-channel information leakage detected.")
         else:
-            print(
-                "[SUCCESS] |t| <= 4.5. No data-dependent information leakage detected."
-            )
+            print("[INCONCLUSIVE] |t| <= 4.5 in this Python timing sample.")
 
         return {
             "t_statistic": round(t_stat, 5),
@@ -127,7 +121,7 @@ class TVLAEngine:
 
 if __name__ == "__main__":
     engine = TVLAEngine()
-    # EXHAUSTIVE SWEEP: 500,000 samples for deep cryptographic side-channel resistance
+    # Historical large exploratory run; not a native side-channel assessment.
     results = engine.run_leakage_assessment(total_samples=500000)
 
     import json

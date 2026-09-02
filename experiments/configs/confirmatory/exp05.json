@@ -1,0 +1,11 @@
+{
+  "campaign": "confirmatory-v1",
+  "component_bit_stride": 8,
+  "experiment": "EXP-05",
+  "input_bit_stride": 1,
+  "master_seed": "sigma-v2-confirmatory-seed-2026-09-02",
+  "message_bytes": 16,
+  "samples": 64,
+  "state_count": 3,
+  "target_round": 4
+}

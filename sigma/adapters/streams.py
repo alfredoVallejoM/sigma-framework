@@ -1,8 +1,9 @@
 # sigma/adapters/streams.py
-import os
-import mmap
 import io
-from typing import Optional, Union, BinaryIO
+import mmap
+import os
+from typing import BinaryIO, Optional, Union
+
 from sigma.interfaces.i_stream import IDataStream
 
 
@@ -13,6 +14,8 @@ class FileStream(IDataStream):
     """
 
     def __init__(self, path_or_obj: Union[str, BinaryIO]):
+        self._f: BinaryIO
+        self._map: Optional[mmap.mmap]
         if isinstance(path_or_obj, str):
             self._f = open(path_or_obj, "rb")
             self._close_on_exit = True
@@ -32,6 +35,7 @@ class FileStream(IDataStream):
 
     def read(self, size: int) -> bytes:
         if self._use_mmap:
+            assert self._map is not None
             return self._map.read(size)
         return self._f.read(size)
 
@@ -40,6 +44,7 @@ class FileStream(IDataStream):
 
     def reset(self) -> None:
         if self._use_mmap:
+            assert self._map is not None
             self._map.seek(0)
         else:
             self._f.seek(0)

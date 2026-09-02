@@ -1,9 +1,10 @@
 import hashlib
 from typing import List
-from sigma.strategies.base import SigmaStrategy
-from sigma.interfaces.i_stream import IDataStream
+
 from sigma.core.merkle import MerkleEngine
 from sigma.core.psi import PsiKernel
+from sigma.interfaces.i_stream import IDataStream
+from sigma.strategies.base import SigmaStrategy
 
 
 class LightweightStrategy(SigmaStrategy):
@@ -42,20 +43,21 @@ class LightweightStrategy(SigmaStrategy):
         # Edge case: empty file
         if not leaves:
             empty_hash = hashlib.sha256(b"").digest()
-            return PsiKernel.compute_anchor_256(
-                empty_hash, empty_hash, empty_hash, empty_hash
-            )
+            return PsiKernel.compute_anchor_256(empty_hash, empty_hash, empty_hash, empty_hash)
 
         # 1. Compute Merkle Root (32 bytes)
         merkle_root = MerkleEngine.compute_root(leaves)
+        assert first_chunk_hash is not None
+        assert last_chunk_hash is not None
 
         # 2. Generate the 4th synthetic component (32 bytes)
         synthetic_mix = bytes(
-            a ^ b ^ c for a, b, c in zip(merkle_root, first_chunk_hash, last_chunk_hash)
+            a ^ b ^ c
+            for a, b, c in zip(merkle_root, first_chunk_hash, last_chunk_hash, strict=False)
         )
 
         # 3. Non-Linear Mix in the 256-bit subspace
-        # Mathematical entropy loss is eliminated
+        # Legacy compression step; no entropy-preservation claim is implied.
         anchor = PsiKernel.compute_anchor_256(
             merkle_root, first_chunk_hash, last_chunk_hash, synthetic_mix
         )

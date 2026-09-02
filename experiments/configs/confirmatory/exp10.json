@@ -1,0 +1,11 @@
+{
+  "campaign": "confirmatory-v1",
+  "experiment": "EXP-10",
+  "io_chunks": [8192, 65536, 1048576],
+  "master_seed": "sigma-v2-confirmatory-seed-2026-09-02",
+  "profiles": ["stream-wide", "tree-wide", "parallel-tree"],
+  "repetitions": 5,
+  "sizes": [0, 1024, 65536, 1048576, 4194304, 16777216, 67108864, 268435456],
+  "timeout_seconds": 600,
+  "workers": [1, 2, 4, 8]
+}

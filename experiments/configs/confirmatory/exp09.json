@@ -1,0 +1,11 @@
+{
+  "campaign": "confirmatory-v1",
+  "constructions": ["sha256", "sha512", "sha3-256", "sha3-512", "blake2b-512", "concat-branches", "sigma-wide", "sigma-cross", "sigma-deep"],
+  "experiment": "EXP-09",
+  "master_seed": "sigma-v2-confirmatory-seed-2026-09-02",
+  "operations": ["full-hash", "file-hash", "anchor", "rounds", "serialization", "verification"],
+  "processes": 5,
+  "repetitions": 20,
+  "sizes": [0, 1, 63, 64, 65, 1024, 4096, 8192, 65535, 65536, 65537, 1048576, 16777216, 268435456],
+  "warmups": 5
+}

@@ -1,0 +1,11 @@
+{
+  "candidate_counts": [1, 4],
+  "candidate_workers": [1, 2, 4],
+  "experiment": "EXP-06",
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "message_bytes": 64,
+  "profiles": ["wide-once", "deep"],
+  "repetitions": 3,
+  "state_counts": [1, 2, 3],
+  "target_rounds": [1, 2, 4, 8]
+}

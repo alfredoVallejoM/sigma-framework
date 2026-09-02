@@ -1,7 +1,7 @@
 import hashlib
-from typing import Iterator
-from sigma.strategies.base import SigmaStrategy
+
 from sigma.interfaces.i_stream import IDataStream
+from sigma.strategies.base import SigmaStrategy
 
 
 class RealTimeStrategy(SigmaStrategy):
@@ -20,7 +20,7 @@ class RealTimeStrategy(SigmaStrategy):
 
     def __init__(self, rounds: int = 0):
         # Rounds are not used in pure streaming the same way,
-        # but we maintain the signature.
+        # but the legacy constructor keeps the parameter for compatibility.
         super().__init__(rounds=rounds, recursion_alg="blake2b")
 
     def calculate_anchor(self, stream: IDataStream) -> bytes:
@@ -33,7 +33,7 @@ class RealTimeStrategy(SigmaStrategy):
     def compute(self, stream: IDataStream) -> str:
         """
         Overrides the Template Method due to the distinct flow.
-        Processes the stream and returns the signature of the LAST block.
+        Processes the stream and returns a chained digest, not a signature.
         """
         stream.reset()
 
@@ -41,7 +41,7 @@ class RealTimeStrategy(SigmaStrategy):
         W = [0, 0, 0, 0]
         t = 0
 
-        # Recursive state (Current Signature)
+        # Recursive digest state.
         current_signature = b"\x00" * 32  # BLAKE2s uses 32 bytes
 
         while True:
@@ -74,11 +74,9 @@ class RealTimeStrategy(SigmaStrategy):
             anchor_int = sum_left ^ sum_right
             anchor_bytes = anchor_int.to_bytes(8, "big")
 
-            # 4. Signature Emission (Chain)
+            # 4. Digest chain update.
             # Sig_t = BLAKE2s(Sig_t-1 || Anchor_t || Chunk)
-            current_signature = hashlib.blake2s(
-                current_signature + anchor_bytes + chunk
-            ).digest()
+            current_signature = hashlib.blake2s(current_signature + anchor_bytes + chunk).digest()
 
             t += 1
 

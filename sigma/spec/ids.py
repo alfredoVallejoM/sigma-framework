@@ -1,0 +1,67 @@
+"""Frozen numeric identifiers for the Sigma v2 wire format."""
+
+from enum import IntEnum
+
+CONTEXT_MAGIC = b"SIGMACTX"
+CONTEXT_VERSION = 2
+DIGEST_MAGIC = b"SIGMADG2\x00"
+
+
+class SuiteId(IntEnum):
+    REFERENCE_STREAM_WIDE_V2 = 0x0001
+    PARANOID_CROSS_WIDE_V2 = 0x0002
+    SIMULTANEOUS_TREE_WIDE_V2 = 0x0003
+    LIGHTWEIGHT_STREAM_WIDE_V2 = 0x0004
+    REALTIME_STREAM_WIDE_V2 = 0x0005
+    PARANOID_DEEP_V2 = 0x0006
+
+
+class AlgorithmId(IntEnum):
+    SHA512 = 0x0001
+    SHA3_512 = 0x0002
+    BLAKE2B_512 = 0x0003
+    SHAKE256_512 = 0x0004
+
+
+class AnchorProfileId(IntEnum):
+    STREAM_WIDE = 0x0001
+    TREE_WIDE = 0x0002
+    CROSS_WIDE = 0x0003
+
+
+class RoundProfileId(IntEnum):
+    WIDE_ONCE = 0x0001
+    DEEP = 0x0002
+
+
+class OutputProfileId(IntEnum):
+    MULTI_STATE = 0x0001
+
+
+class ContextFieldId(IntEnum):
+    SUITE = 0x0001
+    ANCHOR_PROFILE = 0x0002
+    ROUND_PROFILE = 0x0003
+    OUTPUT_PROFILE = 0x0004
+    TARGET_ROUND = 0x0005
+    STATE_COUNT = 0x0006
+    BRANCHES = 0x0007
+    CHUNK_SIZE = 0x0008
+    SALT = 0x0009
+    CHALLENGE = 0x000A
+    APPLICATION_CONTEXT = 0x000B
+
+
+class DomainId(IntEnum):
+    BRANCH = 0x0001
+    BRANCH_END = 0x0002
+    ANCHOR_EVIDENCE = 0x0003
+    INIT = 0x0004
+    ROUND = 0x0005
+    CROSS = 0x0006
+    DEEP = 0x0007
+    FOLD = 0x0008
+    OUTPUT = 0x0009
+    TREE_LEAF = 0x000A
+    TREE_NODE = 0x000B
+    TREE_EMPTY = 0x000C

@@ -1,0 +1,7 @@
+{
+  "experiment": "EXP-03",
+  "master_seed": "sigma-v2-public-seed-2026-09-02",
+  "segments": [1, 2, 3],
+  "trials": 4096,
+  "widths": [4, 8]
+}

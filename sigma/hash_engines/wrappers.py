@@ -1,6 +1,5 @@
 import hashlib
 from abc import ABC, abstractmethod
-from typing import Any
 
 
 class IHashEngine(ABC):
@@ -50,4 +49,4 @@ class SHAKEWrapper(IHashEngine):
 
     @property
     def name(self) -> str:
-        return f"shake_256_{self._bytes*8}"
+        return f"shake_256_{self._bytes * 8}"

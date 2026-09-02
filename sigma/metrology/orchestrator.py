@@ -1,26 +1,23 @@
 # sigma/metrology/orchestrator.py
+import json
 import os
+import platform
+import subprocess
 import sys
 import time
-import subprocess
-import json
-import platform
 from datetime import datetime
-from typing import List, Dict
+from typing import Dict
 
 
 class SigmaMetrologyOrchestrator:
     """
-    Master Orchestrator for the Sigma Validation Suite.
-    Executes all test dimensions in isolated processes to guarantee
-    thermodynamic and cache hygiene in the results.
+    Legacy v1 exploratory-script orchestrator.
+    Process isolation alone does not control frequency, temperature or caches.
     """
 
     def __init__(self):
         self.start_time = time.time()
-        self.base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../..")
-        )
+        self.base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
         # Canonical validation sequence
         self.pipeline = [
@@ -28,13 +25,13 @@ class SigmaMetrologyOrchestrator:
                 "id": "ASIC_ESTIMATOR",
                 "module": "sigma.metrology.asic_estimator",
                 "output": "sigma_asic_metrics.json",
-                "description": "Area Synthesis (GE) and Unrolling Feasibility.",
+                "description": "Historical hand-count hardware model (not synthesis).",
             },
             {
                 "id": "DFA_RESILIENCE",
                 "module": "sigma.metrology.dfa",
                 "output": "sigma_dfa_metrics.json",
-                "description": "Transient Fault Injection (Single Event Upsets).",
+                "description": "Software fault-propagation simulation.",
             },
             {
                 "id": "STOCHASTIC_SAC",
@@ -52,7 +49,7 @@ class SigmaMetrologyOrchestrator:
                 "id": "TVLA_CONSTANT_TIME",
                 "module": "sigma.metrology.tvla",
                 "output": "sigma_tvla_metrics.json",
-                "description": "Welch's t-test for side-channel leakage.",
+                "description": "Exploratory Python fixed-vs-random timing.",
             },
             {
                 "id": "TVLA_BASELINE_CONTROL",
@@ -76,10 +73,8 @@ class SigmaMetrologyOrchestrator:
 
     def _print_banner(self):
         print("=" * 70)
-        print(f"  SIGMA FRAMEWORK - ACADEMIC METROLOGY SUITE ORCHESTRATOR")
-        print(
-            f"  Host: {platform.node()} | OS: {platform.system()} {platform.release()}"
-        )
+        print("  SIGMA FRAMEWORK - ACADEMIC METROLOGY SUITE ORCHESTRATOR")
+        print(f"  Host: {platform.node()} | OS: {platform.system()} {platform.release()}")
         print(f"  CPU Cores: {os.cpu_count()} | Python: {platform.python_version()}")
         print(f"  Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("=" * 70 + "\n")
@@ -107,7 +102,7 @@ class SigmaMetrologyOrchestrator:
 
             try:
                 # Use sys.executable to maintain the same virtual environment
-                process = subprocess.run(
+                subprocess.run(
                     [sys.executable, "-m", task["module"]],
                     cwd=self.base_dir,
                     env=env,
@@ -122,20 +117,16 @@ class SigmaMetrologyOrchestrator:
                 if os.path.exists(os.path.join(self.base_dir, task["output"])):
                     results_manifest[task["id"]] = f"SUCCESS ({duration:.2f}s)"
                 else:
-                    results_manifest[task["id"]] = (
-                        "WARNING: Exit 0 but output file missing."
-                    )
+                    results_manifest[task["id"]] = "WARNING: Exit 0 but output file missing."
                     print(f" -> [WARNING] Output file {task['output']} not found.")
 
             except subprocess.CalledProcessError as e:
-                print(
-                    f"\n -> [ERROR] Module {task['module']} failed with code {e.returncode}."
-                )
+                print(f"\n -> [ERROR] Module {task['module']} failed with code {e.returncode}.")
                 results_manifest[task["id"]] = f"FAILED (Exit Code {e.returncode})"
                 # Fault tolerance decision: Continue with the next test
                 continue
             except KeyboardInterrupt:
-                print(f"\n -> [HALT] Orchestrator interrupted by user.")
+                print("\n -> [HALT] Orchestrator interrupted by user.")
                 sys.exit(1)
 
         self._finalize(results_manifest)

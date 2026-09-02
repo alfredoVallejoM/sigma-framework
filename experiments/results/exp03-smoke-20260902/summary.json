@@ -1,0 +1,7 @@
+{
+  "experiment": "EXP-03",
+  "failures": 0,
+  "observations": 49152,
+  "passed": true,
+  "schema": "sigma-experiment-summary-v1"
+}

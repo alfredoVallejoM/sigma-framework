@@ -1,20 +1,19 @@
 # sigma/metrology/dfa.py
+import json
 import os
 import random
 import statistics
-import json
-import math
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from sigma.core.primitives import BitwiseOps as B
-from sigma.core.types import Word64
 from sigma.core.psi import PsiKernel
+from sigma.core.types import Word64
 
 
 class FaultInjectionSimulator:
     """
-    Transient Fault Injection Simulator.
-    Emulates the impact of a Single Event Upset (SEU) on hardware
-    during the computation of the Psi core's intermediate registers.
+    Legacy software fault-propagation simulator for Psi.
+    It neither models physical injection nor performs differential key recovery.
     """
 
     def __init__(self, target_bit_space: int = 256):
@@ -33,8 +32,7 @@ class FaultInjectionSimulator:
         a3 = B.xor(B.sub(v3, v1), B.rotl(v4, 19))
         a4 = B.xor(B.sub(v4, v2), B.rotl(v1, 31))
 
-        # [!] PHYSICAL FAULT INJECTION (DFA) [!]
-        # The cosmic ray alters the physical register containing a1
+        # Software bit flip in the value corresponding to a1.
         a1 = B.xor(a1, fault_mask)
 
         # --- PHASE B and C: Normal Continuation ---
@@ -62,9 +60,7 @@ class FaultInjectionSimulator:
 
             # Inject the fault only in the target cycle (column)
             if i == fault_col:
-                mixed_word = self._shadow_mix_column_with_fault(
-                    w1, w2, w3, w4, fault_mask
-                )
+                mixed_word = self._shadow_mix_column_with_fault(w1, w2, w3, w4, fault_mask)
             else:
                 mixed_word = PsiKernel._mix_column(w1, w2, w3, w4)
 
@@ -78,7 +74,7 @@ class FaultInjectionSimulator:
         Executes N simulations by injecting a 1-bit error into internal registers.
         Measures whether the core successfully diffuses the error prior to output.
         """
-        print(f"\n[+] Analyzing Differential Fault Analysis (DFA) Resilience")
+        print("\n[+] Measuring legacy Psi software fault propagation")
         print(f"    Iterations: {iterations} | State: {self.bits} bits")
 
         hamming_distances = []
@@ -105,13 +101,11 @@ class FaultInjectionSimulator:
             fault_mask = Word64(1 << fault_bit)
 
             # 4. Shadow Execution (With fault injected in Phase A)
-            faulty_words = self._shadow_compute_anchor_256(
-                V1, V2, V3, V4, fault_col, fault_mask
-            )
+            faulty_words = self._shadow_compute_anchor_256(V1, V2, V3, V4, fault_col, fault_mask)
             faulty_anchor = struct.pack(format_256, *faulty_words)
 
             # 5. Output differential calculation
-            dh = (
+            (
                 int.from_bytes(genuine_anchor, "big").bit_count()
                 ^ int.from_bytes(faulty_anchor, "big").bit_count()
             )
@@ -124,23 +118,18 @@ class FaultInjectionSimulator:
         ideal_dh = self.bits / 2.0
         error_margin = abs(mean_dh - ideal_dh) / ideal_dh
 
-        print(
-            f"    -> Mean Output Fault Distance: {mean_dh:.2f} bits (Ideal: {ideal_dh})"
-        )
-        print(f"    -> Stochastic Deviation Margin : {error_margin*100:.3f}%")
+        print(f"    -> Mean Output Fault Distance: {mean_dh:.2f} bits (Ideal: {ideal_dh})")
+        print(f"    -> Stochastic Deviation Margin : {error_margin * 100:.3f}%")
 
-        is_secure = (
-            error_margin < 0.05
-        )  # If it deviates less than 5% from the ideal mean, it is unassailable.
-        print(
-            f"    -> DFA Resistance Demonstrated     : {'YES (Irrecoverable State)' if is_secure else 'NO (Linear Algebraic Equations Possible)'}"
-        )
+        within_diffusion_band = error_margin < 0.05
+        print(f"    -> Within 5% diffusion band: {within_diffusion_band}")
 
         return {
             "iterations": iterations,
             "mean_hamming_distance_of_fault": round(mean_dh, 4),
             "ideal_hamming_distance": ideal_dh,
-            "is_dfa_resistant": is_secure,
+            "is_dfa_resistant": False,
+            "within_diffusion_band": within_diffusion_band,
         }
 
 

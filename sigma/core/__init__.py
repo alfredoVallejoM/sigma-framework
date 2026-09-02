@@ -2,9 +2,9 @@
 Core cryptographic primitives and mathematical components of the Sigma Framework.
 """
 
-from .types import Word64
+from .merkle import MerkleEngine
 from .primitives import BitwiseOps
 from .psi import PsiKernel
-from .merkle import MerkleEngine
+from .types import Word64
 
-__all__ = ["Word64", "BitwiseOps", "PsiKernel", "MerkleEngine"]
+__all__ = ["BitwiseOps", "MerkleEngine", "PsiKernel", "Word64"]

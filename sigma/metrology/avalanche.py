@@ -1,10 +1,11 @@
 # sigma/metrology/avalanche.py
+import json
+import math
 import os
 import random
 import statistics
-import math
-import json
-from typing import Dict, List, Tuple
+from typing import Any, Dict
+
 from sigma.factory import SigmaFactory
 
 
@@ -54,17 +55,12 @@ class StochasticMetrologyEngine:
 
     def run_monte_carlo_avalanche(
         self, mode: str, payload_size_bytes: int = 1024, iterations: int = 1000
-    ) -> Dict[str, float]:
-        print(
-            f"\n[+] Analyzing Strict Avalanche Criterion (SAC) - Mode: {mode.upper()}"
-        )
-        print(
-            f"    Payload: {payload_size_bytes} B | Monte Carlo Iterations: {iterations}"
-        )
+    ) -> Dict[str, Any]:
+        print(f"\n[+] Analyzing Strict Avalanche Criterion (SAC) - Mode: {mode.upper()}")
+        print(f"    Payload: {payload_size_bytes} B | Monte Carlo Iterations: {iterations}")
 
         hamming_distances = []
         aggregate_stream = bytearray()
-        base_message = os.urandom(payload_size_bytes)
 
         # --- Internal Progress Bar Function ---
         def print_progress(iteration, total, length=40):
@@ -110,14 +106,12 @@ class StochasticMetrologyEngine:
         error_stdev = abs(emp_stdev - self.ideal_stdev) / self.ideal_stdev
 
         print(
-            f"    -> Mean Hamming Distance   : {emp_mean:.4f} (Ideal: {self.ideal_mean}) | Deviation: {error_mean*100:.3f}%"
+            f"    -> Mean Hamming Distance   : {emp_mean:.4f} (Ideal: {self.ideal_mean}) | Deviation: {error_mean * 100:.3f}%"
         )
         print(
-            f"    -> Empirical Standard Dev  : {emp_stdev:.4f} (Ideal: {self.ideal_stdev:.4f}) | Deviation: {error_stdev*100:.3f}%"
+            f"    -> Empirical Standard Dev  : {emp_stdev:.4f} (Ideal: {self.ideal_stdev:.4f}) | Deviation: {error_stdev * 100:.3f}%"
         )
-        print(
-            f"    -> Stream Entropy          : {stream_entropy:.6f} bits/byte (Max: 8.000000)"
-        )
+        print(f"    -> Stream Entropy          : {stream_entropy:.6f} bits/byte (Max: 8.000000)")
 
         return {
             "mode": mode,

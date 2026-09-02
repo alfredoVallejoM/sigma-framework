@@ -1,17 +1,17 @@
 # sigma/metrology/diffusion_profiler.py
-import os
 import json
+import os
 import random
 import statistics
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from sigma.factory import SigmaFactory
 
 
 class DiffusionPropagationProfiler:
     """
     Round-by-Round Diffusion Propagation Profiler (Deep 3D Matrix).
-    Evaluates the velocity at which Sigma's ARX matrix reaches Shannon's
-    saturation point (50% flipped bits) across multiple topological strategies,
+    Measures mean output Hamming distance across legacy strategies,
     scaling payload sizes, and specific parameterized round sequences.
     """
 
@@ -30,11 +30,9 @@ class DiffusionPropagationProfiler:
         """Calculates the bitwise Hamming distance between two hex strings."""
         b1 = bytes.fromhex(hex1)
         b2 = bytes.fromhex(hex2)
-        return sum(bin(x ^ y).count("1") for x, y in zip(b1, b2))
+        return sum(bin(x ^ y).count("1") for x, y in zip(b1, b2, strict=False))
 
-    def _print_progress(
-        self, iteration: int, total: int, prefix: str = "", length: int = 40
-    ):
+    def _print_progress(self, iteration: int, total: int, prefix: str = "", length: int = 40):
         """Native terminal HUD to prevent console blindness during deep sweeps."""
         percent = f"{100 * (iteration / float(total)):.1f}"
         filled_length = int(length * iteration // total)
@@ -51,13 +49,13 @@ class DiffusionPropagationProfiler:
         samples: int = 5000,
     ) -> Dict[str, Any]:
 
-        print(f"[+] Starting Deep ARX Diffusion Profiling (3D Parameter Sweep)")
+        print("[+] Starting Deep ARX Diffusion Profiling (3D Parameter Sweep)")
         print(f"    Samples/Round: {samples}")
         print(f"    Strategies: {strategies}")
         print(f"    Payloads: {payload_sizes} Bytes")
         print(f"    Target Rounds: {target_rounds}\n")
 
-        global_results = {}
+        global_results: Dict[str, Any] = {}
         # Ensure rounds are evaluated in ascending order
         sorted_rounds = sorted(target_rounds)
 
@@ -68,9 +66,7 @@ class DiffusionPropagationProfiler:
             ideal_hamming = target_bits / 2.0
 
             for p_size in payload_sizes:
-                print(
-                    f"[*] Analyzing Strategy: [{strategy.upper()}] | Payload: {p_size} Bytes"
-                )
+                print(f"[*] Analyzing Strategy: [{strategy.upper()}] | Payload: {p_size} Bytes")
                 matrix_results = {}
 
                 for r in sorted_rounds:
@@ -78,18 +74,14 @@ class DiffusionPropagationProfiler:
                     for i in range(samples):
                         # Update HUD smoothly without bottlenecking the I/O bus
                         if i % (samples // 10) == 0 or i == samples - 1:
-                            self._print_progress(
-                                i + 1, samples, prefix=f"Round {r:02d}"
-                            )
+                            self._print_progress(i + 1, samples, prefix=f"Round {r:02d}")
 
                         msg = os.urandom(p_size)
                         msg_mutated = self._flip_random_bit(msg)
 
                         # Generate genuine vs mutated hashes
                         h1 = SigmaFactory.hash_bytes(msg, mode=strategy, rounds=r)
-                        h2 = SigmaFactory.hash_bytes(
-                            msg_mutated, mode=strategy, rounds=r
-                        )
+                        h2 = SigmaFactory.hash_bytes(msg_mutated, mode=strategy, rounds=r)
 
                         distances.append(self._hamming_distance(h1, h2))
 
@@ -108,14 +100,12 @@ class DiffusionPropagationProfiler:
                         "is_saturated": is_saturated,
                     }
 
-                # Identify the exact phase transition where the algorithm becomes secure
+                # First sampled round within the descriptive diffusion band.
                 saturation_round = next(
                     (str(r) for r, d in matrix_results.items() if d["is_saturated"]),
                     "UNREACHED",
                 )
-                print(
-                    f"    -> [VERDICT] Cryptographic Shannon Saturation at: {saturation_round}\n"
-                )
+                print(f"    -> First sampled 49.5%-50.5% diffusion point: {saturation_round}\n")
 
                 global_results[strategy][f"payload_{p_size}B"] = {
                     "target_bits": target_bits,
@@ -171,4 +161,4 @@ if __name__ == "__main__":
 
     with open("sigma_diffusion_metrics.json", "w") as f:
         json.dump(report, f, indent=4)
-    print("[OK] Deep Metrology Dataset secured to sigma_diffusion_metrics.json.")
+    print("[OK] Legacy diffusion dataset written to sigma_diffusion_metrics.json.")

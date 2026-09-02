@@ -1,5 +1,5 @@
 # sigma/core/types.py
-from typing import NewType, Tuple, List
+from typing import NewType, Tuple
 
 # Define Word64 as a distinct type to avoid mixing it with indices or counters.
 # Represents an unsigned 64-bit integer (0 to 2^64 - 1).

@@ -87,6 +87,12 @@ def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path)
     }
     result_paths = sorted((output / "tasks").glob("*/result.json"))
     assert len(result_paths) == 2
+    task_seeds = {
+        json.loads(path.read_text(encoding="utf-8"))["master_seed"]
+        for path in (output / "tasks").glob("*/config.json")
+    }
+    assert len(task_seeds) == 2
+    assert "partition-seed" not in task_seeds
     contents = [path.read_bytes() for path in result_paths]
     mtimes = [path.stat().st_mtime_ns for path in result_paths]
 

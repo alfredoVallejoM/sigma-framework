@@ -12,6 +12,7 @@ from sigma.presets import (
     paranoid_wide_v2,
     paranoid_wide_v2_2,
     realtime_v2,
+    reference_v2_2,
     simultaneous_v2,
     simultaneous_v2_2,
 )
@@ -72,6 +73,13 @@ def test_v22_presets_are_distinct_from_frozen_v21_family() -> None:
     for legacy, current in pairs:
         assert legacy.suite_id != current.suite_id
         assert hash_bytes(b"same message", legacy) != hash_bytes(b"same message", current)
+
+
+def test_reference_v22_preset_exposes_the_registered_reference_suite() -> None:
+    context = reference_v2_2()
+    assert get_preset("reference-v2-2") == context
+    assert context.anchor_profile is AnchorProfileId.STREAM_WIDE
+    assert context.round_profile is RoundProfileId.WIDE_ONCE
 
 
 def test_deep_vector_preset_has_its_own_wide_state_suite() -> None:

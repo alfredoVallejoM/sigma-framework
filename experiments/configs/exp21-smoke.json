@@ -1,0 +1,12 @@
+{
+  "experiment": "EXP-21",
+  "master_seed": "sigma-exp21-smoke-v1",
+  "presets": [
+    "reference-v2-2",
+    "lightweight-v2-2",
+    "simultaneous-v2-2",
+    "paranoid-wide-v2-2",
+    "paranoid-deep-v2-2",
+    "paranoid-deep-vector-v2-2"
+  ]
+}

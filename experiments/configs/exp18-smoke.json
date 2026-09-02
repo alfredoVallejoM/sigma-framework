@@ -1,0 +1,9 @@
+{
+  "experiment": "EXP-18",
+  "master_seed": "sigma-exp18-smoke-v1",
+  "widths": [4],
+  "branch_counts": [2, 3],
+  "faults": ["normal", "constant-first", "correlated-first-two"],
+  "max_candidates": 512,
+  "repetitions": 2
+}

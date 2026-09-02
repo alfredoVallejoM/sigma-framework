@@ -24,6 +24,11 @@ test or smoke experiment never upgrades the final column by itself.
 | PoW predicates have configured reduced acceptance probability | application model | `applications/pow.py` | independent vector + EXP-11 smoke | protocol implemented; not PoSW/VDF |
 | StreamWide memory is constant in message size | algorithmic invariant | incremental branch hashers | EXP-10 smoke | tested locally; confirmatory pending |
 | TreeWide memory is logarithmic in leaves | algorithmic invariant | frontier reducer | unit invariant + EXP-10 smoke | tested locally; confirmatory pending |
+| Cross-anchor work is not automatically reusable after reinjection | FORM-04 / TH-03 | indexed anchor reinjection | EXP-17 smoke direct/distinguished tables | pilot only; advanced attackers pending |
+| DeepVector retains physical branch components; Fold has a narrow successor | FORM-08 / TH-07 | `Deep`, `DeepVector` | EXP-18 reduced smoke | pilot only; joint-security assumption remains explicit |
+| Signed-state reuse reduces to collision of exactly the signed commitment | FORM-09 / TH-08 | signed commitment profiles | EXP-19 reduced smoke | Ed25519 is never artificially reduced |
+| Collision, preimage, second-preimage and multi-target exponents are distinct | FORM-06 / TH-05/06 | reduced trajectories | EXP-20 reduced smoke | regular-image and uniform targets reported separately |
+| Registered domains/framing do not collide and suite downgrade changes context identity | FORM-02 / TH-01 | domain tags, TLV, closed suites | EXP-21 deterministic smoke | full instrumented oracle matrix pending |
 | Distribution/diffusion observations imply no hardness | claim prohibition | experiment runners | EXP-05/07/08 smoke | descriptive only |
 | Fault detection is not DFA resistance | claim prohibition | recomputation and typed codecs | EXP-14 smoke | fault coverage only |
 | Legacy `Psi` is non-bijective | pigeonhole fact only | `experimental/psi.py` | EXP-15 smoke | no collision-resistance claim |

@@ -43,6 +43,16 @@ from .exp14_faults import run as run_exp14
 from .exp14_faults import summarize as summarize_exp14
 from .exp15_psi import run as run_exp15
 from .exp15_psi import summarize as summarize_exp15
+from .exp17_precomputation import run as run_exp17
+from .exp17_precomputation import summarize as summarize_exp17
+from .exp18_deep_vector import run as run_exp18
+from .exp18_deep_vector import summarize as summarize_exp18
+from .exp19_signed_reuse import run as run_exp19
+from .exp19_signed_reuse import summarize as summarize_exp19
+from .exp20_preimages import run as run_exp20
+from .exp20_preimages import summarize as summarize_exp20
+from .exp21_domains import run as run_exp21
+from .exp21_domains import summarize as summarize_exp21
 
 RUNNERS: dict[str, Callable[[dict[str, Any]], list[dict[str, Any]]]] = {
     "EXP-01": run_exp01,
@@ -59,6 +69,11 @@ RUNNERS: dict[str, Callable[[dict[str, Any]], list[dict[str, Any]]]] = {
     "EXP-12": run_exp12,
     "EXP-14": run_exp14,
     "EXP-15": run_exp15,
+    "EXP-17": run_exp17,
+    "EXP-18": run_exp18,
+    "EXP-19": run_exp19,
+    "EXP-20": run_exp20,
+    "EXP-21": run_exp21,
 }
 SUMMARIZERS: dict[str, Callable[[list[dict[str, Any]]], list[dict[str, Any]]]] = {
     "EXP-02": summarize_exp02,
@@ -74,6 +89,11 @@ SUMMARIZERS: dict[str, Callable[[list[dict[str, Any]]], list[dict[str, Any]]]] =
     "EXP-12": summarize_exp12,
     "EXP-14": summarize_exp14,
     "EXP-15": summarize_exp15,
+    "EXP-17": summarize_exp17,
+    "EXP-18": summarize_exp18,
+    "EXP-19": summarize_exp19,
+    "EXP-20": summarize_exp20,
+    "EXP-21": summarize_exp21,
 }
 
 
@@ -124,7 +144,19 @@ def _task_plan(config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, 
             raise ValueError("execution task label must be a non-empty string")
         if not isinstance(overrides, dict):
             raise ValueError("execution task overrides must be an object")
+        if declared is not None and "master_seed" in overrides:
+            raise ValueError("execution tasks cannot override master_seed")
         effective = {**base, **overrides}
+        if declared is not None:
+            seed_material = (
+                b"sigma-exp-task-seed-v2\0"
+                + str(config["master_seed"]).encode()
+                + b"\0"
+                + label.encode()
+                + b"\0"
+                + ordinal.to_bytes(8, "big")
+            )
+            effective["master_seed"] = hashlib.sha256(seed_material).hexdigest()
         if effective.get("experiment") != config["experiment"]:
             raise ValueError("execution tasks cannot change the experiment")
         identity = {"config": effective, "label": label, "ordinal": ordinal}

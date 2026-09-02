@@ -70,7 +70,11 @@ en hosts controlados antes de cerrar R4.
 
 - EXP-01..10 existentes son pilotos funcionales, no los diseños R revisados.
 - EXP-11, 12, 14 y 15 son smoke parciales y requieren los cambios declarados.
-- EXP-17..21 no existen.
+- EXP-17..21 tienen ya runners y smoke deterministas iniciales. EXP-18/19/20
+  separan Fold/Vector, semánticas firmadas y los tres juegos de búsqueda;
+  EXP-21 cubre dominios registrados, framing y downgrade. Continúan parciales:
+  faltan atacantes avanzados de EXP-17, instrumentación completa de entradas de
+  oráculo en EXP-21 y el plan estadístico confirmatorio congelado.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

@@ -21,6 +21,7 @@ PRESETS = (
     "realtime-v2",
     "paranoid-wide-v2",
     "paranoid-deep-v2",
+    "reference-v2-2",
     "lightweight-v2-2",
     "simultaneous-v2-2",
     "paranoid-wide-v2-2",

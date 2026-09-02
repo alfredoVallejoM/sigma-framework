@@ -74,6 +74,15 @@ def lightweight_v2_2(**parameters) -> SigmaContextV2:
     )
 
 
+def reference_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.REFERENCE_STREAM_WIDE_V2_2,
+        AnchorProfileId.STREAM_WIDE,
+        RoundProfileId.WIDE_ONCE,
+        **parameters,
+    )
+
+
 def simultaneous_v2_2(**parameters) -> SigmaContextV2:
     return _context(
         SuiteId.SIMULTANEOUS_TREE_WIDE_V2_2,
@@ -118,6 +127,7 @@ _PRESETS: Dict[str, Callable[..., SigmaContextV2]] = {
     "paranoid-wide-v2": paranoid_wide_v2,
     "paranoid-deep-v2": paranoid_deep_v2,
     "lightweight-v2-2": lightweight_v2_2,
+    "reference-v2-2": reference_v2_2,
     "simultaneous-v2-2": simultaneous_v2_2,
     "paranoid-wide-v2-2": paranoid_wide_v2_2,
     "paranoid-deep-v2-2": paranoid_deep_v2_2,

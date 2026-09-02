@@ -16,7 +16,9 @@ python -m experiments.reproduce \
 The v2 scheduler executes every atomic task in a separate Python process. A
 task owns `tasks/<sha256>/config.json`, `result.json`, `stdout.log` and
 `stderr.log`; the deterministic identifier commits to the effective config,
-label and ordinal. Results are written atomically. An interrupted run can be
+label and ordinal. Explicit tasks receive independent SHA-256-derived child
+seeds, recorded in their effective configs; overriding `master_seed` inside a
+task is forbidden. Results are written atomically. An interrupted run can be
 continued without repeating or duplicating completed partitions:
 
 ```console
@@ -72,6 +74,17 @@ Current runners:
 - `EXP-14`: fault propagation/detection, explicitly not DFA.
 - `EXP-15`: structural and reduced-width legacy `Psi` analysis.
 - `EXP-16`: gated; requires RTL, toolchain, constraints and actual synthesis.
+- `EXP-17`: cross-anchor precomputation controls (direct and distinguished tables).
+- `EXP-18`: reduced Deep fold versus DeepVector collision comparison.
+- `EXP-19`: reduced commitment-reuse search with Ed25519 explicitly unreduced.
+- `EXP-20`: separate preimage, second-preimage and multi-target games.
+- `EXP-21`: deterministic registered-domain, TLV and downgrade-confusion audit.
+
+The EXP-17..21 smoke configurations are implementation pilots, not the full R
+campaigns. In particular, EXP-17 still needs rho/Hellman/rainbow and
+multicollision attackers; EXP-21 still needs the complete instrumented oracle
+input matrix. Their absence remains visible in the preregistration rather than
+being inferred from a passing smoke run.
 
 Each new run embeds a canonical `config.json`. To execute all ten smoke
 configurations and regenerate the complete figure set in one operation, use:

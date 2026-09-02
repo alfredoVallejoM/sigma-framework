@@ -1,0 +1,10 @@
+{
+  "campaign": "pilot-v2-2",
+  "experiment": "EXP-14",
+  "master_seed": "sigma-v2-2-exp14r-pilot-2026-09-03",
+  "message_bytes": 64,
+  "presets": ["lightweight-v2-2", "paranoid-wide-v2-2", "paranoid-deep-v2-2", "paranoid-deep-vector-v2-2"],
+  "state_count": 3,
+  "target_round": 4,
+  "trials": 32
+}

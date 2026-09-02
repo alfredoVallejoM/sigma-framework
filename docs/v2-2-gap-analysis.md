@@ -133,6 +133,10 @@ en hosts controlados antes de cerrar R4.
   sin exponer la clave intermedia; la verificación reconstruye el contexto
   registrado. La campaña mantiene idéntico el presupuesto Argon2 y separa su
   tiempo del postprocesado, sin atribuir nueva entropía ni memory-hardness.
+- EXP-14R inyecta fallos de mensaje, raíz, rama, índice/ronda, estado, codec y
+  fold/vector sobre todos los modos finales, informa distancia y niveles de
+  propagación y exige detección total en la matriz. Sigue siendo una campaña de
+  propagación; no constituye un modelo ni un claim de resistencia DFA.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

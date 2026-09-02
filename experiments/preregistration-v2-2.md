@@ -50,7 +50,7 @@ estimates and internal review. A publishable invocation uses
 | EXP-11R | attempts/verification cost | geometric calibration and zero protocol invariant failures | predicate × challenge reuse × difficulty × t × k × repetition | replay/downgrade/tamper/resource attacks and right-censored pilot implemented; nonce-worker scaling pending |
 | EXP-12R | guess rate/cost | budget-matched effect; no entropy/memory-hardness claim | Argon2 profile × Sigma mode × corpus × repetition | Wide/Deep/DeepVector v2-2 use the identical Argon2 budget with component timing; calibrated total-budget and physical energy runs pending |
 | EXP-13 | none | blocked until specified native core | — | blocked by design |
-| EXP-14R | detection/propagation | report detection rate and latency; no DFA claim | fault × location × mode × repetition | flip smoke partial |
+| EXP-14R | detection/propagation | report detection rate and propagation levels; no DFA claim | fault × location × mode × repetition | bit, omission, reorder, index, repeat, truncation and fold/vector corruption matrix implemented; production grid pending |
 | EXP-15 | historical control | no production-security promotion | reduced Psi analysis cell | separate, partial |
 | EXP-16 | none | blocked until RTL/toolchain/corner exist | — | blocked by design |
 | EXP-17 | cross-anchor reuse/TM frontier | effect/interval for each registered attacker | attacker × n × anchors × memory × repetition | direct/distinguished pilot; rho/Hellman/rainbow/multicollision pending |

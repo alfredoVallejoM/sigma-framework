@@ -219,6 +219,54 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                     ),
                                 }
                             )
+    for n_value in config["widths"]:
+        n = int(n_value)
+        for branch_value in config["branch_counts"]:
+            branches = int(branch_value)
+            for construction in constructions:
+                for repetition in range(repetitions):
+                    label = f"EXP-04/related/{n}/{branches}/{construction}/{repetition}"
+                    rng = derived_random(master_seed, label)
+                    oracle = ReducedOracle(rng.randbytes(32))
+                    left_roots = _roots(oracle, rng.getrandbits(128), n, branches, "normal")
+                    relations = {
+                        "identical-control": left_roots,
+                        "one-component-bit": ((left_roots[0] ^ 1), *left_roots[1:]),
+                        "permuted-components": tuple(reversed(left_roots)),
+                    }
+                    left_anchor = _anchor(oracle, str(construction), left_roots, n)
+                    for relation, right_roots in relations.items():
+                        right_anchor = _anchor(oracle, str(construction), right_roots, n)
+                        records.append(
+                            {
+                                "attack": "related-anchor-differential",
+                                "anchor_collision": left_anchor == right_anchor,
+                                "branches": branches,
+                                "candidates": 2,
+                                "censored": False,
+                                "components_equal": sum(
+                                    left == right
+                                    for left, right in zip(left_roots, right_roots, strict=True)
+                                ),
+                                "construction": construction,
+                                "conservative_bits": (
+                                    0
+                                    if construction == "constant-fold"
+                                    else max(1, n // 2)
+                                    if construction == "narrow-fold"
+                                    else n
+                                ),
+                                "digest_collision": _segment(oracle, left_anchor, n, 1, 2)
+                                == _segment(oracle, right_anchor, n, 1, 2),
+                                "fault": "normal",
+                                "log2_candidates": 1.0,
+                                "physical_bits": len(left_anchor) * n,
+                                "relation": relation,
+                                "repetition": repetition,
+                                "state_bits": n,
+                            }
+                        )
+
     # A control demonstrating why variable-length components require canonical framing.
     raw_left = b"a" + b"bc"
     raw_right = b"ab" + b"c"
@@ -250,10 +298,12 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    fields = ("attack", "construction", "fault", "state_bits", "branches")
+    fields = ("attack", "construction", "fault", "state_bits", "branches", "relation")
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for record in records:
-        grouped.setdefault(tuple(record[field] for field in fields), []).append(record)
+        grouped.setdefault(
+            tuple(record.get(field, "not-applicable") for field in fields), []
+        ).append(record)
     result = []
     for key, group in sorted(grouped.items()):
         result.append(

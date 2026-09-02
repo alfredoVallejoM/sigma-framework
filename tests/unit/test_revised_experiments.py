@@ -73,3 +73,27 @@ def test_exp05r_covers_wide_deep_and_vector_components() -> None:
     groups = SUMMARIZERS["EXP-05"](records)
     assert all(0.0 <= group["output_bit_coverage"] <= 1.0 for group in groups)
     assert all(group["quality_control_passed"] for group in groups)
+
+
+def test_exp04r_includes_related_anchor_controls() -> None:
+    config = {
+        "branch_counts": [3],
+        "constructions": ["concat-wide", "cross-wide", "single-fold"],
+        "faults": ["normal"],
+        "master_seed": "related",
+        "max_candidates": 128,
+        "repetitions": 1,
+        "widths": [4],
+    }
+    records = RUNNERS["EXP-04"](config)
+    related = [record for record in records if record["attack"] == "related-anchor-differential"]
+    assert {record["relation"] for record in related} == {
+        "identical-control",
+        "one-component-bit",
+        "permuted-components",
+    }
+    assert all(
+        record["anchor_collision"] and record["digest_collision"]
+        for record in related
+        if record["relation"] == "identical-control"
+    )

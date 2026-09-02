@@ -94,8 +94,9 @@ en hosts controlados antes de cerrar R4.
 - EXP-04R amplía el piloto a nueve construcciones y siete fallos, incluidos
   truncado, colisionable, permutación, omisión, fold estrecho/constante y
   DeepVector. Cada fila distingue `physical_bits` de `conservative_bits`; 146
-  observaciones locales cerraron sin error. Faltan cuadrícula/potencia y el
-  ataque de anclas relacionadas antes del prerregistro.
+  observaciones locales cerraron sin error. Las relaciones idéntica, cambio de
+  un componente y permutación ya están instrumentadas; falta escalar la
+  cuadrícula confirmatoria.
 - EXP-05R ejecuta Wide, Deep y DeepVector v2-2, conserva componentes por ronda y
   trata ablación/permutación no rechazadas como fallo determinista. El piloto de
   592 observaciones descubrió y corrigió una agregación entre estados de 512 y

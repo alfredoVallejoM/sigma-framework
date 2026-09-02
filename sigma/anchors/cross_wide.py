@@ -56,6 +56,7 @@ class CrossWide:
             wide.roots,
             tuple(cross_roots),
             wide.message_length,
+            self.context.suite_id,
         )
 
     @classmethod

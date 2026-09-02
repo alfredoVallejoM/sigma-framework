@@ -65,12 +65,53 @@ def paranoid_deep_v2(**parameters) -> SigmaContextV2:
     )
 
 
+def lightweight_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.LIGHTWEIGHT_STREAM_WIDE_V2_2,
+        AnchorProfileId.STREAM_WIDE,
+        RoundProfileId.WIDE_ONCE,
+        **parameters,
+    )
+
+
+def simultaneous_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.SIMULTANEOUS_TREE_WIDE_V2_2,
+        AnchorProfileId.TREE_WIDE,
+        RoundProfileId.WIDE_ONCE,
+        chunk_size=65536,
+        **parameters,
+    )
+
+
+def paranoid_wide_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.PARANOID_CROSS_WIDE_V2_2,
+        AnchorProfileId.CROSS_WIDE,
+        RoundProfileId.WIDE_ONCE,
+        **parameters,
+    )
+
+
+def paranoid_deep_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.PARANOID_DEEP_V2_2,
+        AnchorProfileId.CROSS_WIDE,
+        RoundProfileId.DEEP,
+        **parameters,
+    )
+
+
 _PRESETS: Dict[str, Callable[..., SigmaContextV2]] = {
     "lightweight-v2": lightweight_v2,
     "simultaneous-v2": simultaneous_v2,
     "realtime-v2": realtime_v2,
     "paranoid-wide-v2": paranoid_wide_v2,
     "paranoid-deep-v2": paranoid_deep_v2,
+    "lightweight-v2-2": lightweight_v2_2,
+    "simultaneous-v2-2": simultaneous_v2_2,
+    "paranoid-wide-v2-2": paranoid_wide_v2_2,
+    "paranoid-deep-v2-2": paranoid_deep_v2_2,
 }
 
 

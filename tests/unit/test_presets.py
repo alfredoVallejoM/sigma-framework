@@ -5,10 +5,14 @@ from sigma.incremental import IncrementalSigmaV2
 from sigma.presets import (
     get_preset,
     lightweight_v2,
+    lightweight_v2_2,
     paranoid_deep_v2,
+    paranoid_deep_v2_2,
     paranoid_wide_v2,
+    paranoid_wide_v2_2,
     realtime_v2,
     simultaneous_v2,
+    simultaneous_v2_2,
 )
 from sigma.spec.ids import AnchorProfileId, RoundProfileId
 from sigma.v2 import hash_bytes
@@ -55,3 +59,15 @@ def test_realtime_preset_supports_explicit_finalization() -> None:
 def test_unknown_preset_is_rejected() -> None:
     with pytest.raises(ValueError, match="unknown"):
         get_preset("imaginary-v2")
+
+
+def test_v22_presets_are_distinct_from_frozen_v21_family() -> None:
+    pairs = (
+        (lightweight_v2(), lightweight_v2_2()),
+        (simultaneous_v2(), simultaneous_v2_2()),
+        (paranoid_wide_v2(), paranoid_wide_v2_2()),
+        (paranoid_deep_v2(), paranoid_deep_v2_2()),
+    )
+    for legacy, current in pairs:
+        assert legacy.suite_id != current.suite_id
+        assert hash_bytes(b"same message", legacy) != hash_bytes(b"same message", current)

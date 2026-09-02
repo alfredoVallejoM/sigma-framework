@@ -1,4 +1,4 @@
-# Sigma v2-1 wire specification
+# Sigma v2-1 and v2-2 wire specification
 
 Status: wire format frozen at Gate G1; reference suite implementation and vector
 frozen at Gate G2. This denotes interoperability stability, not an external
@@ -44,8 +44,9 @@ the frozen reference StreamWide/WideOnce construction.
 
 Envelope:
 `"SIGMADG2\\0" || context_length:u32 || context || state_count:u16 || states`.
-Each state is `state_length:u16 || state`. There must be exactly `k` equally
-sized, non-empty states (at most 1024 bytes each), and no trailing bytes.
+Each state is `state_length:u16 || state`. There must be exactly `k` states,
+each with the exact `state_size` registered by the selected suite (64 bytes for
+every current suite), and no trailing bytes.
 `.hex()` encodes this complete envelope, never a bare final state.
 
 ## Transcript obligations reserved for Gate G2
@@ -79,6 +80,26 @@ Let `A` be that complete evidence encoding and `C` the context encoding. With
 The output contains exactly `S_t` through `S_(t+k-1)`. A full verifier
 recomputes branch roots, anchor and every preceding state. Adjacent-only
 verification checks one transition and explicitly does not prove its history.
+
+## Typed anchor evidence v2-2
+
+Suite IDs `0x0101..0x0105` select the v2-2 evidence family. They do not alter or
+reinterpret any `0x0001..0x0006` bytes. The new envelope is:
+
+`"SIGMAAE" || evidence_version:u16(2) || evidence_type:u16 || suite_id:u16 || body_length:u32 || body_tlvs`.
+
+Evidence type 1 is `WIDE_ROOTS`; type 2 is `CROSS_WIDE`. Both bodies contain:
+
+| tag | field | representation |
+|---:|---|---|
+| 1 | message length | u64 |
+| 2 | roots | `count:u16`, then ordered `algorithm_id:u16 || length:u16 || root` |
+
+`CROSS_WIDE` additionally requires tag 3 with connections in the same component
+encoding and algorithm order. The suite ID must equal the context suite. Counts,
+algorithm IDs, order and 64-byte component lengths must equal its registered
+descriptor. A v2-2 round refuses legacy untyped evidence, even if its components
+otherwise appear compatible.
 
 For the Deep suite, every transition first computes one `Z_(i,j)` per branch
 using `DST(deep)` and TLVs for context, round index, algorithm ID, complete
@@ -119,6 +140,11 @@ most one frontier subtree per power of two and one leaf buffer: O(log N) state.
 | 4 | lightweight-v2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
 | 5 | realtime-v2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
 | 6 | paranoid-deep-v2 | CrossWide | Deep | four reference branches |
+| 257 | reference-stream-wide-v2-2 | StreamWide | WideOnce | four reference branches |
+| 258 | lightweight-v2-2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
+| 259 | simultaneous-v2-2 | TreeWide | WideOnce | four reference branches |
+| 260 | paranoid-wide-v2-2 | CrossWide | WideOnce | four reference branches |
+| 261 | paranoid-deep-v2-2 | CrossWide | Deep | four reference branches |
 
 Presets have distinct suite IDs and therefore distinct contexts and digests.
 Backend name, worker count, mmap use and reader buffer size are never encoded.

@@ -54,7 +54,9 @@ class StreamWide:
         for hasher in self._hashers:
             hasher.update(suffix)
             roots.append(hasher.digest())
-        return AnchorEvidence(self.context.branches, tuple(roots), self._message_length)
+        return AnchorEvidence(
+            self.context.branches, tuple(roots), self._message_length, self.context.suite_id
+        )
 
     def checkpoint(self) -> AnchorEvidence:
         """Snapshot the current prefix without finalizing the live stream."""
@@ -67,7 +69,9 @@ class StreamWide:
             clone = hasher.copy()
             clone.update(suffix)
             roots.append(clone.digest())
-        return AnchorEvidence(self.context.branches, tuple(roots), self._message_length)
+        return AnchorEvidence(
+            self.context.branches, tuple(roots), self._message_length, self.context.suite_id
+        )
 
     @classmethod
     def compute(cls, context: SigmaContextV2, chunks: Iterable[bytes]) -> AnchorEvidence:

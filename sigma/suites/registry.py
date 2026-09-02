@@ -27,6 +27,7 @@ class SuiteDescriptor:
     branches: Tuple[AlgorithmId, ...]
     state_algorithm: AlgorithmId
     state_size: int
+    evidence_version: int = 1
     stable: bool = False
 
     def validate_context(self, context: SigmaContextV2) -> None:
@@ -126,6 +127,66 @@ PARANOID_DEEP_V2 = SuiteDescriptor(
     stable=True,
 )
 
+REFERENCE_STREAM_WIDE_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.REFERENCE_STREAM_WIDE_V2_2,
+    name="reference-stream-wide-v2-2",
+    anchor_profile=AnchorProfileId.STREAM_WIDE,
+    round_profile=RoundProfileId.WIDE_ONCE,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=REFERENCE_STREAM_WIDE_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64,
+    evidence_version=2,
+)
+
+LIGHTWEIGHT_STREAM_WIDE_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.LIGHTWEIGHT_STREAM_WIDE_V2_2,
+    name="lightweight-stream-wide-v2-2",
+    anchor_profile=AnchorProfileId.STREAM_WIDE,
+    round_profile=RoundProfileId.WIDE_ONCE,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=LIGHTWEIGHT_STREAM_WIDE_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64,
+    evidence_version=2,
+)
+
+SIMULTANEOUS_TREE_WIDE_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.SIMULTANEOUS_TREE_WIDE_V2_2,
+    name="simultaneous-tree-wide-v2-2",
+    anchor_profile=AnchorProfileId.TREE_WIDE,
+    round_profile=RoundProfileId.WIDE_ONCE,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=SIMULTANEOUS_TREE_WIDE_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64,
+    evidence_version=2,
+)
+
+PARANOID_CROSS_WIDE_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.PARANOID_CROSS_WIDE_V2_2,
+    name="paranoid-cross-wide-v2-2",
+    anchor_profile=AnchorProfileId.CROSS_WIDE,
+    round_profile=RoundProfileId.WIDE_ONCE,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=PARANOID_CROSS_WIDE_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64,
+    evidence_version=2,
+)
+
+PARANOID_DEEP_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.PARANOID_DEEP_V2_2,
+    name="paranoid-deep-v2-2",
+    anchor_profile=AnchorProfileId.CROSS_WIDE,
+    round_profile=RoundProfileId.DEEP,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=PARANOID_DEEP_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64,
+    evidence_version=2,
+)
+
 _SUITES: Dict[SuiteId, SuiteDescriptor] = {
     REFERENCE_STREAM_WIDE_V2.suite_id: REFERENCE_STREAM_WIDE_V2,
     PARANOID_CROSS_WIDE_V2.suite_id: PARANOID_CROSS_WIDE_V2,
@@ -133,6 +194,11 @@ _SUITES: Dict[SuiteId, SuiteDescriptor] = {
     LIGHTWEIGHT_STREAM_WIDE_V2.suite_id: LIGHTWEIGHT_STREAM_WIDE_V2,
     REALTIME_STREAM_WIDE_V2.suite_id: REALTIME_STREAM_WIDE_V2,
     PARANOID_DEEP_V2.suite_id: PARANOID_DEEP_V2,
+    REFERENCE_STREAM_WIDE_V2_2.suite_id: REFERENCE_STREAM_WIDE_V2_2,
+    LIGHTWEIGHT_STREAM_WIDE_V2_2.suite_id: LIGHTWEIGHT_STREAM_WIDE_V2_2,
+    SIMULTANEOUS_TREE_WIDE_V2_2.suite_id: SIMULTANEOUS_TREE_WIDE_V2_2,
+    PARANOID_CROSS_WIDE_V2_2.suite_id: PARANOID_CROSS_WIDE_V2_2,
+    PARANOID_DEEP_V2_2.suite_id: PARANOID_DEEP_V2_2,
 }
 
 

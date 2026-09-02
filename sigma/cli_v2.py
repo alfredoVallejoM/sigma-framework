@@ -20,6 +20,10 @@ PRESETS = (
     "realtime-v2",
     "paranoid-wide-v2",
     "paranoid-deep-v2",
+    "lightweight-v2-2",
+    "simultaneous-v2-2",
+    "paranoid-wide-v2-2",
+    "paranoid-deep-v2-2",
 )
 
 
@@ -107,8 +111,8 @@ def _hash_command(args) -> int:
     context = _context(args)
     backend = None
     if args.workers is not None:
-        if args.preset != "simultaneous-v2":
-            raise ValueError("--workers is only valid with simultaneous-v2")
+        if args.preset not in ("simultaneous-v2", "simultaneous-v2-2"):
+            raise ValueError("--workers is only valid with a simultaneous preset")
         backend = MultiprocessingTreeBackend(args.workers)
     digest = _hash_input(args, context, backend)
     if args.format == "binary":

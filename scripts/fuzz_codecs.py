@@ -5,9 +5,11 @@ import random
 from collections.abc import Callable
 from typing import Any
 
+from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWide
 from sigma.applications.kdf_argon2id import Argon2idParameters
 from sigma.applications.pow import PowParameters, PowPredicate
 from sigma.outputs import SigmaDigestV2
+from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError
 from sigma.v2 import hash_bytes
@@ -54,11 +56,23 @@ def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
     digest = hash_bytes(b"fuzz-seed", context)
     pow_parameters = PowParameters(b"challenge", 2, 2, PowPredicate.DUAL_STATE, 3)
     kdf_parameters = Argon2idParameters(1024, 2, 1)
+    wide_context = lightweight_v2_2()
+    wide_evidence = StreamWide.compute(wide_context, (b"fuzz-seed",))
+    cross_context = paranoid_wide_v2_2()
+    cross_evidence = CrossWide.compute(cross_context, (b"fuzz-seed",))
     cases = {
         "context": (context.to_bytes(), SigmaContextV2.from_bytes),
         "digest": (digest.to_bytes(), SigmaDigestV2.from_bytes),
         "pow": (pow_parameters.to_bytes(), PowParameters.from_bytes),
         "kdf": (kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
+        "evidence-wide": (
+            wide_evidence.to_bytes(),
+            lambda data: AnchorEvidence.from_bytes(data, wide_context),
+        ),
+        "evidence-cross": (
+            cross_evidence.to_bytes(),
+            lambda data: CrossWideEvidence.from_bytes(data, cross_context),
+        ),
     }
     return {
         name: _exercise(rng, encoded, parser, lambda value: value.to_bytes(), iterations)

@@ -28,6 +28,10 @@ class Deep:
             raise TypeError("Deep requires CrossWideEvidence")
         if anchor.algorithms != self.context.branches:
             raise ValueError("anchor branch descriptors differ from context")
+        if self.suite.evidence_version >= 2 and anchor.suite_id is not self.context.suite_id:
+            raise ValueError("v2-2 anchor must carry the exact context suite")
+        if anchor.suite_id is not None and anchor.suite_id is not self.context.suite_id:
+            raise ValueError("anchor suite differs from context")
         if any(len(root) != 64 for root in anchor.roots + anchor.cross_roots):
             raise ValueError("Deep suite anchor components must contain 64 bytes")
 

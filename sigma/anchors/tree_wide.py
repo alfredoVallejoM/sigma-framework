@@ -155,7 +155,9 @@ class TreeWide:
             if node.byte_length != self._message_length:
                 raise RuntimeError("tree accounting invariant failed")
             roots.append(node.digest)
-        return AnchorEvidence(self.context.branches, tuple(roots), self._message_length)
+        return AnchorEvidence(
+            self.context.branches, tuple(roots), self._message_length, self.context.suite_id
+        )
 
     @classmethod
     def compute(cls, context: SigmaContextV2, chunks: Iterable[bytes]) -> AnchorEvidence:

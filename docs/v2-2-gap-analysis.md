@@ -174,3 +174,16 @@ y someter a reproducción y revisión criptográfica externas.
   modelo lineal con pendiente aproximada de 159,7 bytes/ronda.
 - Los runners EXP-06, EXP-09 y EXP-14 que descartaban el transcript usan ya el
   camino rodante. EXP-01, EXP-05 y EXP-07 lo conservan porque miden el trace.
+
+### Tanda C1.4 — evidencia tipada LIB-03
+
+- Registrada la familia v2-2 bajo `SuiteId 0x0101..0x0105`; ningún ID v2-1 se
+  reutiliza y sus serializers/KAT permanecen byte a byte.
+- El envelope `SIGMAAE` incluye versión, tipo, suite, longitud y TLV canónico.
+  Wide y Cross validan cantidad, orden, algoritmos y 64 bytes por componente.
+- Las rondas v2-2 rechazan evidencia legacy o de otra suite antes de evaluar.
+- Añadidos presets/CLI v2-2, corpus negativo, 20.000 mutaciones específicas y
+  un KAT separado reconstruido también por un consumidor literal con
+  `hashlib`/`struct`.
+- Validación de cierre: 294 tests pasan, 1 opcional se omite; Ruff, mypy,
+  compileall y 60.000 mutaciones totales permanecen verdes.

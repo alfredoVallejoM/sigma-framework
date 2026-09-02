@@ -128,4 +128,19 @@ def test_cli_rejects_invalid_backend_combination() -> None:
         "2",
     )
     assert result.returncode == 2
-    assert "only valid with simultaneous-v2" in result.stderr
+    assert "only valid with a simultaneous preset" in result.stderr
+
+
+def test_cli_supports_v22_typed_evidence_suite() -> None:
+    hashed = run_cli(
+        "hash",
+        "--text",
+        "abc",
+        "--preset",
+        "lightweight-v2-2",
+        "--format",
+        "json",
+    )
+    assert hashed.returncode == 0, hashed.stderr
+    digest = SigmaDigestV2.from_json(hashed.stdout)
+    assert digest.metadata()["suite_name"] == "lightweight-stream-wide-v2-2"

@@ -82,7 +82,7 @@ def test_revised_collision_controls_and_survival_are_reported() -> None:
             "repetitions": 4,
             "state_counts": [2],
             "target_rounds": [1],
-            "widths": [4],
+            "widths": [4, 6],
         }
     )
     assert {record["construction"] for record in records} == {
@@ -91,7 +91,14 @@ def test_revised_collision_controls_and_survival_are_reported() -> None:
         "anchored-consecutive",
         "anchored-indexed-consecutive",
     }
-    assert all(group["survival"] for group in summarize_collisions(records))
+    summaries = summarize_collisions(records)
+    assert all(group["survival"] for group in summaries)
+    assert all(group["slope_bootstrap_replicates"] > 0 for group in summaries)
+    assert all(
+        set(group["model_rmse"])
+        == {"min-anchor-segment", "state-only", "anchor-only", "segment-only"}
+        for group in summaries
+    )
 
 
 def test_revised_persistence_separates_anchor_relation_and_transition_controls() -> None:
@@ -117,3 +124,9 @@ def test_revised_persistence_separates_anchor_relation_and_transition_controls()
     assert {group["anchor_relation"] for group in groups} == {"same", "different"}
     assert all("compatible_holm_5pct" in group for group in groups)
     assert all("interpretation" in group for group in groups)
+    assert all(group["quality_control_passed"] for group in groups)
+    assert all(
+        group["exact_95_low"] <= group["observed_probability"] <= group["exact_95_high"]
+        for group in groups
+    )
+    assert all("saturated_deviance" in group for group in groups)

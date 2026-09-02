@@ -87,6 +87,10 @@ en hosts controlados antes de cerrar R4.
   locales produjeron 768 y 12 288 observaciones respectivamente. Un primer
   piloto EXP-03 con oráculo compartido dio un resultado adverso y fue descartado
   metodológicamente antes de congelar R4; permanece conservado fuera del repo.
+  El análisis posterior añade pendiente bootstrap determinista y RMSE contra
+  cuatro modelos en EXP-02R, e intervalo exacto Clopper–Pearson, likelihoods y
+  deviance en EXP-03R. Aún deben fijarse las cuadrículas/tamaños a partir de
+  potencia y censura antes de congelar las configuraciones.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

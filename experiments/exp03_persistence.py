@@ -162,6 +162,27 @@ def _exact_binomial_p_value(successes: int, trials: int, probability: float) -> 
     )
 
 
+def _binomial_log_likelihood(successes: int, trials: int, probability: float) -> float:
+    failures = trials - successes
+    if probability == 0.0:
+        return 0.0 if successes == 0 else float("-inf")
+    if probability == 1.0:
+        return 0.0 if failures == 0 else float("-inf")
+    return successes * math.log(probability) + failures * math.log1p(-probability)
+
+
+def _clopper_pearson(successes: int, trials: int) -> tuple[float, float] | None:
+    try:
+        from scipy.stats import beta
+    except ImportError:
+        return None
+    lower = 0.0 if successes == 0 else float(beta.ppf(0.025, successes, trials - successes + 1))
+    upper = (
+        1.0 if successes == trials else float(beta.ppf(0.975, successes + 1, trials - successes))
+    )
+    return lower, upper
+
+
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     revised = any("anchor_relation" in record for record in records)
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
@@ -191,6 +212,10 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         )
         expected = float(group[0]["expected_probability"])
         exact_p_value = _exact_binomial_p_value(successes, trials, expected)
+        observed_log_likelihood = _binomial_log_likelihood(successes, trials, probability)
+        theory_log_likelihood = _binomial_log_likelihood(successes, trials, expected)
+        unity_log_likelihood = _binomial_log_likelihood(successes, trials, 1.0)
+        exact_interval = _clopper_pearson(successes, trials) if revised else None
         lower = max(0.0, center - margin)
         upper = min(1.0, center + margin)
         summaries.append(
@@ -201,6 +226,18 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "construction": construction,
                 "expected_probability": expected,
                 "exact_binomial_p_value": exact_p_value,
+                "log_likelihood_observed": observed_log_likelihood,
+                "log_likelihood_theory": theory_log_likelihood,
+                "log_likelihood_unity": (
+                    unity_log_likelihood if math.isfinite(unity_log_likelihood) else None
+                ),
+                "log_lr_theory_vs_unity": (
+                    theory_log_likelihood - unity_log_likelihood
+                    if math.isfinite(unity_log_likelihood)
+                    else None
+                ),
+                "unity_model_impossible": not math.isfinite(unity_log_likelihood),
+                "saturated_deviance": 2 * (observed_log_likelihood - theory_log_likelihood),
                 "observed_probability": probability,
                 "segment_length": segment_length,
                 "state_bits": state_bits,
@@ -208,6 +245,15 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "trials": trials,
                 "wilson_high": upper,
                 "wilson_low": lower,
+                **(
+                    {
+                        "exact_95_high": exact_interval[1] if exact_interval else None,
+                        "exact_95_low": exact_interval[0] if exact_interval else None,
+                        "quality_control_passed": exact_interval is not None,
+                    }
+                    if revised
+                    else {}
+                ),
             }
         )
     tested = [item for item in summaries if 0.0 < float(item["expected_probability"]) < 1.0]

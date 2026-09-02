@@ -7,21 +7,29 @@ from sigma.anchors.base import CrossWideEvidence
 from sigma.anchors.branches import hash_once
 from sigma.outputs import SigmaDigestV2
 from sigma.spec import SigmaContextV2
-from sigma.spec.encoding import domain_tag, encode_tlv, encode_uint
+from sigma.spec.encoding import domain_tag, encode_tlv, encode_tlv_field, encode_uint
 from sigma.spec.ids import DomainId, RoundProfileId
 from sigma.suites.registry import get_suite
 from sigma.validation import require_int
 
+from .backends import SERIAL_DEEP_BRANCH_BACKEND, DeepBranchBackend
 from .wide_once import RoundTranscript, TraceConfig, TracePolicy
 
 
 class Deep:
-    def __init__(self, context: SigmaContextV2):
+    def __init__(
+        self,
+        context: SigmaContextV2,
+        backend: DeepBranchBackend = SERIAL_DEEP_BRANCH_BACKEND,
+    ):
         self.context = context
         self.suite = get_suite(context.suite_id)
         self.suite.validate_context(context)
         if context.round_profile is not RoundProfileId.DEEP:
             raise ValueError("Deep requires the DEEP round profile")
+        if not isinstance(backend, DeepBranchBackend):
+            raise TypeError("backend must implement DeepBranchBackend")
+        self.backend = backend
 
     def _validate_anchor(self, anchor: CrossWideEvidence) -> None:
         if not isinstance(anchor, CrossWideEvidence):
@@ -42,40 +50,42 @@ class Deep:
 
     def _next_with_branches(
         self, anchor: CrossWideEvidence, index: int, state: bytes
-    ) -> Tuple[bytes, Tuple[bytes, ...]]:
+    ) -> Tuple[bytes, List[bytes]]:
         self._validate_anchor(anchor)
         require_int("round index", index, minimum=0, maximum=(1 << 64) - 1)
         if not isinstance(state, bytes) or len(state) != self.suite.state_size:
             raise ValueError(f"state must contain exactly {self.suite.state_size} bytes")
-        branch_outputs = []
-        for algorithm in self.context.branches:
-            framed = encode_tlv(
-                (
-                    (1, self.context.to_bytes()),
-                    (2, encode_uint(index, 8)),
-                    (3, encode_uint(algorithm, 2)),
-                    (4, anchor.to_bytes()),
-                    (5, state),
-                )
-            )
-            branch_outputs.append(hash_once(algorithm, domain_tag(DomainId.DEEP) + framed))
+
+        completed = self.backend.execute(self.context, anchor, index, state)
+        if len(completed) != len(self.context.branches):
+            raise RuntimeError("Deep backend returned an incomplete branch set")
+        branch_by_position = {}
+        for position, output in completed:
+            if position in branch_by_position or not 0 <= position < len(self.context.branches):
+                raise RuntimeError("Deep backend returned invalid branch positions")
+            if not isinstance(output, bytes) or len(output) != self.suite.state_size:
+                raise RuntimeError("Deep backend returned an invalid branch output")
+            branch_by_position[position] = output
+        if len(branch_by_position) != len(self.context.branches):
+            raise RuntimeError("Deep backend returned an incomplete branch set")
+        branch_outputs = [
+            branch_by_position[position] for position in range(len(self.context.branches))
+        ]
         encoded_outputs = encode_uint(len(branch_outputs), 2) + b"".join(
             encode_uint(algorithm, 2) + encode_uint(len(output), 2) + output
             for algorithm, output in zip(self.context.branches, branch_outputs, strict=False)
         )
-        fold_input = encode_tlv(
-            (
-                (1, self.context.to_bytes()),
-                (2, encode_uint(index, 8)),
-                (3, anchor.to_bytes()),
-                (4, encoded_outputs),
-            )
-        )
+        # Encode fixed tags independently so CPython cannot retain one tracked
+        # aggregate tuple per level in its allocator free lists.
+        fold_input = encode_tlv_field(1, self.context.to_bytes())
+        fold_input += encode_tlv_field(2, encode_uint(index, 8))
+        fold_input += encode_tlv_field(3, anchor.to_bytes())
+        fold_input += encode_tlv_field(4, encoded_outputs)
         successor = hash_once(
             self.suite.state_algorithm,
             domain_tag(DomainId.FOLD) + fold_input,
         )
-        return successor, tuple(branch_outputs)
+        return successor, branch_outputs
 
     def next_state(self, anchor: CrossWideEvidence, index: int, state: bytes) -> bytes:
         successor, _ = self._next_with_branches(anchor, index, state)
@@ -114,7 +124,7 @@ class Deep:
                 states.append(state)
                 state_indices.append(state_index)
             if trace.captures(index):
-                outputs.append(round_outputs)
+                outputs.append(tuple(round_outputs))
                 output_indices.append(index)
         return (
             SigmaDigestV2(self.context, tuple(selected)),

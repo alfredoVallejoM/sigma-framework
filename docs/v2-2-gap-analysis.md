@@ -246,3 +246,16 @@ y someter a reproducción y revisión criptográfica externas.
 - El SBOM incorpora ejes de versión, commit, tag y árbol sucio. El modo
   `--require-clean-tag` impide generar artefactos publicables fuera de un tag
   exacto y limpio.
+
+### Tanda C2.4 — identidad RealTime y backend Deep LIB-10/11
+
+- ADR-0002 resuelve RealTime como política incremental sobre StreamWide. No se
+  crea un `SuiteId` v2-2 redundante; el ID v2-1 queda sólo para reproducción y
+  se marca obsoleto sin cambiar sus bytes.
+- Deep separa la operación matemática de rama de los planificadores serial y
+  threaded. El backend puede completar en cualquier orden; el motor valida
+  cardinalidad, índices y anchuras y reconstruye el vector canónico antes del
+  fold.
+- Hay equivalencia de digest y transcript con 1, 2, 4 y 8 workers, un backend
+  de prueba que invierte finalizaciones y backends deliberadamente corruptos.
+  La ruta normal sigue superando la regresión O(k) de memoria.

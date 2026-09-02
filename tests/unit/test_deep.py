@@ -2,9 +2,17 @@ import gc
 import statistics
 import tracemalloc
 
+import pytest
+
 from sigma.anchors import CrossWide
-from sigma.presets import paranoid_deep_v2, paranoid_wide_v2
-from sigma.rounds import Deep, TraceConfig, TracePolicy
+from sigma.presets import paranoid_deep_v2, paranoid_deep_v2_2, paranoid_wide_v2
+from sigma.rounds import (
+    Deep,
+    DeepBranchBackend,
+    ThreadedDeepBranchBackend,
+    TraceConfig,
+    TracePolicy,
+)
 from sigma.v2 import hash_bytes, trace_bytes, verify_full
 
 
@@ -65,3 +73,57 @@ def _deep_rolling_peak(target_round: int) -> int:
 
 def test_deep_rolling_memory_does_not_retain_round_branches() -> None:
     assert _deep_rolling_peak(512) <= _deep_rolling_peak(16) + 16 * 1024
+
+
+class ReverseCompletionBackend(DeepBranchBackend):
+    @property
+    def name(self) -> str:
+        return "reverse-test"
+
+    def execute(self, context, anchor, index, state):
+        from sigma.rounds.deep_math import evaluate_deep_branch
+
+        return [
+            evaluate_deep_branch(
+                position, context.branches[position], context, anchor, index, state
+            )
+            for position in reversed(range(len(context.branches)))
+        ]
+
+
+@pytest.mark.parametrize("workers", [1, 2, 4, 8])
+def test_deep_threaded_backend_is_identical_for_every_worker_count(workers: int) -> None:
+    context = paranoid_deep_v2_2(target_round=4, state_count=3)
+    anchor = CrossWide.compute(context, (b"parallel-deep",))
+    serial_digest, serial_trace = Deep(context).evaluate(anchor)
+    parallel_digest, parallel_trace = Deep(context, ThreadedDeepBranchBackend(workers)).evaluate(
+        anchor
+    )
+    assert parallel_digest == serial_digest
+    assert parallel_trace == serial_trace
+
+
+def test_deep_normalizes_backend_completion_order_before_fold() -> None:
+    context = paranoid_deep_v2_2(target_round=3, state_count=2)
+    anchor = CrossWide.compute(context, (b"completion-order",))
+    expected = Deep(context).evaluate(anchor)
+    assert Deep(context, ReverseCompletionBackend()).evaluate(anchor) == expected
+
+
+@pytest.mark.parametrize(
+    "results",
+    [(), ((0, b"x" * 64),) * 4, ((99, b"x" * 64),) * 4, tuple((i, b"x") for i in range(4))],
+)
+def test_deep_rejects_malformed_backend_results(results) -> None:
+    class MalformedBackend(DeepBranchBackend):
+        @property
+        def name(self) -> str:
+            return "malformed-test"
+
+        def execute(self, context, anchor, index, state):
+            return results
+
+    context = paranoid_deep_v2_2(target_round=1)
+    anchor = CrossWide.compute(context, (b"malformed",))
+    with pytest.raises(RuntimeError, match="branch"):
+        Deep(context, MalformedBackend()).evaluate_digest(anchor)

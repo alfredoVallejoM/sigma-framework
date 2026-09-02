@@ -1,6 +1,7 @@
 import pytest
 
 from sigma.incremental import IncrementalSigmaV2
+from sigma.presets import lightweight_v2_2
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import hash_bytes, verify_full
@@ -58,3 +59,11 @@ def test_tree_profile_rejects_incremental_checkpoint_api() -> None:
                 chunk_size=65536,
             )
         )
+
+
+def test_realtime_policy_uses_the_same_v22_streamwide_suite() -> None:
+    context = lightweight_v2_2(target_round=2, state_count=2)
+    incremental = IncrementalSigmaV2(context)
+    for chunk in (b"real", b"", b"time", b"-policy"):
+        incremental.update(chunk)
+    assert incremental.finalize() == hash_bytes(b"realtime-policy", context)

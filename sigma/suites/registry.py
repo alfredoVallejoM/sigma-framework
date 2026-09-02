@@ -30,6 +30,7 @@ class SuiteDescriptor:
     suite_family: str = "v2-1"
     evidence_version: int = 1
     stable: bool = False
+    deprecated: bool = False
 
     def validate_context(self, context: SigmaContextV2) -> None:
         expected = {
@@ -114,6 +115,7 @@ REALTIME_STREAM_WIDE_V2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     stable=True,
+    deprecated=True,
 )
 
 PARANOID_DEEP_V2 = SuiteDescriptor(

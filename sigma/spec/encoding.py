@@ -31,20 +31,26 @@ def decode_uint(data: bytes, width: int) -> int:
     return int.from_bytes(data, "big")
 
 
+def encode_tlv_field(tag: int, value: bytes) -> bytes:
+    """Encode one validated field for fixed-schema codecs."""
+
+    if isinstance(tag, bool) or not isinstance(tag, int) or not 0 < tag <= 0xFFFF:
+        raise ValueError("TLV tag must be an integer in [1, 65535]")
+    if not isinstance(value, bytes):
+        raise TypeError("TLV values must be bytes")
+    if len(value) > MAX_FIELD_LENGTH:
+        raise ValueError("TLV field exceeds the configured limit")
+    return _TLV_HEADER.pack(tag, len(value)) + value
+
+
 def encode_tlv(fields: Iterable[Tuple[int, bytes]]) -> bytes:
     output = bytearray()
     previous = -1
     for tag, value in fields:
-        if isinstance(tag, bool) or not isinstance(tag, int) or not 0 < tag <= 0xFFFF:
-            raise ValueError("TLV tag must be an integer in [1, 65535]")
+        encoded = encode_tlv_field(tag, value)
         if tag <= previous:
             raise ValueError("TLV tags must be unique and strictly increasing")
-        if not isinstance(value, bytes):
-            raise TypeError("TLV values must be bytes")
-        if len(value) > MAX_FIELD_LENGTH:
-            raise ValueError("TLV field exceeds the configured limit")
-        output += _TLV_HEADER.pack(tag, len(value))
-        output += value
+        output += encoded
         previous = tag
     return bytes(output)
 

@@ -12,6 +12,7 @@ from sigma.spec.encoding import (
     decode_uint,
     domain_tag,
     encode_tlv,
+    encode_tlv_field,
     encode_u16_sequence,
     encode_uint,
 )
@@ -82,6 +83,7 @@ def test_tlv_tag_and_value_boundaries_are_exact() -> None:
             encode_tlv(((tag, b""),))  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="bytes"):
         encode_tlv(((1, bytearray()),))  # type: ignore[arg-type]
+    assert encode_tlv_field(7, b"value") == encode_tlv(((7, b"value"),))
 
 
 def test_tlv_field_length_budget_accepts_limit_and_rejects_next_byte() -> None:

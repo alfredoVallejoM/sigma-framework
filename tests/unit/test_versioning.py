@@ -30,3 +30,10 @@ def test_v21_is_frozen_while_v22_remains_experimental() -> None:
     v22 = get_suite(SuiteId.REFERENCE_STREAM_WIDE_V2_2)
     assert (v21.suite_family, v21.evidence_version, v21.stable) == ("v2-1", 1, True)
     assert (v22.suite_family, v22.evidence_version, v22.stable) == ("v2-2", 2, False)
+
+
+def test_historical_realtime_suite_is_deprecated_without_a_v22_replacement() -> None:
+    historical = get_suite(SuiteId.REALTIME_STREAM_WIDE_V2)
+    assert historical.stable is True
+    assert historical.deprecated is True
+    assert all(suite_id.name != "REALTIME_STREAM_WIDE_V2_2" for suite_id in SuiteId)

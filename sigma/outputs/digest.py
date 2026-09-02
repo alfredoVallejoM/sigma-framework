@@ -74,6 +74,7 @@ class SigmaDigestV2:
             "suite_id": int(self.context.suite_id),
             "suite_family": get_suite(self.context.suite_id).suite_family,
             "interoperability_frozen": get_suite(self.context.suite_id).stable,
+            "deprecated_suite": get_suite(self.context.suite_id).deprecated,
             "suite_name": get_suite(self.context.suite_id).name,
             "target_round": self.context.target_round,
         }

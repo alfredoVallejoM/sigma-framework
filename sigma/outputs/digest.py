@@ -5,12 +5,10 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from sigma.spec.context import SigmaContextV2
+from sigma.spec.context import SigmaContextV2, validate_registered_context
 from sigma.spec.encoding import DecodeError, decode_uint, encode_uint
 from sigma.spec.ids import DIGEST_MAGIC
 from sigma.suites.registry import get_suite
-
-MAX_STATE_BYTES = 1024
 
 
 @dataclass(frozen=True)
@@ -23,17 +21,18 @@ class SigmaDigestV2:
     def __post_init__(self) -> None:
         if not isinstance(self.context, SigmaContextV2):
             raise TypeError("context must be SigmaContextV2")
+        validate_registered_context(self.context)
         if len(self.states) != self.context.state_count:
             raise ValueError("number of states must equal context.state_count")
         if not self.states:
             raise ValueError("at least one state is required")
         if not all(isinstance(state, bytes) for state in self.states):
             raise TypeError("states must contain bytes")
-        state_size = len(self.states[0])
-        if not 1 <= state_size <= MAX_STATE_BYTES:
-            raise ValueError(f"state size must be in [1, {MAX_STATE_BYTES}]")
-        if any(len(state) != state_size for state in self.states):
-            raise ValueError("all states must have the same size")
+        expected_size = get_suite(self.context.suite_id).state_size
+        if any(len(state) != expected_size for state in self.states):
+            raise ValueError(
+                f"every state must contain exactly {expected_size} bytes for the selected suite"
+            )
 
     def to_bytes(self) -> bytes:
         context_bytes = self.context.to_bytes()
@@ -118,7 +117,8 @@ class SigmaDigestV2:
             raise DecodeError("truncated digest context")
         context = SigmaContextV2.from_bytes(data[header_size:context_end])
         try:
-            get_suite(context.suite_id).validate_context(context)
+            suite = get_suite(context.suite_id)
+            suite.validate_context(context)
         except ValueError as exc:
             raise DecodeError(f"context does not match its suite: {exc}") from exc
         count = decode_uint(data[context_end : context_end + 2], 2)
@@ -126,17 +126,15 @@ class SigmaDigestV2:
             raise DecodeError("digest state count differs from context")
         offset = context_end + 2
         states: List[bytes] = []
-        expected_size: Optional[int] = None
         for _ in range(count):
             if offset + 2 > len(data):
                 raise DecodeError("truncated state length")
             state_size = decode_uint(data[offset : offset + 2], 2)
             offset += 2
-            if not 1 <= state_size <= MAX_STATE_BYTES:
-                raise DecodeError("invalid state size")
-            if expected_size is not None and state_size != expected_size:
-                raise DecodeError("states have inconsistent sizes")
-            expected_size = state_size
+            if state_size != suite.state_size:
+                raise DecodeError(
+                    f"state size must be exactly {suite.state_size} bytes for the selected suite"
+                )
             end = offset + state_size
             if end > len(data):
                 raise DecodeError("truncated state")

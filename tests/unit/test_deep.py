@@ -1,6 +1,6 @@
 from sigma.anchors import CrossWide
 from sigma.presets import paranoid_deep_v2, paranoid_wide_v2
-from sigma.rounds import Deep
+from sigma.rounds import Deep, TraceConfig, TracePolicy
 from sigma.v2 import hash_bytes, trace_bytes, verify_full
 
 
@@ -28,3 +28,20 @@ def test_deep_and_wide_are_separate_suites_and_verify_fully() -> None:
     assert deep != wide
     assert verify_full(b"abc", deep)
     assert not verify_full(b"abd", deep)
+
+
+def test_deep_rolling_evaluation_matches_full_trace() -> None:
+    context = paranoid_deep_v2(target_round=8, state_count=3)
+    anchor = CrossWide.compute(context, (b"abc",))
+    engine = Deep(context)
+    rolling = engine.evaluate_digest(anchor)
+    traced, transcript = engine.evaluate(anchor)
+    assert rolling == traced
+    assert rolling.states == transcript.states[-context.state_count :]
+
+    no_trace_digest, transcript = engine.evaluate_trace(
+        anchor, TraceConfig(TracePolicy.NONE)
+    )
+    assert no_trace_digest == rolling
+    assert transcript.states == ()
+    assert transcript.branch_outputs == ()

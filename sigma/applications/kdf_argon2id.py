@@ -6,6 +6,7 @@ from sigma.outputs import SigmaDigestV2
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError, decode_tlv, decode_uint, encode_tlv, encode_uint
 from sigma.v2 import hash_bytes
+from sigma.validation import require_int
 
 ARGON2_VERSION_13 = 0x13
 KDF_MAGIC = b"SIGMAKDF2"
@@ -20,18 +21,13 @@ class Argon2idParameters:
     version: int = ARGON2_VERSION_13
 
     def __post_init__(self) -> None:
-        for name in ("memory_kib", "time_cost", "parallelism", "output_length", "version"):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(f"{name} must be an integer")
-        if self.parallelism < 1 or self.parallelism > 0xFFFF:
-            raise ValueError("parallelism must be in [1, 65535]")
-        if self.memory_kib < 8 * self.parallelism or self.memory_kib > 0xFFFFFFFF:
+        require_int("parallelism", self.parallelism, minimum=1, maximum=0xFFFF)
+        require_int("memory_kib", self.memory_kib, minimum=1, maximum=0xFFFFFFFF)
+        require_int("time_cost", self.time_cost, minimum=1, maximum=0xFFFFFFFF)
+        require_int("output_length", self.output_length, minimum=16, maximum=1024)
+        require_int("version", self.version, minimum=0, maximum=0xFF)
+        if self.memory_kib < 8 * self.parallelism:
             raise ValueError("memory_kib must be at least 8 * parallelism and fit uint32")
-        if self.time_cost < 1 or self.time_cost > 0xFFFFFFFF:
-            raise ValueError("time_cost must be in [1, 2^32-1]")
-        if self.output_length < 16 or self.output_length > 1024:
-            raise ValueError("output_length must be in [16, 1024]")
         if self.version != ARGON2_VERSION_13:
             raise ValueError("only Argon2 version 1.3 is supported")
 

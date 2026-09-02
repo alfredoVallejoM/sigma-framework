@@ -40,7 +40,7 @@ class IncrementalSigmaV2:
         if self._finalized:
             raise RuntimeError("incremental digest is already finalized")
         evidence = self._anchor.checkpoint()
-        digest, _ = _round_engine(self.context).evaluate(evidence)
+        digest = _round_engine(self.context).evaluate_digest(evidence)
         return SigmaCheckpointV2(self._offset, digest)
 
     def finalize(self) -> SigmaDigestV2:
@@ -48,5 +48,4 @@ class IncrementalSigmaV2:
             raise RuntimeError("incremental digest is already finalized")
         self._finalized = True
         evidence = self._anchor.finalize()
-        digest, _ = _round_engine(self.context).evaluate(evidence)
-        return digest
+        return _round_engine(self.context).evaluate_digest(evidence)

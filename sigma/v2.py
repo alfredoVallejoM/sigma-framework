@@ -13,9 +13,10 @@ from sigma.anchors import (
 )
 from sigma.backends import SERIAL_BACKEND, ExecutionBackend, FileExecutionBackend
 from sigma.outputs import SigmaDigestV2
-from sigma.rounds import Deep, RoundTranscript, WideOnce
+from sigma.rounds import Deep, RoundTranscript, TraceConfig, WideOnce
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId, RoundProfileId
+from sigma.validation import ValidationError, require_int
 
 DEFAULT_READ_SIZE = 64 * 1024
 
@@ -44,8 +45,7 @@ def hash_chunks(chunks: Iterable[bytes], context: Optional[SigmaContextV2] = Non
     for chunk in chunks:
         engine.update(chunk)
     anchor = engine.finalize()
-    digest, _ = _round_engine(selected_context).evaluate(anchor)
-    return digest
+    return _round_engine(selected_context).evaluate_digest(anchor)
 
 
 def hash_bytes(
@@ -60,8 +60,7 @@ def hash_bytes(
     if not isinstance(selected_backend, ExecutionBackend):
         raise TypeError("backend must implement ExecutionBackend")
     anchor = selected_backend.compute_anchor(data, selected_context)
-    digest, _ = _round_engine(selected_context).evaluate(anchor)
-    return digest
+    return _round_engine(selected_context).evaluate_digest(anchor)
 
 
 def hash_text(text: str, context: Optional[SigmaContextV2] = None) -> SigmaDigestV2:
@@ -77,8 +76,10 @@ def hash_reader(
     context: Optional[SigmaContextV2] = None,
     read_size: int = DEFAULT_READ_SIZE,
 ) -> SigmaDigestV2:
-    if isinstance(read_size, bool) or not isinstance(read_size, int) or read_size <= 0:
-        raise ValueError("read_size must be a positive integer")
+    try:
+        require_int("read_size", read_size, minimum=1, maximum=(1 << 63) - 1)
+    except ValidationError:
+        raise ValidationError("read_size must be a positive integer") from None
     selected_context = context if context is not None else SigmaContextV2()
     anchor_engine = _anchor_engine(selected_context)
     while True:
@@ -88,8 +89,7 @@ def hash_reader(
         if not chunk:
             break
         anchor_engine.update(chunk)
-    digest, _ = _round_engine(selected_context).evaluate(anchor_engine.finalize())
-    return digest
+    return _round_engine(selected_context).evaluate_digest(anchor_engine.finalize())
 
 
 def hash_file(
@@ -104,11 +104,14 @@ def hash_file(
     if not isinstance(backend, FileExecutionBackend):
         raise TypeError("file backend must implement FileExecutionBackend")
     anchor = backend.compute_anchor_file(path, selected_context)
-    digest, _ = _round_engine(selected_context).evaluate(anchor)
-    return digest
+    return _round_engine(selected_context).evaluate_digest(anchor)
 
 
-def trace_bytes(data: bytes, context: Optional[SigmaContextV2] = None) -> RoundTranscript:
+def trace_bytes(
+    data: bytes,
+    context: Optional[SigmaContextV2] = None,
+    trace: Optional[TraceConfig] = None,
+) -> RoundTranscript:
     """Return a diagnostic transcript; do not persist secret-bearing traces."""
 
     if not isinstance(data, bytes):
@@ -117,7 +120,7 @@ def trace_bytes(data: bytes, context: Optional[SigmaContextV2] = None) -> RoundT
     engine = _anchor_engine(selected_context)
     engine.update(data)
     anchor = engine.finalize()
-    _, transcript = _round_engine(selected_context).evaluate(anchor)
+    _, transcript = _round_engine(selected_context).evaluate_trace(anchor, trace)
     return transcript
 
 

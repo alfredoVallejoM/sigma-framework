@@ -53,10 +53,37 @@ def test_digest_requires_context_state_count() -> None:
 
 
 def test_digest_requires_equal_nonempty_states() -> None:
-    with pytest.raises(ValueError, match="same size"):
+    with pytest.raises(ValueError, match="exactly 64 bytes"):
         SigmaDigestV2(SigmaContextV2(), (b"a", b"bb"))
-    with pytest.raises(ValueError, match="state size"):
+    with pytest.raises(ValueError, match="exactly 64 bytes"):
         SigmaDigestV2(SigmaContextV2(), (b"", b""))
+
+
+@pytest.mark.parametrize("state_size", [0, 1, 63, 65, 1024, 1025])
+def test_digest_constructor_rejects_non_suite_state_width(state_size: int) -> None:
+    with pytest.raises(ValueError, match="exactly 64 bytes"):
+        SigmaDigestV2(SigmaContextV2(), (b"a" * state_size, b"b" * state_size))
+
+
+def test_digest_constructor_accepts_suite_state_width() -> None:
+    SigmaDigestV2(SigmaContextV2(), (b"a" * 64, b"b" * 64))
+
+
+@pytest.mark.parametrize("state_size", [0, 1, 63, 65, 1024, 1025])
+def test_digest_parser_rejects_non_suite_state_width(state_size: int) -> None:
+    context = SigmaContextV2().to_bytes()
+    malformed = (
+        DIGEST_MAGIC
+        + len(context).to_bytes(4, "big")
+        + context
+        + (2).to_bytes(2, "big")
+        + state_size.to_bytes(2, "big")
+        + b"a" * state_size
+        + state_size.to_bytes(2, "big")
+        + b"b" * state_size
+    )
+    with pytest.raises(DecodeError, match="exactly 64 bytes"):
+        SigmaDigestV2.from_bytes(malformed)
 
 
 def test_digest_parser_rejects_count_downgrade() -> None:

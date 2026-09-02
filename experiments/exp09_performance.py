@@ -79,14 +79,14 @@ def _prepared_operation(construction: str, operation: str, message: bytes):
     anchor_engine = _anchor_engine(context)
     anchor_engine.update(message)
     anchor = anchor_engine.finalize()
-    digest, _ = _round_engine(context).evaluate(anchor)
+    digest = _round_engine(context).evaluate_digest(anchor)
     if operation == "anchor":
         return (
             lambda: _anchor_engine(context).compute(context, (message,)).to_bytes(),
             "memory",
         )
     if operation == "rounds":
-        return lambda: _round_engine(context).evaluate(anchor)[0].to_bytes(), "memory"
+        return lambda: _round_engine(context).evaluate_digest(anchor).to_bytes(), "memory"
     if operation == "serialization":
         return digest.to_bytes, "memory"
     if operation == "verification":

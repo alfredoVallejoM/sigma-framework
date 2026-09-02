@@ -15,8 +15,7 @@ def _evaluate(payload: bytes, context) -> bytes:
     anchor_engine = _anchor_engine(context)
     anchor_engine.update(payload)
     anchor = anchor_engine.finalize()
-    digest, _ = _round_engine(context).evaluate(anchor)
-    return digest.to_bytes()
+    return _round_engine(context).evaluate_digest(anchor).to_bytes()
 
 
 def run(config: dict[str, Any]) -> list[dict[str, Any]]:

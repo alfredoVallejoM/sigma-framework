@@ -7,6 +7,8 @@ big-endian length. The parser rejects every alternative representation.
 import struct
 from typing import Dict, FrozenSet, Iterable, Tuple
 
+from sigma.validation import require_int
+
 MAX_FIELD_LENGTH = 1 << 20
 _TLV_HEADER = struct.Struct(">HI")
 _DOMAIN_MAGIC = b"SIGMADST"
@@ -17,13 +19,10 @@ class DecodeError(ValueError):
 
 
 def encode_uint(value: int, width: int) -> bytes:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError("integer value required")
     if width not in (1, 2, 4, 8):
         raise ValueError("integer width must be 1, 2, 4, or 8 bytes")
-    if not 0 <= value < 1 << (width * 8):
-        raise ValueError(f"integer does not fit in {width} bytes")
-    return value.to_bytes(width, "big")
+    checked = require_int("value", value, minimum=0, maximum=(1 << (width * 8)) - 1)
+    return checked.to_bytes(width, "big")
 
 
 def decode_uint(data: bytes, width: int) -> int:

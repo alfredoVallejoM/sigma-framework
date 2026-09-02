@@ -50,7 +50,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
         roots = list(anchor.roots)
         roots[root_index] = _flip(roots[root_index], rng.randrange(len(roots[root_index]) * 8))
         faulty_anchor = AnchorEvidence(anchor.algorithms, tuple(roots), anchor.message_length)
-        changed, _ = WideOnce(context).evaluate(faulty_anchor)
+        changed = WideOnce(context).evaluate_digest(faulty_anchor)
         records.append(
             {
                 "detected": changed.to_bytes() != expected.to_bytes(),

@@ -3,9 +3,17 @@ from typing import Any
 
 import pytest
 
-from sigma.spec.context import SigmaContextV2
+from sigma.spec.context import SigmaContextV2, parse_context, validate_registered_context
 from sigma.spec.encoding import DecodeError, decode_tlv, encode_tlv, encode_uint
-from sigma.spec.ids import CONTEXT_MAGIC
+from sigma.spec.ids import (
+    CONTEXT_MAGIC,
+    AlgorithmId,
+    AnchorProfileId,
+    OutputProfileId,
+    RoundProfileId,
+    SuiteId,
+)
+from sigma.suites.registry import get_suite
 
 
 def test_context_round_trip_is_unique() -> None:
@@ -82,3 +90,53 @@ def test_context_rejects_noncanonical_field_order() -> None:
 def test_context_resource_limits(kwargs: dict[str, Any]) -> None:
     with pytest.raises((TypeError, ValueError)):
         SigmaContextV2(**kwargs)
+
+
+def test_syntax_only_parser_does_not_authorize_mismatched_suite() -> None:
+    mismatched = SigmaContextV2(anchor_profile=AnchorProfileId.CROSS_WIDE)
+    assert parse_context(mismatched.to_bytes()) == mismatched
+    with pytest.raises(DecodeError, match="registered suite"):
+        SigmaContextV2.from_bytes(mismatched.to_bytes())
+    with pytest.raises(DecodeError, match="registered suite"):
+        validate_registered_context(mismatched)
+
+
+def test_registered_context_matrix_accepts_only_exact_suite_tuples() -> None:
+    branch_sets = (
+        (AlgorithmId.SHA512, AlgorithmId.SHA3_512),
+        (
+            AlgorithmId.SHA512,
+            AlgorithmId.SHA3_512,
+            AlgorithmId.BLAKE2B_512,
+            AlgorithmId.SHAKE256_512,
+        ),
+    )
+    for suite_id in SuiteId:
+        suite = get_suite(suite_id)
+        for anchor_profile in AnchorProfileId:
+            for round_profile in RoundProfileId:
+                for output_profile in OutputProfileId:
+                    for branches in branch_sets:
+                        for chunk_size in (0, 65536):
+                            context = SigmaContextV2(
+                                suite_id=suite_id,
+                                anchor_profile=anchor_profile,
+                                round_profile=round_profile,
+                                output_profile=output_profile,
+                                branches=branches,
+                                chunk_size=chunk_size,
+                            )
+                            expected = (
+                                anchor_profile is suite.anchor_profile
+                                and round_profile is suite.round_profile
+                                and output_profile is suite.output_profile
+                                and branches == suite.branches
+                                and chunk_size
+                                == (65536 if anchor_profile is AnchorProfileId.TREE_WIDE else 0)
+                            )
+                            if expected:
+                                assert validate_registered_context(context) is context
+                                assert SigmaContextV2.from_bytes(context.to_bytes()) == context
+                            else:
+                                with pytest.raises(DecodeError):
+                                    validate_registered_context(context)

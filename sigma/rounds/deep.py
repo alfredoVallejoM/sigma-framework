@@ -1,6 +1,7 @@
 """Deep profile: every branch is evaluated at every sequential level."""
 
-from typing import List, Tuple
+from collections import deque
+from typing import List, Optional, Tuple
 
 from sigma.anchors.base import CrossWideEvidence
 from sigma.anchors.branches import hash_once
@@ -9,8 +10,9 @@ from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import domain_tag, encode_tlv, encode_uint
 from sigma.spec.ids import DomainId, RoundProfileId
 from sigma.suites.registry import get_suite
+from sigma.validation import require_int
 
-from .wide_once import RoundTranscript
+from .wide_once import RoundTranscript, TraceConfig, TracePolicy
 
 
 class Deep:
@@ -38,8 +40,7 @@ class Deep:
         self, anchor: CrossWideEvidence, index: int, state: bytes
     ) -> Tuple[bytes, Tuple[bytes, ...]]:
         self._validate_anchor(anchor)
-        if isinstance(index, bool) or not 0 <= index < 1 << 64:
-            raise ValueError("round index must fit in an unsigned 64-bit integer")
+        require_int("round index", index, minimum=0, maximum=(1 << 64) - 1)
         if not isinstance(state, bytes) or len(state) != self.suite.state_size:
             raise ValueError(f"state must contain exactly {self.suite.state_size} bytes")
         branch_outputs = []
@@ -76,17 +77,56 @@ class Deep:
         successor, _ = self._next_with_branches(anchor, index, state)
         return successor
 
-    def evaluate(self, anchor: CrossWideEvidence):
+    def evaluate_digest(self, anchor: CrossWideEvidence) -> SigmaDigestV2:
+        """Evaluate without retaining diagnostic branch outputs or prior states."""
+
+        self._validate_anchor(anchor)
         state = self._initial_state(anchor)
-        states: List[bytes] = [state]
-        outputs: List[Tuple[bytes, ...]] = []
+        selected = deque((state,), maxlen=self.context.state_count)
         last_index = self.context.target_round + self.context.state_count - 1
         for index in range(last_index):
+            state = self.next_state(anchor, index, state)
+            selected.append(state)
+        return SigmaDigestV2(self.context, tuple(selected))
+
+    def evaluate_trace(
+        self, anchor: CrossWideEvidence, trace: Optional[TraceConfig] = None
+    ) -> Tuple[SigmaDigestV2, RoundTranscript]:
+        self._validate_anchor(anchor)
+        trace = trace if trace is not None else TraceConfig()
+        last_index = self.context.target_round + self.context.state_count - 1
+        trace.validate_budget(last_index)
+        state = self._initial_state(anchor)
+        selected = deque((state,), maxlen=self.context.state_count)
+        states: List[bytes] = [state] if trace.captures(0) else []
+        state_indices: List[int] = [0] if trace.captures(0) else []
+        outputs: List[Tuple[bytes, ...]] = []
+        output_indices: List[int] = []
+        for index in range(last_index):
             state, round_outputs = self._next_with_branches(anchor, index, state)
-            states.append(state)
-            outputs.append(round_outputs)
-        selected = tuple(states[self.context.target_round : last_index + 1])
+            state_index = index + 1
+            selected.append(state)
+            if trace.captures(state_index):
+                states.append(state)
+                state_indices.append(state_index)
+            if trace.captures(index):
+                outputs.append(round_outputs)
+                output_indices.append(index)
         return (
-            SigmaDigestV2(self.context, selected),
-            RoundTranscript(tuple(states), tuple(outputs)),
+            SigmaDigestV2(self.context, tuple(selected)),
+            RoundTranscript(
+                tuple(states),
+                tuple(outputs),
+                tuple(state_indices),
+                tuple(output_indices),
+            ),
+        )
+
+    def evaluate(self, anchor: CrossWideEvidence) -> Tuple[SigmaDigestV2, RoundTranscript]:
+        """Compatibility alias for an explicit full diagnostic trace."""
+
+        last_index = self.context.target_round + self.context.state_count - 1
+        return self.evaluate_trace(
+            anchor,
+            TraceConfig(policy=TracePolicy.FULL, max_entries=last_index + 1),
         )

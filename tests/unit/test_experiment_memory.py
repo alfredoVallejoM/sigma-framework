@@ -20,4 +20,26 @@ def test_memory_experiment_uses_fresh_process_and_records_scope() -> None:
     assert len(records) == 4
     assert all(record["rss_scope"] == "current-process" for record in records)
     assert all(record["peak_allocated_bytes"] > 0 for record in records)
-    assert len(summarize(records)) == 2
+    summaries = summarize(records)
+    assert len(summaries) == 6
+    assert {group["dimension"] for group in summaries} == {"message_bytes", "target_round"}
+
+
+def test_memory_experiment_models_depth_and_trace_policy_separately() -> None:
+    records = run(
+        {
+            "io_chunks": [1024],
+            "profiles": ["stream-wide"],
+            "repetitions": 2,
+            "sizes": [0],
+            "state_counts": [3],
+            "target_rounds": [16, 256],
+            "trace_policies": ["none", "full"],
+            "timeout_seconds": 30,
+        }
+    )
+    assert len(records) == 8
+    assert all(record["trace_entries"] == 0 for record in records if record["trace_policy"] == "none")
+    assert all(record["trace_entries"] > 0 for record in records if record["trace_policy"] == "full")
+    depth = [group for group in summarize(records) if group["dimension"] == "target_round"]
+    assert len(depth) == 2

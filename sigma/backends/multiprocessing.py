@@ -9,6 +9,7 @@ from typing import Iterator, Tuple
 from sigma.anchors import AnchorEvidence, TreeWide
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
+from sigma.validation import require_int
 
 from .base import ExecutionBackend, FileExecutionBackend
 
@@ -47,11 +48,9 @@ class MultiprocessingTreeBackend(ExecutionBackend, FileExecutionBackend):
     workers: int = 0
 
     def __post_init__(self) -> None:
-        if isinstance(self.workers, bool) or not isinstance(self.workers, int):
-            raise TypeError("workers must be an integer")
+        require_int("workers", self.workers, minimum=0, maximum=MAX_WORKERS)
         selected = self.workers or (os.cpu_count() or 1)
-        if not 1 <= selected <= MAX_WORKERS:
-            raise ValueError(f"workers must be in [1, {MAX_WORKERS}]")
+        require_int("workers", selected, minimum=1, maximum=MAX_WORKERS)
         object.__setattr__(self, "workers", selected)
 
     @property

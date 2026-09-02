@@ -1,7 +1,11 @@
+import gc
+import statistics
+import tracemalloc
+
 import pytest
 
 from sigma.anchors import StreamWide
-from sigma.rounds import WideOnce
+from sigma.rounds import TraceConfig, TracePolicy, WideOnce
 from sigma.spec import SigmaContextV2
 
 
@@ -46,3 +50,67 @@ def test_engine_rejects_wrong_state_size() -> None:
     anchor = StreamWide.compute(context, [b"abc"])
     with pytest.raises(ValueError, match="64 bytes"):
         WideOnce(context).next_state(anchor, 0, b"short")
+
+
+def test_rolling_evaluation_matches_full_trace_without_retaining_history() -> None:
+    context = SigmaContextV2(target_round=128, state_count=3)
+    anchor = StreamWide.compute(context, [b"abc"])
+    engine = WideOnce(context)
+    rolling = engine.evaluate_digest(anchor)
+    traced, transcript = engine.evaluate(anchor)
+    assert rolling == traced
+    assert rolling.states == transcript.states[-context.state_count :]
+
+
+def test_trace_policies_capture_only_requested_state_indices() -> None:
+    context = SigmaContextV2(target_round=8, state_count=2)
+    anchor = StreamWide.compute(context, [b"abc"])
+    engine = WideOnce(context)
+    digest, no_trace = engine.evaluate_trace(anchor, TraceConfig(TracePolicy.NONE))
+    assert no_trace.states == ()
+    assert no_trace.state_indices == ()
+    assert digest == engine.evaluate_digest(anchor)
+
+    _, selected = engine.evaluate_trace(
+        anchor,
+        TraceConfig(TracePolicy.SELECTED, selected_indices=(0, 3, 9)),
+    )
+    assert selected.state_indices == (0, 3, 9)
+
+    _, sampled = engine.evaluate_trace(
+        anchor,
+        TraceConfig(TracePolicy.EVERY_N, every_n=4),
+    )
+    assert sampled.state_indices == (0, 4, 8)
+
+
+def test_trace_budget_is_rejected_before_evaluation() -> None:
+    context = SigmaContextV2(target_round=8, state_count=2)
+    anchor = StreamWide.compute(context, [b"abc"])
+    with pytest.raises(ValueError, match="max_entries"):
+        WideOnce(context).evaluate_trace(
+            anchor,
+            TraceConfig(TracePolicy.FULL, max_entries=3),
+        )
+
+
+def _rolling_peak(target_round: int) -> int:
+    context = SigmaContextV2(target_round=target_round, state_count=3)
+    anchor = StreamWide.compute(context, [b"memory-regression"])
+    peaks = []
+    for _ in range(3):
+        gc.collect()
+        tracemalloc.start()
+        WideOnce(context).evaluate_digest(anchor)
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        peaks.append(peak)
+    return int(statistics.median(peaks))
+
+
+def test_rolling_evaluation_memory_does_not_scale_with_target_round() -> None:
+    short_peak = _rolling_peak(16)
+    long_peak = _rolling_peak(4096)
+    # A former implementation retained 4,099 complete 64-byte states. Permit
+    # allocator noise, but reject any return to storage proportional to t.
+    assert long_peak <= short_peak + 16 * 1024

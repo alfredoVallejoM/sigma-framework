@@ -144,6 +144,9 @@ The byte-level construction is specified in
 [`specification/sigma-v2.md`](specification/sigma-v2.md). Work packages, gates
 and remaining experimental/paper tasks are tracked in
 [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md).
+The post-audit redesign, formal obligations, confirmatory experiments, metrics
+and planned paper figures are specified in
+[`docs/research-addendum-v2-2.md`](docs/research-addendum-v2-2.md).
 The formal claims and working paper are in
 [`specification/security-analysis.md`](specification/security-analysis.md) and
 [`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment protocol and smoke configurations are documented in

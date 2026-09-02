@@ -3,6 +3,11 @@
 Esta hoja traduce el plan maestro a gates comprobables. Un gate no se considera
 cerrado por tener código: requiere especificación, tests y artefactos indicados.
 
+La planificación posterior a la auditoría de la reconstrucción v2, incluyendo
+las correcciones del núcleo, la ampliación formal, los experimentos revisados,
+sus métricas y las figuras previstas para el artículo, se desarrolla en
+[`research-addendum-v2-2.md`](research-addendum-v2-2.md).
+
 ## Fase 0 — Baseline y aislamiento de v1
 
 - Corregir compilación de CLI sin modificar digests.

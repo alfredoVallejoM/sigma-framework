@@ -5,6 +5,7 @@ from typing import Tuple
 
 from sigma.spec.encoding import domain_tag, encode_uint
 from sigma.spec.ids import AlgorithmId, DomainId
+from sigma.validation import require_int
 
 
 @dataclass(frozen=True)
@@ -22,8 +23,7 @@ class AnchorEvidence:
             raise TypeError("anchor algorithms must be AlgorithmId values")
         if not all(isinstance(root, bytes) and root for root in self.roots):
             raise TypeError("anchor roots must be non-empty bytes")
-        if isinstance(self.message_length, bool) or not 0 <= self.message_length < 1 << 64:
-            raise ValueError("message length must fit in an unsigned 64-bit integer")
+        require_int("message_length", self.message_length, minimum=0, maximum=(1 << 64) - 1)
 
     @property
     def physical_width_bits(self) -> int:
@@ -55,8 +55,7 @@ class CrossWideEvidence:
             raise TypeError("cross anchor algorithms must be AlgorithmId values")
         if not all(isinstance(root, bytes) and root for root in self.roots + self.cross_roots):
             raise TypeError("cross anchor components must be non-empty bytes")
-        if isinstance(self.message_length, bool) or not 0 <= self.message_length < 1 << 64:
-            raise ValueError("message length must fit in an unsigned 64-bit integer")
+        require_int("message_length", self.message_length, minimum=0, maximum=(1 << 64) - 1)
 
     @property
     def physical_width_bits(self) -> int:

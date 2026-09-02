@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Tuple
 
+from sigma.validation import require_int
+
 from .encoding import (
     DecodeError,
     decode_tlv,
@@ -58,12 +60,9 @@ class SigmaContextV2:
         ):
             if not isinstance(getattr(self, name), enum_type):
                 raise TypeError(f"{name} must be {enum_type.__name__}")
-        if isinstance(self.target_round, bool) or not 0 <= self.target_round <= MAX_TARGET_ROUND:
-            raise ValueError(f"target_round must be in [0, {MAX_TARGET_ROUND}]")
-        if isinstance(self.state_count, bool) or not 1 <= self.state_count <= MAX_STATE_COUNT:
-            raise ValueError(f"state_count must be in [1, {MAX_STATE_COUNT}]")
-        if isinstance(self.chunk_size, bool) or not 0 <= self.chunk_size <= 0xFFFFFFFF:
-            raise ValueError("chunk_size must fit in an unsigned 32-bit integer")
+        require_int("target_round", self.target_round, minimum=0, maximum=MAX_TARGET_ROUND)
+        require_int("state_count", self.state_count, minimum=1, maximum=MAX_STATE_COUNT)
+        require_int("chunk_size", self.chunk_size, minimum=0, maximum=0xFFFFFFFF)
         if not self.branches or len(set(self.branches)) != len(self.branches):
             raise ValueError("branches must be non-empty and contain no duplicates")
         if not all(isinstance(branch, AlgorithmId) for branch in self.branches):
@@ -95,6 +94,12 @@ class SigmaContextV2:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> "SigmaContextV2":
+        """Parse and require membership in the closed suite registry."""
+
+        return validate_registered_context(cls._parse_bytes(data))
+
+    @classmethod
+    def _parse_bytes(cls, data: bytes) -> "SigmaContextV2":
         prefix_size = len(CONTEXT_MAGIC) + 6
         if not isinstance(data, bytes):
             raise TypeError("context encoding must be bytes")
@@ -135,3 +140,24 @@ class SigmaContextV2:
             )
         except (TypeError, ValueError) as exc:
             raise DecodeError(f"invalid context field: {exc}") from exc
+
+
+def parse_context(data: bytes) -> SigmaContextV2:
+    """Parse canonical syntax without authorizing evaluation of the suite tuple."""
+
+    return SigmaContextV2._parse_bytes(data)
+
+
+def validate_registered_context(context: SigmaContextV2) -> SigmaContextV2:
+    """Return a context only when every semantic field matches its registered suite."""
+
+    if not isinstance(context, SigmaContextV2):
+        raise TypeError("context must be SigmaContextV2")
+    # Local import breaks the intentional context/registry dependency cycle.
+    from sigma.suites.registry import get_suite
+
+    try:
+        get_suite(context.suite_id).validate_context(context)
+    except ValueError as exc:
+        raise DecodeError(f"context does not match its registered suite: {exc}") from exc
+    return context

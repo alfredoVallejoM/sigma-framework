@@ -127,6 +127,9 @@ reglas de exclusión. Congelar configs sólo después de medir factibilidad.
 Estado: EXP-00 v2 implementado y probado; el diseño/prerregistro de las campañas
 R y sus estimaciones sigue abierto. Las configuraciones históricas continúan
 siendo smoke y no se han promovido silenciosamente a confirmatorias.
+Los borradores `confirmatory-v1` están bloqueados activamente: una configuración
+confirmatoria nueva exige prerregistro `frozen` con hash coincidente, y fuerza
+tag limpio más hash del artefacto instalable antes de ejecutar una sola tarea.
 
 ### C5 — Confirmatorio (R5)
 

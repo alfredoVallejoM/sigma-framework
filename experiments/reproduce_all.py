@@ -14,7 +14,9 @@ def reproduce_all(
     if campaign == "smoke":
         configs = [config_dir / f"exp{index:02d}-smoke.json" for index in range(1, 11)]
     elif campaign == "confirmatory":
-        configs = [config_dir / "confirmatory" / f"exp{index:02d}.json" for index in range(1, 11)]
+        raise ValueError(
+            "legacy confirmatory-v1 configs are blocked; freeze the revised R protocols first"
+        )
     else:
         raise ValueError("campaign must be smoke or confirmatory")
     missing = [str(path) for path in configs if not path.is_file()]

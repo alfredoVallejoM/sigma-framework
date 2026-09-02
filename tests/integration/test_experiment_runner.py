@@ -175,3 +175,35 @@ def test_runner_distinguishes_timeout_and_right_censoring(tmp_path: Path) -> Non
     timeout_summary = json.loads((timeout_output / "summary.json").read_text(encoding="utf-8"))
     assert timeout_summary["execution_complete"] is False
     assert timeout_summary["tasks"]["timeout"] == 1
+
+    recovered = _run(config, timeout_output, "--resume", "--task-timeout", "10")
+    assert recovered.returncode == 0, recovered.stderr
+    recovered_summary = json.loads(
+        (timeout_output / "summary.json").read_text(encoding="utf-8")
+    )
+    assert recovered_summary["execution_complete"] is True
+    assert recovered_summary["tasks"]["censored"] == 1
+    attempts = list((timeout_output / "tasks").glob("*/attempts/0001-result.json"))
+    assert len(attempts) == 1
+    assert json.loads(attempts[0].read_text(encoding="utf-8"))["status"] == "timeout"
+
+
+def test_runner_blocks_unfrozen_confirmatory_config_before_execution(tmp_path: Path) -> None:
+    config = tmp_path / "config.json"
+    config.write_text(
+        json.dumps(
+            {
+                "campaign": "confirmatory-v2-2",
+                "experiment": "EXP-01",
+                "master_seed": "must-not-run",
+                "presets": ["lightweight-v2-2"],
+                "sizes": [0],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "blocked"
+    result = _run(config, output)
+    assert result.returncode == 2
+    assert "frozen preregistration" in result.stderr
+    assert not output.exists()

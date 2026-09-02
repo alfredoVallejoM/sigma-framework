@@ -177,6 +177,16 @@ def _read_task_result(path: Path, identifier: str) -> dict[str, Any]:
     return result
 
 
+def _archive_failed_attempt(task_dir: Path) -> None:
+    attempts = task_dir / "attempts"
+    attempts.mkdir(exist_ok=True)
+    index = len(list(attempts.glob("*-result.json"))) + 1
+    for name in ("result.json", "stdout.log", "stderr.log"):
+        source = task_dir / name
+        if source.is_file():
+            os.replace(source, attempts / f"{index:04d}-{name}")
+
+
 def _run_task(task: dict[str, Any], tasks_root: Path, timeout: float | None) -> dict[str, Any]:
     identifier = str(task["id"])
     task_dir = tasks_root / identifier
@@ -264,6 +274,23 @@ def _false_values(items: list[dict[str, Any]], predicate: Callable[[str], bool])
     return sum(value is False for item in items for key, value in item.items() if predicate(key))
 
 
+def _validate_confirmatory_protocol(config: dict[str, Any]) -> bool:
+    campaign = config.get("campaign")
+    if not isinstance(campaign, str) or not campaign.startswith("confirmatory"):
+        return False
+    preregistration = config.get("preregistration")
+    if not isinstance(preregistration, dict) or preregistration.get("status") != "frozen":
+        raise ValueError("confirmatory campaigns require a frozen preregistration")
+    path_value = preregistration.get("path")
+    expected = preregistration.get("sha256")
+    if not isinstance(path_value, str) or not isinstance(expected, str):
+        raise ValueError("confirmatory preregistration requires path and sha256")
+    path = Path(path_value)
+    if not path.is_file() or sha256_file(path) != expected:
+        raise ValueError("confirmatory preregistration file/hash mismatch")
+    return True
+
+
 def execute(
     config_path: Path,
     output: Path,
@@ -279,6 +306,7 @@ def execute(
     experiment = config.get("experiment")
     if experiment not in RUNNERS:
         raise ValueError(f"unsupported experiment: {experiment!r}")
+    confirmatory = _validate_confirmatory_protocol(config)
     tasks, execution = _task_plan(config)
     configured_timeout = execution.get("timeout_seconds")
     timeout = task_timeout if task_timeout is not None else configured_timeout
@@ -299,7 +327,9 @@ def execute(
         _atomic_bytes(config_copy, expected_config)
 
     manifest = environment_manifest(config, command)
-    strict_source = require_clean_tag or execution.get("require_clean_tag") is True
+    strict_source = (
+        require_clean_tag or execution.get("require_clean_tag") is True or confirmatory
+    )
     if strict_source and not manifest["publishable_source"]:
         raise ValueError("publishable execution requires a clean exact tag and artifact_path hash")
 
@@ -307,11 +337,15 @@ def execute(
     tasks_root.mkdir(exist_ok=True)
     results: list[dict[str, Any]] = []
     for task in tasks:
-        result_path = tasks_root / str(task["id"]) / "result.json"
+        task_dir = tasks_root / str(task["id"])
+        result_path = task_dir / "result.json"
         if resume and result_path.is_file():
-            results.append(_read_task_result(result_path, str(task["id"])))
-        else:
-            results.append(_run_task(task, tasks_root, float(timeout) if timeout else None))
+            previous = _read_task_result(result_path, str(task["id"]))
+            if previous["status"] in {"success", "censored"}:
+                results.append(previous)
+                continue
+            _archive_failed_attempt(task_dir)
+        results.append(_run_task(task, tasks_root, float(timeout) if timeout else None))
 
     records = [
         record

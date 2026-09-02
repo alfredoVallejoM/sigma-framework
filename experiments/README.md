@@ -50,6 +50,10 @@ Right-censoring is a completed scientific observation. Summary v2 reports
 `execution_complete`, `invariants_passed`, `hypothesis_outcome` and
 `quality_controls_passed`; an unsupported statistical hypothesis does not turn
 an otherwise valid run into an execution failure.
+On resume, `success` and `censored` partitions are immutable. Failed or timed
+out attempts are moved to `tasks/<id>/attempts/` with their logs before a new
+attempt; this retains the failure history while permitting operational
+recovery with a different CLI timeout.
 
 Committed `*-smoke-*` results only validate the pipeline at modest cost. They
 must not be described as the full experiment or as evidence at production
@@ -95,12 +99,12 @@ python -m experiments.reproduce_all \
   --figure-output /tmp/sigma-reproduction-figures
 ```
 
-Preregistered resource-intensive configurations are under
-`experiments/configs/confirmatory`. Run them only on a controlled host with
-adequate disk, RAM and time by adding `--campaign confirmatory`. EXP-01 switches
-to bounded-memory file generation above 16 MiB; EXP-02 records right-censoring
-at its declared candidate budget. These configs are a protocol, not a claim
-that the confirmatory campaign has already been executed.
+The files under `experiments/configs/confirmatory` are retained historical
+`confirmatory-v1` drafts. They predate the revised R designs and are deliberately
+blocked by both the runner and `reproduce_all`. A future confirmatory config
+must name a frozen preregistration and its SHA-256; the runner also automatically
+requires a clean exact tag and hashed installed artifact. The current
+`preregistration-v2-2.md` is explicitly a draft and cannot satisfy that gate.
 
 The manifest records exact commit/tag state, microcode, dependencies, command,
 seed derivation and artifact hashes. Each task records start/end temperature,

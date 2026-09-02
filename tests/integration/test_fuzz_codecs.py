@@ -9,5 +9,6 @@ def test_codec_mutation_fuzz_harness_smoke() -> None:
         "evidence-cross",
         "evidence-wide",
         "kdf",
+        "kdf-result",
         "pow",
     }

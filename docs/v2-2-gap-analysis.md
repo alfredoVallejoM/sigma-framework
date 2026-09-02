@@ -212,3 +212,15 @@ y someter a reproducción y revisión criptográfica externas.
   conservar una ejecución auditable sin incorporarlo al digest matemático.
 - Validación de cierre: 314 tests pasan, 1 opcional se omite; quality, tipos y
   compilación permanecen verdes.
+
+### Tanda C2.1 — composición KDF LIB-08
+
+- La composición deja de devolver `(base_key, digest)`: `SigmaKdfResult`
+  conserva parámetros, salt, digest v2-2 y clave final, pero nunca la clave
+  Argon2id intermedia.
+- El resultado tiene codec estricto, dominio final separado, comprobación de
+  consistencia y `verify_password()` con comparación constante.
+- La política por defecto rechaza perfiles Argon2 débiles antes del cálculo;
+  EXP-12 declara una política de prueba separada y compara objetivos equivalentes.
+- Vector interoperable Argon2id+Sigma congelado. Validación con dependencia
+  real: 317 pruebas sin skips y EXP-12 smoke con 24 observaciones/cero fallos.

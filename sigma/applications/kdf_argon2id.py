@@ -1,15 +1,20 @@
 """Optional Argon2id composition; Sigma adds binding and overhead, not entropy."""
 
+import hashlib
+import hmac
 from dataclasses import dataclass
 
 from sigma.outputs import SigmaDigestV2
-from sigma.spec import SigmaContextV2
+from sigma.policy import DEFAULT_RESOURCE_POLICY, ResourcePolicy
+from sigma.presets import lightweight_v2_2
 from sigma.spec.encoding import DecodeError, decode_tlv, decode_uint, encode_tlv, encode_uint
 from sigma.v2 import hash_bytes
 from sigma.validation import require_int
 
 ARGON2_VERSION_13 = 0x13
 KDF_MAGIC = b"SIGMAKDF2"
+KDF_RESULT_MAGIC = b"SIGMAKDR2"
+KDF_FINAL_DOMAIN = b"SIGMA-KDF-FINAL-V1"
 
 
 @dataclass(frozen=True)
@@ -61,11 +66,18 @@ class Argon2idParameters:
             raise DecodeError(f"invalid KDF parameters: {exc}") from exc
 
 
-def derive_argon2id(password: bytes, salt: bytes, parameters: Argon2idParameters) -> bytes:
+def derive_argon2id(
+    password: bytes,
+    salt: bytes,
+    parameters: Argon2idParameters,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> bytes:
     if not isinstance(password, bytes):
         raise TypeError("password must be bytes")
     if not isinstance(salt, bytes) or len(salt) < 8:
         raise ValueError("salt must contain at least 8 bytes")
+    policy.validate_argon2(parameters.memory_kib, parameters.time_cost)
     try:
         from argon2.low_level import Type, hash_secret_raw
     except ImportError as exc:
@@ -82,12 +94,117 @@ def derive_argon2id(password: bytes, salt: bytes, parameters: Argon2idParameters
     )
 
 
-def derive_argon2id_sigma(
-    password: bytes, salt: bytes, parameters: Argon2idParameters
-) -> tuple[bytes, SigmaDigestV2]:
-    base_key = derive_argon2id(password, salt, parameters)
-    context = SigmaContextV2(
-        salt=salt,
-        application_context=parameters.to_bytes(),
+def _final_key(parameters: Argon2idParameters, salt: bytes, digest: SigmaDigestV2) -> bytes:
+    framed = encode_tlv(
+        (
+            (1, parameters.to_bytes()),
+            (2, salt),
+            (3, digest.to_bytes()),
+        )
     )
-    return base_key, hash_bytes(base_key, context)
+    return hashlib.shake_256(KDF_FINAL_DOMAIN + framed).digest(parameters.output_length)
+
+
+@dataclass(frozen=True)
+class SigmaKdfResult:
+    parameters: Argon2idParameters
+    salt: bytes
+    sigma_digest: SigmaDigestV2
+    final_key: bytes
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.parameters, Argon2idParameters):
+            raise TypeError("parameters must be Argon2idParameters")
+        if not isinstance(self.salt, bytes) or len(self.salt) < 8:
+            raise ValueError("salt must contain at least 8 bytes")
+        if not isinstance(self.sigma_digest, SigmaDigestV2):
+            raise TypeError("sigma_digest must be SigmaDigestV2")
+        if not isinstance(self.final_key, bytes):
+            raise TypeError("final_key must be bytes")
+        if self.sigma_digest.context.salt != self.salt:
+            raise ValueError("Sigma digest salt differs from KDF result")
+        expected_application = KDF_FINAL_DOMAIN + self.parameters.to_bytes()
+        if self.sigma_digest.context.application_context != expected_application:
+            raise ValueError("Sigma digest does not bind the KDF parameters")
+        if len(self.final_key) != self.parameters.output_length:
+            raise ValueError("final key length differs from KDF parameters")
+        if not hmac.compare_digest(
+            self.final_key, _final_key(self.parameters, self.salt, self.sigma_digest)
+        ):
+            raise ValueError("final key is inconsistent with the Sigma digest")
+
+    def to_bytes(self) -> bytes:
+        return KDF_RESULT_MAGIC + encode_tlv(
+            (
+                (1, self.parameters.to_bytes()),
+                (2, self.salt),
+                (3, self.sigma_digest.to_bytes()),
+                (4, self.final_key),
+            )
+        )
+
+    @classmethod
+    def bind(
+        cls,
+        parameters: Argon2idParameters,
+        salt: bytes,
+        sigma_digest: SigmaDigestV2,
+    ) -> "SigmaKdfResult":
+        return cls(
+            parameters,
+            salt,
+            sigma_digest,
+            _final_key(parameters, salt, sigma_digest),
+        )
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "SigmaKdfResult":
+        if not isinstance(data, bytes) or not data.startswith(KDF_RESULT_MAGIC):
+            raise DecodeError("invalid KDF result magic")
+        fields = decode_tlv(data[len(KDF_RESULT_MAGIC) :], allowed_tags=frozenset(range(1, 5)))
+        if set(fields) != set(range(1, 5)):
+            raise DecodeError("missing KDF result fields")
+        try:
+            return cls(
+                parameters=Argon2idParameters.from_bytes(fields[1]),
+                salt=fields[2],
+                sigma_digest=SigmaDigestV2.from_bytes(fields[3]),
+                final_key=fields[4],
+            )
+        except (TypeError, ValueError) as exc:
+            raise DecodeError(f"invalid KDF result: {exc}") from exc
+
+
+def derive_argon2id_sigma(
+    password: bytes,
+    salt: bytes,
+    parameters: Argon2idParameters,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> SigmaKdfResult:
+    """Return only the composed result; the intermediate Argon2 key is not exposed."""
+
+    base_key = derive_argon2id(password, salt, parameters, policy=policy)
+    context = lightweight_v2_2(
+        salt=salt,
+        application_context=KDF_FINAL_DOMAIN + parameters.to_bytes(),
+    )
+    digest = hash_bytes(base_key, context, policy=policy)
+    return SigmaKdfResult.bind(parameters, salt, digest)
+
+
+def verify_password(
+    password: bytes,
+    result: SigmaKdfResult,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> bool:
+    if not isinstance(result, SigmaKdfResult):
+        raise TypeError("result must be SigmaKdfResult")
+    try:
+        candidate = derive_argon2id_sigma(
+            password, result.salt, result.parameters, policy=policy
+        )
+    except ValueError:
+        return False
+    return hmac.compare_digest(candidate.final_key, result.final_key)

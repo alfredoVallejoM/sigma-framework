@@ -164,3 +164,13 @@ parallelism, output length and Argon2 version 1.3. The composition computes
 Argon2id first, then hashes that key with a Sigma context containing the salt
 and encoded parameters. It adds deterministic binding and overhead, not
 password entropy or independent memory hardness.
+
+The v2-2 composition never returns the intermediate Argon2id key. It hashes the
+intermediate under `lightweight-stream-wide-v2-2`, binding
+`"SIGMA-KDF-FINAL-V1" || parameters` as application context, and derives the
+requested final length with SHAKE256 over that domain plus canonical TLVs for
+parameters, salt and complete Sigma digest. `SigmaKdfResult` encodes
+`"SIGMAKDR2"` followed by strict TLVs 1=parameters, 2=salt, 3=Sigma digest and
+4=final key. The parser recomputes the final derivation and rejects inconsistent
+records. Password verification recomputes the composition and compares final
+keys with a constant-time comparison provided by the runtime.

@@ -6,7 +6,11 @@ from collections.abc import Callable
 from typing import Any
 
 from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWide
-from sigma.applications.kdf_argon2id import Argon2idParameters
+from sigma.applications.kdf_argon2id import (
+    KDF_FINAL_DOMAIN,
+    Argon2idParameters,
+    SigmaKdfResult,
+)
 from sigma.applications.pow import PowParameters, PowPredicate
 from sigma.outputs import SigmaDigestV2
 from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2
@@ -56,6 +60,14 @@ def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
     digest = hash_bytes(b"fuzz-seed", context)
     pow_parameters = PowParameters(b"challenge", 2, 2, PowPredicate.DUAL_STATE, 3)
     kdf_parameters = Argon2idParameters(1024, 2, 1)
+    kdf_salt = b"fuzz-salt-value"
+    kdf_context = lightweight_v2_2(
+        salt=kdf_salt,
+        application_context=KDF_FINAL_DOMAIN + kdf_parameters.to_bytes(),
+    )
+    kdf_result = SigmaKdfResult.bind(
+        kdf_parameters, kdf_salt, hash_bytes(b"diagnostic-base", kdf_context)
+    )
     wide_context = lightweight_v2_2()
     wide_evidence = StreamWide.compute(wide_context, (b"fuzz-seed",))
     cross_context = paranoid_wide_v2_2()
@@ -65,6 +77,7 @@ def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
         "digest": (digest.to_bytes(), SigmaDigestV2.from_bytes),
         "pow": (pow_parameters.to_bytes(), PowParameters.from_bytes),
         "kdf": (kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
+        "kdf-result": (kdf_result.to_bytes(), SigmaKdfResult.from_bytes),
         "evidence-wide": (
             wide_evidence.to_bytes(),
             lambda data: AnchorEvidence.from_bytes(data, wide_context),

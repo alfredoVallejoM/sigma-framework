@@ -8,6 +8,7 @@ from sigma.applications.pow import (
     accepts,
     evaluate_nonce,
     solve,
+    solve_parallel,
     verify,
 )
 from sigma.outputs import SigmaDigestV2
@@ -92,3 +93,13 @@ def test_pow_policy_rejects_before_nonce_search_and_verification() -> None:
         solve(b"payload", parameters, policy=strict)
     proof = evaluate_nonce(b"payload", 0, parameters)
     assert not verify(b"payload", proof, parameters, policy=strict)
+
+
+def test_parallel_pow_solver_partitions_nonce_batches_and_verifies() -> None:
+    parameters = _parameters(PowPredicate.SINGLE_STATE, 4)
+    proof, evaluations = solve_parallel(
+        b"parallel", parameters, workers=2, start_nonce=7, max_attempts=1_000
+    )
+    assert 1 <= evaluations <= 1_000
+    assert verify(b"parallel", proof, parameters)
+    assert proof.nonce >= 7

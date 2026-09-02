@@ -134,7 +134,10 @@ en hosts controlados antes de cerrar R4.
 - EXP-11R trata los intentos agotados como censura derecha y comprueba challenge
   reutilizado, replay, sustitución de challenge, downgrade de dificultad,
   alteración de digest y límite local de recursos. Falta medir escalado de
-  miners por nonce; tampoco se transforma este PoW en PoSW o VDF.
+  miners por nonce mediante lotes multiproceso disjuntos y registra speedup y
+  eficiencia. El piloto de dificultad 6 fue negativo por overhead: dos/cuatro
+  workers tardaron ~34–35 ms frente a ~11 ms serial; no se presentará como
+  aceleración. Esto no transforma el PoW en PoSW o VDF.
 - EXP-12R permite componer Argon2id con Wide, CrossWide, Deep o DeepVector v2-2
   sin exponer la clave intermedia; la verificación reconstruye el contexto
   registrado. La campaña mantiene idéntico el presupuesto Argon2 y separa su

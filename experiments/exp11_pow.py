@@ -3,7 +3,14 @@ import statistics
 import time
 from typing import Any
 
-from sigma.applications.pow import PowParameters, PowPredicate, PowProof, solve, verify
+from sigma.applications.pow import (
+    PowParameters,
+    PowPredicate,
+    PowProof,
+    solve,
+    solve_parallel,
+    verify,
+)
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import PolicyViolation, ResourcePolicy
 
@@ -21,7 +28,9 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
         (PowPredicate.DUAL_STATE, total_bits // 2),
         (PowPredicate.CONCATENATED, total_bits),
     )
-    target_rounds = [int(value) for value in config.get("target_rounds", [config.get("target_round", 1)])]
+    target_rounds = [
+        int(value) for value in config.get("target_rounds", [config.get("target_round", 1)])
+    ]
     state_counts = [int(value) for value in config.get("state_counts", [2])]
     challenge_modes = [str(value) for value in config.get("challenge_modes", ["unique"])]
     max_attempts = int(config.get("max_attempts", 100_000))
@@ -81,7 +90,9 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                 predicate,
                                 per_state_bits,
                             )
-                            challenge_substitution_rejected = not verify(payload, proof, substituted)
+                            challenge_substitution_rejected = not verify(
+                                payload, proof, substituted
+                            )
                             downgraded = PowParameters(
                                 challenge,
                                 target_round,
@@ -131,23 +142,76 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                                 "trial": trial,
                                 "verification_match": verified,
                                 "verification_ns": verification_ns,
+                                "workers": 1,
                             }
                         )
+    worker_counts = [int(value) for value in config.get("nonce_worker_counts", [])]
+    for trial in range(int(config.get("parallel_trials", 0))):
+        rng = derived_random(str(config["master_seed"]), f"EXP-11/parallel/{trial}")
+        parameters = PowParameters(
+            challenge=rng.randbytes(16),
+            target_round=int(config.get("parallel_target_round", 1)),
+            state_count=2,
+            predicate=PowPredicate.SINGLE_STATE,
+            difficulty_bits=total_bits,
+        )
+        payload = rng.randbytes(24)
+        start_nonce = rng.randrange(0, 1 << 32)
+        for workers in worker_counts:
+            started = time.perf_counter_ns()
+            try:
+                proof, attempts = solve_parallel(
+                    payload,
+                    parameters,
+                    workers=workers,
+                    start_nonce=start_nonce,
+                    max_attempts=max_attempts,
+                )
+            except RuntimeError:
+                proof = None
+                attempts = max_attempts
+            mining_ns = time.perf_counter_ns() - started
+            verified = proof is not None and verify(payload, proof, parameters)
+            records.append(
+                {
+                    "attempts": attempts,
+                    "censored": proof is None,
+                    "challenge_mode": "parallel-scaling",
+                    "challenge_substitution_rejected": None,
+                    "difficulty_downgrade_rejected": None,
+                    "expected_probability": 2.0**-total_bits,
+                    "mining_ns": mining_ns,
+                    "nonce": proof.nonce if proof is not None else None,
+                    "predicate": "single_state_parallel",
+                    "replay_rejected": None,
+                    "resource_exhaustion_rejected": None,
+                    "state_count": 2,
+                    "tampered_digest_rejected": None,
+                    "target_round": parameters.target_round,
+                    "trial": trial,
+                    "verification_match": verified,
+                    "verification_ns": None,
+                    "workers": workers,
+                }
+            )
     return records
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    groups: dict[tuple[str, int, int, str], list[dict[str, Any]]] = {}
+    groups: dict[tuple[str, int, int, str, int], list[dict[str, Any]]] = {}
     for record in records:
         key = (
             str(record["predicate"]),
             int(record["target_round"]),
             int(record.get("state_count", 2)),
             str(record.get("challenge_mode", "unique")),
+            int(record.get("workers", 1)),
         )
         groups.setdefault(key, []).append(record)
-    summaries = []
-    for (predicate, target_round, state_count, challenge_mode), group in sorted(groups.items()):
+    summaries: list[dict[str, Any]] = []
+    for (predicate, target_round, state_count, challenge_mode, workers), group in sorted(
+        groups.items()
+    ):
         probability = float(group[0]["expected_probability"])
         attempts = [int(row["attempts"]) for row in group]
         successes = sum(not bool(row.get("censored", False)) for row in group)
@@ -189,7 +253,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     for row in group
                     if row["verification_ns"] is not None
                 )
-                if successes
+                if any(row["verification_ns"] is not None for row in group)
                 else None,
                 "observed_acceptance_probability": observed_probability,
                 "predicate": predicate,
@@ -197,6 +261,35 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "state_count": state_count,
                 "target_round": target_round,
                 "trials": len(group),
+                "workers": workers,
             }
+        )
+    baselines = {
+        (
+            item["predicate"],
+            item["target_round"],
+            item["state_count"],
+            item["challenge_mode"],
+        ): item
+        for item in summaries
+        if item["workers"] == 1
+    }
+    for item in summaries:
+        baseline = baselines.get(
+            (
+                item["predicate"],
+                item["target_round"],
+                item["state_count"],
+                item["challenge_mode"],
+            )
+        )
+        speedup = (
+            float(baseline["median_mining_ns"]) / float(item["median_mining_ns"])
+            if baseline is not None
+            else None
+        )
+        item["mining_speedup_vs_worker1"] = speedup
+        item["mining_parallel_efficiency"] = (
+            speedup / int(item["workers"]) if speedup is not None else None
         )
     return summaries

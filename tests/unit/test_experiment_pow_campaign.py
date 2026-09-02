@@ -34,3 +34,22 @@ def test_pow_campaign_preserves_right_censoring() -> None:
     )
     assert any(record["censored"] for record in records)
     assert all(group["censored_trials"] >= 0 for group in summarize(records))
+
+
+def test_pow_campaign_reports_candidate_parallelism() -> None:
+    records = run(
+        {
+            "master_seed": "parallel",
+            "max_attempts": 512,
+            "nonce_worker_counts": [1, 2],
+            "parallel_trials": 2,
+            "total_difficulty_bits": 4,
+            "trials": 1,
+        }
+    )
+    scaling = [record for record in records if record["challenge_mode"] == "parallel-scaling"]
+    assert {record["workers"] for record in scaling} == {1, 2}
+    groups = [
+        group for group in summarize(records) if group["challenge_mode"] == "parallel-scaling"
+    ]
+    assert all(group["mining_speedup_vs_worker1"] is not None for group in groups)

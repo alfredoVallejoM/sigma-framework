@@ -7,7 +7,15 @@ from .kdf_argon2id import (
     derive_argon2id_sigma,
     verify_password,
 )
-from .pow import PowParameters, PowPredicate, PowProof, evaluate_nonce, solve, verify
+from .pow import (
+    PowParameters,
+    PowPredicate,
+    PowProof,
+    evaluate_nonce,
+    solve,
+    solve_parallel,
+    verify,
+)
 from .signed import (
     SigmaSignedCommitmentV2,
     sign_ed25519,
@@ -27,6 +35,7 @@ __all__ = [
     "evaluate_nonce",
     "sign_ed25519",
     "solve",
+    "solve_parallel",
     "verify",
     "verify_full_signed",
     "verify_password",

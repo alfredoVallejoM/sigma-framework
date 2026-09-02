@@ -6,6 +6,7 @@ resistance.
 """
 
 import hmac
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -19,6 +20,7 @@ from sigma.validation import require_int
 
 POW_MAGIC = b"SIGMAPOW2"
 MAX_NONCE = (1 << 64) - 1
+MAX_POW_WORKERS = 256
 
 
 class PowPredicate(IntEnum):
@@ -197,4 +199,53 @@ def solve(
         proof = evaluate_nonce(payload, nonce, parameters, policy=policy)
         if accepts(proof.digest, parameters):
             return proof, attempts
+    raise RuntimeError("no valid nonce found within max_attempts")
+
+
+def _evaluate_parallel_candidate(
+    arguments: tuple[bytes, int, PowParameters, ResourcePolicy],
+) -> PowProof:
+    payload, nonce, parameters, policy = arguments
+    return evaluate_nonce(payload, nonce, parameters, policy=policy)
+
+
+def solve_parallel(
+    payload: bytes,
+    parameters: PowParameters,
+    *,
+    workers: int,
+    start_nonce: int = 0,
+    max_attempts: int = 1_000_000,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> tuple[PowProof, int]:
+    """Search disjoint nonce strides; return a valid proof and actual evaluations."""
+
+    selected_workers = require_int("workers", workers, minimum=1, maximum=MAX_POW_WORKERS)
+    require_int("start_nonce", start_nonce, minimum=0, maximum=MAX_NONCE)
+    require_int("max_attempts", max_attempts, minimum=1, maximum=MAX_NONCE)
+    policy.validate_pow(parameters.difficulty_bits, max_attempts)
+    if selected_workers == 1:
+        return solve(
+            payload,
+            parameters,
+            start_nonce=start_nonce,
+            max_attempts=max_attempts,
+            policy=policy,
+        )
+    evaluated = 0
+    with ProcessPoolExecutor(max_workers=selected_workers) as executor:
+        for offset in range(0, max_attempts, selected_workers):
+            nonces = [
+                start_nonce + value
+                for value in range(offset, min(offset + selected_workers, max_attempts))
+                if start_nonce + value <= MAX_NONCE
+            ]
+            if not nonces:
+                break
+            arguments = [(payload, nonce, parameters, policy) for nonce in nonces]
+            batch = list(executor.map(_evaluate_parallel_candidate, arguments, chunksize=1))
+            evaluated += len(batch)
+            proofs = [proof for proof in batch if accepts(proof.digest, parameters)]
+            if proofs:
+                return min(proofs, key=lambda proof: proof.nonce), evaluated
     raise RuntimeError("no valid nonce found within max_attempts")

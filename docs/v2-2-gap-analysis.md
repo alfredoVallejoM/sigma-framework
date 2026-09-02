@@ -32,8 +32,8 @@ bloqueadas por cambios del núcleo que pueden alterar mediciones y objetos.
 | LIB-10 | abierto | Deep ejecuta ramas secuencialmente dentro de cada ronda | backend intrarronda y equivalencia bajo reordenación |
 | LIB-11 | abierto | RealTime duplica matemáticamente Lightweight con otro `SuiteId` | decisión documentada y migración/versionado |
 | LIB-12 | abierto | no existe DeepVector/LinkedWide | diseño, implementación o descarte razonado |
-| LIB-13 | parcial | consumidor independiente completo para las seis suites; faltan aplicaciones y corpus KAT integral | corpus completo de aplicaciones y suites |
-| LIB-14 | parcial | existe fuzz mutacional determinista de cuatro parsers | property, coverage-guided, mutation, parsers nuevos y presupuestos |
+| LIB-13 | cerrado | segunda implementación cubre seis suites y tres aplicaciones; corpus y límites completos | mantener conformidad en CI y reproducción externa |
+| LIB-14 | cerrado | property, fuzz mutacional/Atheris de ocho parsers y mutación clasificada | repetir campañas al cambiar codecs/validadores |
 | LIB-15 | parcial | paquete `2.0.0a1`, suites `v2-1`, wire v2 y artefactos existen | nomenclatura unificada, política y tag limpio de campaña |
 
 ## Brecha formal
@@ -309,3 +309,22 @@ y someter a reproducción y revisión criptográfica externas.
   omisiones; Ruff y mypy verdes.
 - El tramo de suites de LIB-13 queda cerrado. El paquete permanece parcial
   hasta completar vectores y reconstrucción independiente de PoW, KDF y firma.
+
+### Tanda C2.9 — aplicaciones, corpus y cierre LIB-13/14
+
+- `reference/independent_applications.py` reconstruye sin importar `sigma` el
+  framing y evaluación PoW, el postprocesamiento KDF posterior a Argon2id y la
+  entrada/resultado Ed25519. Las tres rutas coinciden byte a byte con la API
+  pública, incluida la firma determinista.
+- `conformance-v2-2.json`, generado explícitamente por un script separado,
+  congela contexto, evidencia, raíces, conexiones, estados, ramas y digest de
+  las seis suites, además del vector PoW. Se complementa con los KAT existentes
+  de Argon2id+Sigma y compromiso firmado.
+- Los 37 supervivientes de la campaña TLV histórica quedaron clasificados: 33
+  sólo cambian diagnósticos, dos cambian un centinela sin alterar el dominio y
+  dos dependen del default de `byteorder` de Python 3.11+ (la CI 3.10 los mata).
+  Tras regenerar la caché, seis mutantes conductuales nuevos de tags/tamaños
+  fueron muertos 6/6 por tests directos.
+- Cierre local: 493 pruebas sin omisiones con Argon2 real; Ruff y mypy verdes.
+  R2 queda satisfecho en el repositorio, pendiente únicamente de reproducción
+  multiplataforma/externa como condición posterior de R5, no de diseño.

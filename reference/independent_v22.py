@@ -96,6 +96,8 @@ def wide_evidence(
     context: bytes,
     suite_id: int,
     algorithms: tuple[tuple[int, Callable[..., Any]], ...],
+    *,
+    evidence_version: int = 2,
 ) -> tuple[bytes, list[bytes]]:
     roots = []
     for position, (algorithm, _) in enumerate(algorithms):
@@ -103,6 +105,16 @@ def wide_evidence(
         roots.append(
             hash_branch(algorithm, domain(1) + descriptor + message + domain(2) + u64(len(message)))
         )
+    if evidence_version == 1:
+        evidence = (
+            domain(3)
+            + u16(len(roots))
+            + b"".join(
+                u16(algorithm) + u16(len(root)) + root
+                for (algorithm, _), root in zip(algorithms, roots, strict=True)
+            )
+        )
+        return evidence + u64(len(message)), roots
     body = tlv((1, u64(len(message))), (2, encode_components(algorithms, roots)))
     return evidence_envelope(suite_id, 1, body), roots
 
@@ -112,12 +124,20 @@ def cross_evidence(
     context: bytes,
     suite_id: int,
     algorithms: tuple[tuple[int, Callable[..., Any]], ...],
+    *,
+    evidence_version: int = 2,
 ) -> tuple[bytes, list[bytes], list[bytes]]:
-    wide, roots = wide_evidence(message, context, suite_id, algorithms)
+    wide, roots = wide_evidence(
+        message, context, suite_id, algorithms, evidence_version=evidence_version
+    )
     cross_roots = [
         hash_branch(algorithm, domain(6) + tlv((1, u16(position)), (2, context), (3, wide)))
         for position, (algorithm, _) in enumerate(algorithms)
     ]
+    if evidence_version == 1:
+        evidence = domain(3) + u16(3) + encode_components(algorithms, roots)
+        evidence += encode_components(algorithms, cross_roots) + u64(len(message))
+        return evidence, roots, cross_roots
     body = tlv(
         (1, u64(len(message))),
         (2, encode_components(algorithms, roots)),
@@ -144,6 +164,7 @@ def sequential_suite(
     salt: bytes = b"",
     challenge: bytes = b"",
     application_context: bytes = b"",
+    evidence_version: int = 2,
 ) -> dict[str, Any]:
     """Evaluate Stream/Cross v2.2 with WideOnce or Deep rounds."""
 
@@ -160,9 +181,21 @@ def sequential_suite(
         application_context=application_context,
     )
     if anchor_profile == 3:
-        evidence, roots, cross_roots = cross_evidence(message, context, suite_id, algorithms)
+        evidence, roots, cross_roots = cross_evidence(
+            message,
+            context,
+            suite_id,
+            algorithms,
+            evidence_version=evidence_version,
+        )
     else:
-        evidence, roots = wide_evidence(message, context, suite_id, algorithms)
+        evidence, roots = wide_evidence(
+            message,
+            context,
+            suite_id,
+            algorithms,
+            evidence_version=evidence_version,
+        )
         cross_roots = []
     state = hashlib.sha3_512(domain(4) + tlv((1, context), (2, evidence))).digest()
     states = [state]

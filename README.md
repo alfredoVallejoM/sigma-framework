@@ -163,7 +163,10 @@ The dependency-free consumer in
 [`reference/independent_v22.py`](reference/independent_v22.py) deliberately
 imports no `sigma` code and differentially reconstructs all six v2.2 suite
 constructions, including every Deep/DeepVector intermediate and TreeWide leaf
-boundaries, directly from the published byte specification.
+boundaries, directly from the published byte specification. The frozen
+[`conformance-v2-2.json`](specification/test-vectors/conformance-v2-2.json)
+corpus covers those suites and PoW; separate frozen vectors cover KDF and the
+signed commitment.
 
 ## Claims and limitations
 

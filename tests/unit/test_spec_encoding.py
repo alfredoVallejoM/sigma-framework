@@ -78,9 +78,9 @@ def test_tlv_tag_and_value_boundaries_are_exact() -> None:
         1: b"",
         0xFFFF: b"x",
     }
-    for tag in (0, 0x10000, True, 1.0):
-        with pytest.raises((TypeError, ValueError)):
-            encode_tlv(((tag, b""),))  # type: ignore[arg-type]
+    for tag in (0, 0x10000, True, 1.0, "1"):
+        with pytest.raises(ValueError, match="tag"):
+            encode_tlv_field(tag, b"")  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="bytes"):
         encode_tlv(((1, bytearray()),))  # type: ignore[arg-type]
     assert encode_tlv_field(7, b"value") == encode_tlv(((7, b"value"),))
@@ -88,9 +88,10 @@ def test_tlv_tag_and_value_boundaries_are_exact() -> None:
 
 def test_tlv_field_length_budget_accepts_limit_and_rejects_next_byte() -> None:
     at_limit = b"x" * MAX_FIELD_LENGTH
+    assert encode_tlv_field(1, at_limit).endswith(at_limit)
     assert decode_tlv(encode_tlv(((1, at_limit),)), allowed_tags=frozenset({1}))[1] == at_limit
     with pytest.raises(ValueError, match="limit"):
-        encode_tlv(((1, at_limit + b"x"),))
+        encode_tlv_field(1, at_limit + b"x")
 
 
 def test_tlv_rejects_unknown_and_truncated_fields() -> None:

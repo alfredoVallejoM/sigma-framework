@@ -125,6 +125,10 @@ en hosts controlados antes de cerrar R4.
   `tracemalloc`, RSS, frontera, temporales y política de trace. En Linux el
   backend multiproceso muestrea RSS agregado padre+hijos; fuera de `/proc` el
   dato queda ausente en vez de atribuir el RSS del padre al conjunto.
+- EXP-11R trata los intentos agotados como censura derecha y comprueba challenge
+  reutilizado, replay, sustitución de challenge, downgrade de dificultad,
+  alteración de digest y límite local de recursos. Falta medir escalado de
+  miners por nonce; tampoco se transforma este PoW en PoSW o VDF.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

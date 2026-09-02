@@ -47,7 +47,7 @@ estimates and internal review. A publishable invocation uses
 | EXP-08R | calibrated battery anomaly | descriptive full-family report | construction × corpus × state/domain × battery × stream | independent v2-2 streams and internal calibration implemented; NIST/PractRand/TestU01 execution gated by unavailable tools |
 | EXP-09R | latency/throughput | effect and interval per host/operation | host × operation × mode × size × repetition | v2-2 operation matrix, CPU/context-switch metrology and valid rate units implemented; cold-cache, signed verification and multihost runs pending |
 | EXP-10R | peak aggregate memory | growth model and interval | mode × size × t × k × workers × trace × repetition | v2-2 mode/trace grid and Linux aggregate parent+children sampling implemented; larger grid and cross-platform RSS normalization pending |
-| EXP-11R | attempts/verification cost | geometric calibration and zero protocol invariant failures | predicate × difficulty × t × k × repetition | smoke partial |
+| EXP-11R | attempts/verification cost | geometric calibration and zero protocol invariant failures | predicate × challenge reuse × difficulty × t × k × repetition | replay/downgrade/tamper/resource attacks and right-censored pilot implemented; nonce-worker scaling pending |
 | EXP-12R | guess rate/cost | budget-matched effect; no entropy/memory-hardness claim | mode × budget × corpus × repetition | smoke partial |
 | EXP-13 | none | blocked until specified native core | — | blocked by design |
 | EXP-14R | detection/propagation | report detection rate and latency; no DFA claim | fault × location × mode × repetition | flip smoke partial |

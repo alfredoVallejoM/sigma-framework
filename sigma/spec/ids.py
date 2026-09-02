@@ -21,6 +21,7 @@ class SuiteId(IntEnum):
     SIMULTANEOUS_TREE_WIDE_V2_2 = 0x0103
     PARANOID_CROSS_WIDE_V2_2 = 0x0104
     PARANOID_DEEP_V2_2 = 0x0105
+    PARANOID_DEEP_VECTOR_V2_2 = 0x0106
 
 
 class EvidenceType(IntEnum):
@@ -48,6 +49,7 @@ class AnchorProfileId(IntEnum):
 class RoundProfileId(IntEnum):
     WIDE_ONCE = 0x0001
     DEEP = 0x0002
+    DEEP_VECTOR = 0x0003
 
 
 class OutputProfileId(IntEnum):
@@ -82,3 +84,5 @@ class DomainId(IntEnum):
     TREE_NODE = 0x000B
     TREE_EMPTY = 0x000C
     SIGNED_COMMITMENT = 0x000D
+    VECTOR_INIT = 0x000E
+    VECTOR_ROUND = 0x000F

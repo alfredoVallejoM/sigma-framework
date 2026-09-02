@@ -40,8 +40,11 @@ class Deep:
             raise ValueError("v2-2 anchor must carry the exact context suite")
         if anchor.suite_id is not None and anchor.suite_id is not self.context.suite_id:
             raise ValueError("anchor suite differs from context")
-        if any(len(root) != 64 for root in anchor.roots + anchor.cross_roots):
-            raise ValueError("Deep suite anchor components must contain 64 bytes")
+        if any(
+            len(root) != self.suite.anchor_component_size
+            for root in anchor.roots + anchor.cross_roots
+        ):
+            raise ValueError("Deep anchor component width differs from the selected suite")
 
     def _initial_state(self, anchor: CrossWideEvidence) -> bytes:
         self._validate_anchor(anchor)
@@ -63,7 +66,7 @@ class Deep:
         for position, output in completed:
             if position in branch_by_position or not 0 <= position < len(self.context.branches):
                 raise RuntimeError("Deep backend returned invalid branch positions")
-            if not isinstance(output, bytes) or len(output) != self.suite.state_size:
+            if not isinstance(output, bytes) or len(output) != self.suite.anchor_component_size:
                 raise RuntimeError("Deep backend returned an invalid branch output")
             branch_by_position[position] = output
         if len(branch_by_position) != len(self.context.branches):

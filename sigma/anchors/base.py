@@ -100,7 +100,7 @@ class AnchorEvidence:
             suite = get_suite(self.suite_id)
             if self.algorithms != suite.branches:
                 raise ValueError("anchor algorithms do not match the evidence suite")
-            if any(len(root) != suite.state_size for root in self.roots):
+            if any(len(root) != suite.anchor_component_size for root in self.roots):
                 raise ValueError("anchor root length does not match the evidence suite")
 
     @property
@@ -166,7 +166,9 @@ class CrossWideEvidence:
             suite = get_suite(self.suite_id)
             if self.algorithms != suite.branches:
                 raise ValueError("cross algorithms do not match the evidence suite")
-            if any(len(root) != suite.state_size for root in self.roots + self.cross_roots):
+            if any(
+                len(root) != suite.anchor_component_size for root in self.roots + self.cross_roots
+            ):
                 raise ValueError("cross component length does not match the evidence suite")
 
     @property

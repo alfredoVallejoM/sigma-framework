@@ -27,6 +27,7 @@ class SuiteDescriptor:
     branches: Tuple[AlgorithmId, ...]
     state_algorithm: AlgorithmId
     state_size: int
+    anchor_component_size: int = 64
     suite_family: str = "v2-1"
     evidence_version: int = 1
     stable: bool = False
@@ -195,6 +196,19 @@ PARANOID_DEEP_V2_2 = SuiteDescriptor(
     suite_family="v2-2",
 )
 
+PARANOID_DEEP_VECTOR_V2_2 = SuiteDescriptor(
+    suite_id=SuiteId.PARANOID_DEEP_VECTOR_V2_2,
+    name="paranoid-deep-vector-v2-2",
+    anchor_profile=AnchorProfileId.CROSS_WIDE,
+    round_profile=RoundProfileId.DEEP_VECTOR,
+    output_profile=OutputProfileId.MULTI_STATE,
+    branches=PARANOID_DEEP_V2.branches,
+    state_algorithm=AlgorithmId.SHA3_512,
+    state_size=64 * len(PARANOID_DEEP_V2.branches),
+    evidence_version=2,
+    suite_family="v2-2",
+)
+
 _SUITES: Dict[SuiteId, SuiteDescriptor] = {
     REFERENCE_STREAM_WIDE_V2.suite_id: REFERENCE_STREAM_WIDE_V2,
     PARANOID_CROSS_WIDE_V2.suite_id: PARANOID_CROSS_WIDE_V2,
@@ -207,6 +221,7 @@ _SUITES: Dict[SuiteId, SuiteDescriptor] = {
     SIMULTANEOUS_TREE_WIDE_V2_2.suite_id: SIMULTANEOUS_TREE_WIDE_V2_2,
     PARANOID_CROSS_WIDE_V2_2.suite_id: PARANOID_CROSS_WIDE_V2_2,
     PARANOID_DEEP_V2_2.suite_id: PARANOID_DEEP_V2_2,
+    PARANOID_DEEP_VECTOR_V2_2.suite_id: PARANOID_DEEP_VECTOR_V2_2,
 }
 
 

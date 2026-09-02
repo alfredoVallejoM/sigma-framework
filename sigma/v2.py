@@ -15,7 +15,7 @@ from sigma.backends import SERIAL_BACKEND, ExecutionBackend, FileExecutionBacken
 from sigma.file_snapshot import FileIdentity, immutable_snapshot, stable_open
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY, PolicyViolation, ResourcePolicy
-from sigma.rounds import Deep, RoundTranscript, TraceConfig, WideOnce
+from sigma.rounds import Deep, DeepVector, RoundTranscript, TraceConfig, WideOnce
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId, RoundProfileId
 from sigma.validation import ValidationError, require_int
@@ -44,6 +44,8 @@ def _round_engine(context: SigmaContextV2):
         return WideOnce(context)
     if context.round_profile is RoundProfileId.DEEP:
         return Deep(context)
+    if context.round_profile is RoundProfileId.DEEP_VECTOR:
+        return DeepVector(context)
     raise ValueError(f"unsupported round profile: {context.round_profile.name}")
 
 

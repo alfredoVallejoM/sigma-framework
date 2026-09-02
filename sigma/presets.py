@@ -102,6 +102,15 @@ def paranoid_deep_v2_2(**parameters) -> SigmaContextV2:
     )
 
 
+def paranoid_deep_vector_v2_2(**parameters) -> SigmaContextV2:
+    return _context(
+        SuiteId.PARANOID_DEEP_VECTOR_V2_2,
+        AnchorProfileId.CROSS_WIDE,
+        RoundProfileId.DEEP_VECTOR,
+        **parameters,
+    )
+
+
 _PRESETS: Dict[str, Callable[..., SigmaContextV2]] = {
     "lightweight-v2": lightweight_v2,
     "simultaneous-v2": simultaneous_v2,
@@ -112,6 +121,7 @@ _PRESETS: Dict[str, Callable[..., SigmaContextV2]] = {
     "simultaneous-v2-2": simultaneous_v2_2,
     "paranoid-wide-v2-2": paranoid_wide_v2_2,
     "paranoid-deep-v2-2": paranoid_deep_v2_2,
+    "paranoid-deep-vector-v2-2": paranoid_deep_vector_v2_2,
 }
 
 

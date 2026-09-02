@@ -25,6 +25,7 @@ PRESETS = (
     "simultaneous-v2-2",
     "paranoid-wide-v2-2",
     "paranoid-deep-v2-2",
+    "paranoid-deep-vector-v2-2",
 )
 
 

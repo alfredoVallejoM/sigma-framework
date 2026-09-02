@@ -270,3 +270,14 @@ y someter a reproducción y revisión criptográfica externas.
 - Codec estricto, prefijos truncados, límites de clave, alteraciones de firma y
   vector congelado quedan cubiertos. Atheris incluye el octavo parser: 10.000
   ejecuciones, cero crashes, `cov=301`, `ft=559`.
+
+### Tanda C2.6 — DeepVector LIB-12
+
+- Nueva suite `0x0106`, perfil y dominios exclusivos; cada estado publicado es
+  el vector canónico de cuatro componentes de 64 bytes, sin fold intermedio.
+- Cada componente siguiente autentica el vector anterior completo, contexto,
+  índice, evidencia y posición. La especificación niega explícitamente una
+  interpretación aditiva de seguridad sin hipótesis conjunta.
+- Se separan `anchor_component_size` y `state_size` en el registro: todas las
+  suites previas conservan 64/64 y DeepVector usa 64/256. Tests cubren anchura,
+  dependencia completa, trace, verificación, dominios y memoria O(k).

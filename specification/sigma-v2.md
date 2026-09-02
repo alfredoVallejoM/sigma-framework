@@ -83,7 +83,7 @@ verification checks one transition and explicitly does not prove its history.
 
 ## Typed anchor evidence v2-2
 
-Suite IDs `0x0101..0x0105` select the v2-2 evidence family. They do not alter or
+Suite IDs `0x0101..0x0106` select the v2-2 evidence family. They do not alter or
 reinterpret any `0x0001..0x0006` bytes. The new envelope is:
 
 `"SIGMAAE" || evidence_version:u16(2) || evidence_type:u16 || suite_id:u16 || body_length:u32 || body_tlvs`.
@@ -107,6 +107,20 @@ CrossWide evidence and current state. The ordered vector of algorithm ID,
 length and `Z_(i,j)` values is then hashed by SHA3-512 under `DST(fold)`, again
 with context, round index and complete anchor. Branches within a level may run
 in parallel; level `i+1` cannot start before the fold of level `i`.
+
+DeepVector suite `0x0106` deliberately removes that fold. Its state is the
+ordered concatenation `V_i = S_i^1 || ... || S_i^m`, with every component fixed
+to the registered 64-byte anchor-component width. Initialization is:
+
+`S_0^j = H_j(DST(vector-init) || TLV(1,C; 2,A; 3,j:u16))`.
+
+Every subsequent component consumes the complete prior vector:
+
+`S_(i+1)^j = H_j(DST(vector-round) || TLV(1,C; 2,i:u64; 3,A; 4,V_i; 5,j:u16))`.
+
+The digest publishes `V_t..V_(t+k-1)` as fixed 256-byte states. This avoids a
+single fold bottleneck but does not imply additive security across deterministic
+connections; any stronger claim requires an explicit joint assumption.
 
 ## Sigma Tree v2-1
 
@@ -145,6 +159,7 @@ most one frontier subtree per power of two and one leaf buffer: O(log N) state.
 | 259 | simultaneous-v2-2 | TreeWide | WideOnce | four reference branches |
 | 260 | paranoid-wide-v2-2 | CrossWide | WideOnce | four reference branches |
 | 261 | paranoid-deep-v2-2 | CrossWide | Deep | four reference branches |
+| 262 | paranoid-deep-vector-v2-2 | CrossWide | DeepVector | four reference branches |
 
 Presets have distinct suite IDs and therefore distinct contexts and digests.
 Backend name, worker count, mmap use and reader buffer size are never encoded.

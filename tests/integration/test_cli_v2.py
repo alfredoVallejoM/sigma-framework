@@ -144,3 +144,19 @@ def test_cli_supports_v22_typed_evidence_suite() -> None:
     assert hashed.returncode == 0, hashed.stderr
     digest = SigmaDigestV2.from_json(hashed.stdout)
     assert digest.metadata()["suite_name"] == "lightweight-stream-wide-v2-2"
+
+
+def test_cli_supports_deep_vector() -> None:
+    hashed = run_cli(
+        "hash",
+        "--text",
+        "abc",
+        "--preset",
+        "paranoid-deep-vector-v2-2",
+        "--format",
+        "json",
+    )
+    assert hashed.returncode == 0, hashed.stderr
+    digest = SigmaDigestV2.from_json(hashed.stdout)
+    assert digest.metadata()["suite_name"] == "paranoid-deep-vector-v2-2"
+    assert digest.metadata()["state_size"] == 256

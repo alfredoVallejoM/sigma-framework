@@ -100,12 +100,12 @@ class WideOnce:
             raise ValueError("v2-2 anchor must carry the exact context suite")
         if anchor.suite_id is not None and anchor.suite_id is not self.context.suite_id:
             raise ValueError("anchor suite differs from context")
-        if any(len(root) != 64 for root in anchor.roots):
-            raise ValueError("reference suite anchor roots must contain 64 bytes")
+        if any(len(root) != self.suite.anchor_component_size for root in anchor.roots):
+            raise ValueError("anchor root width differs from the selected suite")
         if isinstance(anchor, CrossWideEvidence) and any(
-            len(root) != 64 for root in anchor.cross_roots
+            len(root) != self.suite.anchor_component_size for root in anchor.cross_roots
         ):
-            raise ValueError("reference suite cross roots must contain 64 bytes")
+            raise ValueError("cross-root width differs from the selected suite")
 
     def _initial_state(self, anchor: Union[AnchorEvidence, CrossWideEvidence]) -> bytes:
         self._validate_anchor(anchor)

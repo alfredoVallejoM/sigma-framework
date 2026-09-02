@@ -8,6 +8,7 @@ from sigma.presets import (
     lightweight_v2_2,
     paranoid_deep_v2,
     paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
     paranoid_wide_v2,
     paranoid_wide_v2_2,
     realtime_v2,
@@ -71,3 +72,12 @@ def test_v22_presets_are_distinct_from_frozen_v21_family() -> None:
     for legacy, current in pairs:
         assert legacy.suite_id != current.suite_id
         assert hash_bytes(b"same message", legacy) != hash_bytes(b"same message", current)
+
+
+def test_deep_vector_preset_has_its_own_wide_state_suite() -> None:
+    context = paranoid_deep_vector_v2_2()
+    assert context.suite_id not in {
+        paranoid_deep_v2().suite_id,
+        paranoid_deep_v2_2().suite_id,
+    }
+    assert len(hash_bytes(b"vector", context).states[0]) == 256

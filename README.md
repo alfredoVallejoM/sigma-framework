@@ -108,6 +108,7 @@ never presented as the final digest of a stream that may continue.
 | `realtime-v2` | two-branch StreamWide | WideOnce | incremental update and explicit EOF |
 | `paranoid-wide-v2` | four-branch CrossWide | WideOnce | retains roots plus connections |
 | `paranoid-deep-v2` | four-branch CrossWide | Deep | evaluates every branch per level |
+| `paranoid-deep-vector-v2-2` | four-branch CrossWide | DeepVector | retains the complete branch vector per level |
 
 The names are convenience presets, not security grades. Different presets have
 different suite IDs and intentionally produce different digests.

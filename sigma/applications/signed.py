@@ -8,7 +8,7 @@ from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWi
 from sigma.anchors.base import parse_evidence
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY, PolicyViolation, ResourcePolicy
-from sigma.rounds import Deep, WideOnce
+from sigma.rounds import Deep, DeepVector, WideOnce
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import (
     DecodeError,
@@ -174,6 +174,10 @@ def _digest_from_anchor(context: SigmaContextV2, anchor: Evidence) -> SigmaDiges
         if not isinstance(anchor, CrossWideEvidence):
             raise ValueError("Deep signed commitments require CrossWide evidence")
         return Deep(context).evaluate_digest(anchor)
+    if context.round_profile is RoundProfileId.DEEP_VECTOR:
+        if not isinstance(anchor, CrossWideEvidence):
+            raise ValueError("DeepVector signed commitments require CrossWide evidence")
+        return DeepVector(context).evaluate_digest(anchor)
     raise ValueError("unsupported signed round profile")
 
 

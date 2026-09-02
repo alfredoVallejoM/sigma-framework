@@ -8,10 +8,37 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from sigma.presets import lightweight_v2, paranoid_deep_v2, paranoid_wide_v2
-from sigma.v2 import _anchor_engine, _round_engine, hash_bytes, hash_file, verify_full
+from sigma.presets import (
+    lightweight_v2,
+    lightweight_v2_2,
+    paranoid_deep_v2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
+    paranoid_wide_v2,
+    paranoid_wide_v2_2,
+)
+from sigma.v2 import (
+    _anchor_engine,
+    _round_engine,
+    hash_bytes,
+    hash_file,
+    verify_adjacent_only,
+    verify_full,
+)
 
 from .common import derived_random
+
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows
+    resource = None  # type: ignore[assignment]
+
+
+def _context_switches() -> tuple[int | None, int | None]:
+    if resource is None:
+        return None, None
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    return int(usage.ru_nvcsw), int(usage.ru_nivcsw)
 
 
 def _branches(message: bytes) -> bytes:
@@ -25,17 +52,19 @@ def _branches(message: bytes) -> bytes:
     )
 
 
-def _preset(construction: str):
+def _preset(construction: str, revised: bool = False):
     if construction == "sigma-wide":
-        return lightweight_v2()
+        return lightweight_v2_2() if revised else lightweight_v2()
     if construction == "sigma-cross":
-        return paranoid_wide_v2()
+        return paranoid_wide_v2_2() if revised else paranoid_wide_v2()
     if construction == "sigma-deep":
-        return paranoid_deep_v2()
+        return paranoid_deep_v2_2() if revised else paranoid_deep_v2()
+    if construction == "sigma-deep-vector" and revised:
+        return paranoid_deep_vector_v2_2()
     raise ValueError(f"operation requires a Sigma construction: {construction}")
 
 
-def _memory_full(construction: str, message: bytes) -> bytes:
+def _memory_full(construction: str, message: bytes, revised: bool = False) -> bytes:
     if construction == "sha256":
         return hashlib.sha256(message).digest()
     if construction == "sha512":
@@ -48,34 +77,39 @@ def _memory_full(construction: str, message: bytes) -> bytes:
         return hashlib.blake2b(message, digest_size=64).digest()
     if construction == "concat-branches":
         return _branches(message)
-    return hash_bytes(message, _preset(construction)).to_bytes()
+    return hash_bytes(message, _preset(construction, revised)).to_bytes()
 
 
-def _file_full(construction: str, path: Path) -> bytes:
+def _file_full(construction: str, path: Path, revised: bool = False) -> bytes:
     if construction.startswith("sigma-"):
-        return hash_file(path, _preset(construction)).to_bytes()
+        return hash_file(path, _preset(construction, revised)).to_bytes()
     with path.open("rb") as source:
         message = source.read()
-    return _memory_full(construction, message)
+    return _memory_full(construction, message, revised)
 
 
-def _prepared_operation(construction: str, operation: str, message: bytes):
+def _prepared_operation(construction: str, operation: str, message: bytes, revised: bool = False):
     if operation == "full-hash":
-        return lambda: _memory_full(construction, message), "memory"
-    if operation == "file-hash":
+        return lambda: _memory_full(construction, message, revised), "memory"
+    if operation in {"file-hash", "file-hot"}:
         temporary = tempfile.TemporaryDirectory(prefix="sigma-exp09-")
         path = Path(temporary.name) / "message.bin"
         path.write_bytes(message)
 
         def file_call() -> bytes:
-            result = _file_full(construction, path)
+            result = _file_full(construction, path, revised)
             if not path.exists():
                 raise RuntimeError("benchmark input unexpectedly disappeared")
             return result
 
         file_call._temporary = temporary  # type: ignore[attr-defined]
-        return file_call, "uncontrolled-page-cache"
-    context = _preset(construction)
+        cache_state = (
+            "warm-page-cache-after-warmup"
+            if operation == "file-hot"
+            else "uncontrolled-page-cache"
+        )
+        return file_call, cache_state
+    context = _preset(construction, revised)
     anchor_engine = _anchor_engine(context)
     anchor_engine.update(message)
     anchor = anchor_engine.finalize()
@@ -91,28 +125,66 @@ def _prepared_operation(construction: str, operation: str, message: bytes):
         return digest.to_bytes, "memory"
     if operation == "verification":
         return lambda: bytes((verify_full(message, digest),)), "memory"
+    if operation == "local-verification":
+        if len(digest.states) < 2:
+            raise ValueError("local verification requires at least two published states")
+        return (
+            lambda: bytes(
+                (
+                    verify_adjacent_only(
+                        context,
+                        anchor,
+                        context.target_round,
+                        digest.states[0],
+                        digest.states[1],
+                    ),
+                )
+            ),
+            "memory",
+        )
     raise ValueError(f"unsupported operation: {operation}")
 
 
-def _measure(task: tuple[str, str, int, int, int]) -> dict[str, Any]:
-    construction, operation, size, seed, warmups = task
+def _measure(task: tuple[str, str, int, int, int, int, bool]) -> dict[str, Any]:
+    construction, operation, size, seed, warmups, repetition, revised = task
     message = random.Random(seed).randbytes(size)
-    function, cache_state = _prepared_operation(construction, operation, message)
+    function, cache_state = _prepared_operation(construction, operation, message, revised)
     for _ in range(warmups):
         function()
+    voluntary_before, involuntary_before = _context_switches()
+    cpu_started = time.process_time_ns()
     started = time.perf_counter_ns()
     output = function()
     elapsed = time.perf_counter_ns() - started
+    cpu_elapsed = time.process_time_ns() - cpu_started
+    voluntary_after, involuntary_after = _context_switches()
+    byte_operations = {"anchor", "file-hash", "file-hot", "full-hash", "verification"}
     return {
         "bytes": size,
         "cache_state": cache_state,
         "construction": construction,
         "cycles_per_byte": None,
+        "cpu_elapsed_ns": cpu_elapsed,
+        "cpu_percent_single_core": cpu_elapsed / elapsed * 100,
         "elapsed_ns": elapsed,
+        "involuntary_context_switches": (
+            involuntary_after - involuntary_before
+            if involuntary_after is not None and involuntary_before is not None
+            else None
+        ),
         "operation": operation,
+        "operations_per_s": 1_000_000_000 / elapsed,
         "output_sha256": hashlib.sha256(output).hexdigest(),
         "pid": os.getpid(),
-        "throughput_bytes_s": size * 1_000_000_000 / elapsed if size else None,
+        "repetition": repetition,
+        "throughput_bytes_s": (
+            size * 1_000_000_000 / elapsed if size and operation in byte_operations else None
+        ),
+        "voluntary_context_switches": (
+            voluntary_after - voluntary_before
+            if voluntary_after is not None and voluntary_before is not None
+            else None
+        ),
         "warmups": warmups,
     }
 
@@ -123,6 +195,9 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     warmups = int(config.get("warmups", 2))
     master_seed = str(config["master_seed"])
     sigma = {"sigma-wide", "sigma-cross", "sigma-deep"}
+    revised = config.get("suite_family") == "v2-2"
+    if revised:
+        sigma.add("sigma-deep-vector")
     for construction in config["constructions"]:
         for operation in config["operations"]:
             if operation not in ("full-hash", "file-hash") and construction not in sigma:
@@ -132,7 +207,9 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                 for repetition in range(repetitions):
                     label = f"EXP-09/{construction}/{operation}/{size}/{repetition}"
                     seed = derived_random(master_seed, label).getrandbits(128)
-                    tasks.append((str(construction), str(operation), size, seed, warmups))
+                    tasks.append(
+                        (str(construction), str(operation), size, seed, warmups, repetition, revised)
+                    )
     order_rng = derived_random(master_seed, "EXP-09/task-order")
     order_rng.shuffle(tasks)
     processes = int(config.get("processes", 1))
@@ -173,6 +250,35 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "bootstrap_median_low_ns": _percentile(bootstraps, 0.025),
                 "mad_ns": statistics.median(abs(value - median) for value in values),
                 "median_ns": median,
+                "median_cpu_percent_single_core": statistics.median(
+                    float(item["cpu_percent_single_core"]) for item in group
+                ),
+                "median_involuntary_context_switches": statistics.median(
+                    int(item["involuntary_context_switches"])
+                    for item in group
+                    if item["involuntary_context_switches"] is not None
+                )
+                if any(item["involuntary_context_switches"] is not None for item in group)
+                else None,
+                "median_operations_per_s": statistics.median(
+                    float(item["operations_per_s"]) for item in group
+                ),
+                "median_throughput_bytes_s": (
+                    statistics.median(
+                        float(item["throughput_bytes_s"])
+                        for item in group
+                        if item["throughput_bytes_s"] is not None
+                    )
+                    if any(item["throughput_bytes_s"] is not None for item in group)
+                    else None
+                ),
+                "median_voluntary_context_switches": statistics.median(
+                    int(item["voluntary_context_switches"])
+                    for item in group
+                    if item["voluntary_context_switches"] is not None
+                )
+                if any(item["voluntary_context_switches"] is not None for item in group)
+                else None,
                 "observations": len(group),
                 "p05_ns": _percentile(values, 0.05),
                 "p95_ns": _percentile(values, 0.95),

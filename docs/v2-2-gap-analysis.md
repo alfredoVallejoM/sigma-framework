@@ -116,6 +116,11 @@ en hosts controlados antes de cerrar R4.
   calibración agregada de p-values frente a SHA-512/BLAKE2b. El piloto interno
   no sustituye NIST SP 800-22, PractRand ni TestU01: sus ejecutables no están
   instalados en este entorno y la campaña externa permanece como gate visible.
+- EXP-09R separa hash en memoria, archivo caliente, ancla, rondas precalculadas,
+  serialización y verificación completa/local para los tres modos v2-2; registra
+  CPU y cambios de contexto y no expresa bytes/s para operaciones sin entrada
+  de bytes. Archivo frío, verificación firmada, afinidad/ciclos y multihost
+  continúan pendientes de infraestructura controlada.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

@@ -23,3 +23,31 @@ def test_performance_experiment_separates_operations_and_reports_intervals() -> 
     groups = summarize(records)
     assert all(group["bootstrap_median_low_ns"] <= group["median_ns"] for group in groups)
     assert all(group["median_ns"] <= group["bootstrap_median_high_ns"] for group in groups)
+    assert all(record["repetition"] in {0, 1} for record in records)
+    assert all(record["operations_per_s"] > 0 for record in records)
+    assert all(
+        record["throughput_bytes_s"] is None
+        for record in records
+        if record["operation"] in {"rounds", "serialization"}
+    )
+
+
+def test_revised_performance_covers_deep_vector_and_local_verification() -> None:
+    records = run(
+        {
+            "constructions": ["sigma-deep-vector"],
+            "master_seed": "revised",
+            "operations": ["full-hash", "rounds", "local-verification"],
+            "processes": 1,
+            "repetitions": 1,
+            "sizes": [8],
+            "suite_family": "v2-2",
+            "warmups": 0,
+        }
+    )
+    assert {record["operation"] for record in records} == {
+        "full-hash",
+        "local-verification",
+        "rounds",
+    }
+    assert all(record["construction"] == "sigma-deep-vector" for record in records)

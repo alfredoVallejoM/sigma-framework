@@ -6,12 +6,20 @@ or stable-security claim, an independent reviewer must receive and assess:
 Current status: **not reviewed externally**. This checklist is a release gate,
 not evidence that the gate has passed.
 
-- frozen `sigma-v2-1` wire and tree specifications;
-- TH-01–TH-09, including freshness and joint-branch assumptions;
+- frozen v2.1 compatibility vectors and experimental `sigma-v2-2` wire,
+  evidence, tree and application specifications;
+- G-COLL, G-PRE, G-2PRE, G-SEG-COLL, G-MULTI, G-CONFORM and G-SIG-REUSE,
+  including all budgets, target distributions and freshness events;
+- TH-01–TH-08, including separate anchor collision/preimage/second-preimage
+  parameters and every regularity or joint-branch assumption;
 - domain separation and cross-use of Keccak-family functions;
 - parser limits, denial-of-service surfaces and canonicality tests;
-- StreamWide/CrossWide/TreeWide reductions and multiprocessing equivalence;
-- complete (not smoke) EXP-01–10 data/configs/manifests;
+- StreamWide/CrossWide/TreeWide reductions, Deep/DeepVector failure models and
+  scheduler/multiprocessing equivalence;
+- the Ed25519 reuse reduction and the difference between attestation, full
+  verification and one-edge verification;
+- complete (not smoke) EXP-01R–21R data/configs/manifests for every applicable
+  experiment, with EXP-13/16 absent unless their native/RTL gates exist;
 - all negative, censored and statistically corrected results;
 - release artifact checksums, SBOM and clean tagged commit.
 

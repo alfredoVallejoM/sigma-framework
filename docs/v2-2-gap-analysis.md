@@ -40,16 +40,16 @@ bloqueadas por cambios del núcleo que pueden alterar mediciones y objetos.
 
 | ID | Estado | Acción vinculante |
 |---|---|---|
-| FORM-01 | abierto | definir siete juegos con presupuestos y capacidades separados |
-| FORM-02 | bloqueado por LIB-03/04 | reescribir canonicalidad para todos los tipos aceptados |
-| FORM-03 | abierto | separar colisión, preimagen, segunda preimagen y supuesto conjunto del ancla |
-| FORM-04 | parcial | la intuición de reinyección existe; falta juego condicionado y controles |
-| FORM-05 | parcial | modelo reducido existente; falta bound, constante de cumpleaños y censura |
-| FORM-06 | abierto | teoremas independientes de preimagen y segunda preimagen |
-| FORM-07 | parcial | contabilidad experimental existe; falta modelo de oráculo paralelo |
-| FORM-08 | abierto | seguridad de Deep/DeepVector bajo ramas y fold defectuosos |
-| FORM-09 | bloqueado por LIB-09 | reducción de reutilización de firma por modalidad de verificación |
-| FORM-10 | abierto | related work y afirmación de novedad delimitada con fuentes primarias |
+| FORM-01 | implementado | siete juegos y presupuestos separados; requiere revisión humana |
+| FORM-02 | implementado | canonicalidad cubre todos los tipos aceptados y evidencia v2-2 |
+| FORM-03 | implementado | cuatro parámetros del ancla y límites físicos separados |
+| FORM-04 | implementado | evento condicionado, frescura y controles delimitados |
+| FORM-05 | implementado | bound con `Bad_Q`, consultas y constante de mediana |
+| FORM-06 | implementado | segunda preimagen por reducción; preimagen como modelo separado |
+| FORM-07 | implementado | DAG de trabajo/span y límite explícito de la afirmación |
+| FORM-08 | implementado | fallos/correlación de ramas y fold separados por modo |
+| FORM-09 | implementado | reducción EUF-CMA y tres semánticas de verificación |
+| FORM-10 | parcial | comparación primaria inicial y novedad estrecha; búsqueda no exhaustiva |
 
 Ningún texto formal se considerará prueba revisada externamente. Las hipótesis
 conjuntas se etiquetarán siempre como supuestos, no como bits sumados.
@@ -328,3 +328,23 @@ y someter a reproducción y revisión criptográfica externas.
 - Cierre local: 493 pruebas sin omisiones con Argon2 real; Ruff y mypy verdes.
   R2 queda satisfecho en el repositorio, pendiente únicamente de reproducción
   multiplataforma/externa como condición posterior de R5, no de diseño.
+
+### Tanda C3.1 — formalización v2-2 FORM-01..10
+
+- El análisis deja de mezclar colisión, preimagen y segunda preimagen. Define
+  siete juegos y exige publicar trabajo, consultas, profundidad, procesadores,
+  memoria, usuarios/targets y consultas de firma.
+- Canonicalidad enumera cada tipo aceptado; el ancla distingue
+  `alpha_coll/pre/2pre/joint` de anchura física. La cota de segmento incluye
+  `Bad_Q`, términos no ideales y la constante `sqrt(2 ln 2)`.
+- Preimagen queda rotulada como modelo de imagen regular, no como consecuencia
+  de colisión. El teorema de segunda preimagen usa una descomposición separada.
+- WideOnce, Deep y DeepVector tienen DAGs distintos y límites explícitos. Deep
+  no hereda una reducción de “una rama sana” si falla el fold; DeepVector sí
+  conserva componentes, sin fuerza aditiva automática.
+- La composición Ed25519 separa atestación, recomputación completa y una sola
+  arista. La matriz claim-to-evidence y el checklist externo se actualizaron.
+- FORM-01..09 están listos para revisión interna humana. FORM-10 incorpora un
+  conjunto primario inicial (HAIFA, combiners, wide-pipe, herding,
+  TupleHash/ParallelHash, PoSW, PBKDF2, Argon2 y Ed25519), pero no se declarará
+  exhaustivo ni cerrará novedad sin revisión bibliográfica independiente.

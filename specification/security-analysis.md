@@ -1,170 +1,330 @@
-# Sigma v2-1 security analysis
+# Sigma v2.2 security analysis
 
-Status: internal formal analysis for the frozen v2-1 construction. These
-statements are not a third-party cryptographic review. “RO” below is an ideal
-random-oracle model; the instantiated SHA-2/SHA-3/BLAKE2/SHAKE functions are not
-proved random or independent merely because they have different names.
+Status: internal, reviewable formalization of the experimental v2.2 family.
+It is not a third-party proof or a production-security claim. “RO” means an
+ideal random oracle. Different standardized hash names, and distinct domain
+prefixes used with one primitive, do not by themselves establish independent
+random oracles.
 
-## Notation and games
+## 1. Objects and notation
 
-Let `Enc` be the canonical encoding in `sigma-v2.md`, `C` a valid context,
-`A_C(M)` the complete encoded anchor evidence, and `F` the registered state
-function with output width `n`. Define
+Let `C` be a suite-valid canonical context, `M` a byte string, `A_C(M)` the
+complete canonical anchor evidence, and `n=512` the scalar state width. For
+WideOnce,
 
-`S_0 = F(DST_init || Enc(C,A))` and
-`S_(i+1) = F(DST_round || Enc(C,i,A,S_i))`.
+```text
+S_0     = F(DST_init  || Enc(C,A))
+S_(i+1) = F(DST_round || Enc(C,i,A,S_i))
+D[t,k]  = Enc(C,S_t,...,S_(t+k-1)).
+```
 
-The digest segment is `D_(t,k)(M,C) = Enc(C,S_t,...,S_(t+k-1))`. An anchor has
-effective collision strength `a` when the best permitted adversary needs about
-`2^(a/2)` work to collide it; its physical byte length is not, by itself, `a`.
-All bounds count distinct, validly encoded queries and include an explicit
-`epsilon` term for violated freshness, encoding bugs, or deviation from the
-stated idealized model.
+Deep replaces a transition by branch outputs `B_i^j` and a 512-bit fold.
+DeepVector publishes `V_i=(B_i^1,...,B_i^m)` and every next component consumes
+the complete previous vector. `Q` denotes all distinct oracle inputs in an
+execution; repeated identical inputs count once.
 
-## TH-01 — Canonicality
+The following quantities are assumptions or measured attack costs, never
+inferred from byte length:
 
-**Statement.** `Enc` is injective on valid contexts, anchor records, tree nodes
-and digest records. For a fixed suite and input byte string, every conforming
-backend computes the same mathematical value.
+- `alpha_coll(A)`: collision strength of the complete anchor;
+- `alpha_pre(A)`: target-preimage strength of the anchor;
+- `alpha_2pre(A)`: second-preimage strength of the anchor;
+- `alpha_joint(A,J)`: strength under a named joint branch assumption `J`;
+- `w_phys(A)`: physical number of retained evidence bits.
 
-**Argument.** Fixed-width big-endian integers have a unique representation.
-Each TLV has a fixed header; tags are strictly increasing and unique; every
-container carries its exact length/count; and decoders reject unknown, missing,
-truncated or trailing data. Parsing is therefore a left inverse of encoding,
-which proves injectivity on accepted values. A branch transcript ends in the
-fixed `BRANCH_END` tag and `|M|:u64`; equality fixes the message length and hence
-the boundary and bytes of `M`. Tree leaves and nodes additionally bind index,
-range, height and byte length. Backend, adapter, read size and worker count are
-absent from `C` and from the mathematical algorithms. Backend equality is a
-conformance obligation tested by EXP-01, not a consequence that arbitrary code
-inherits automatically.
+No formula may substitute `w_phys` for an `alpha` parameter. CrossWide
+connections are deterministic functions of retained roots and receive no extra
+independent strength. Additive branch strength is used only when a separately
+stated joint assumption supplies it.
 
-## TH-02 — Anchor binding
+## 2. Adversary interface and seven games (FORM-01)
 
-**Statement.** A StreamWide or CrossWide anchor collision for distinct
-`(C,M)` yields equal message length and a collision in every retained branch.
-For TreeWide, it yields for every retained branch either an underlying hash
-collision at a leaf/node or identical canonical leaf sequence. CrossWide cannot
-be weaker than its retained root vector merely because connections are added.
+Every result fixes a suite set `S`, context policy `P`, time/work `W`, anchor
+queries `q_A`, transition/component queries `q_R`, adaptive parallel depth
+`d`, processors `p`, memory `mu`, and number of targets/users `u`. The
+adversary may choose contexts only from `S` accepted by `P`, sees the public
+algorithms and domains, and may adapt later queries to prior answers. It never
+receives secret state from the implementation.
 
-**Reduction.** Parse equal evidence using TH-01. Algorithm identifiers and root
-lengths align uniquely, so every corresponding root is equal. For distinct
-branch transcripts, this is a collision in that branch. CrossWide serializes
-the original roots before all connections; deleting the connection suffix gives
-the same reduction. Recursing from an equal TreeWide root over unequal canonical
-trees reaches the first unequal pair of inputs with equal output for the
-corresponding registered hash. Consequently, for any selected retained branch
-`j`, an anchor-collision adversary becomes a collision adversary against `H_j`
-with essentially the same work. This is the conservative “at least one sound
-branch” claim. Additive `m*n` strength requires an additional joint-independence
-assumption that v2-1 does not assert.
+1. **G-COLL.** Output distinct canonical `(C,M) != (C',M')` whose complete
+   digests are equal. Cross-context wins are allowed only when the encoded
+   contexts are equal, which canonicality reduces to `C=C'`.
+2. **G-PRE.** Receive a target sampled by the challenger under a declared
+   message distribution and fixed `C`; output any `M'` with the same digest.
+   The target distribution and its min-entropy are part of the game.
+3. **G-2PRE.** Receive `(C,M,D(C,M))`; output `M' != M` with the same digest.
+4. **G-SEG-COLL.** Choose two distinct inputs whose `k` published states at
+   target round `t` match. This game exposes `t,k` and does not treat one valid
+   edge as proof of its prefix.
+5. **G-MULTI.** Receive or choose `u` explicitly domain-separated contexts and
+   targets. Win against any one. Bounds pay an explicit union factor (normally
+   at most `u` or `binom(u,2)`); “multi-user security for free” is not assumed.
+6. **G-CONFORM.** Choose one valid `(C,M)` plus adapter, chunk partition,
+   backend and worker schedule. Win if two conforming executions disagree on
+   any context, anchor, intermediate or digest byte. This is a deterministic
+   implementation game, not a cryptographic game.
+7. **G-SIG-REUSE.** With signing-oracle budget `q_S`, output a valid Ed25519
+   signature/commitment for an unsigned record not previously signed. The game
+   separately records whether the verifier checks attestation, full history or
+   only one edge.
 
-## TH-03 — Non-coalescence under reinjection
+Reports must publish `(W,q_A,q_R,d,p,mu,u,q_S)`, available context/message
+oracles, censoring and success definition. Query count, wall time and adaptive
+depth are not interchangeable.
 
-**Statement.** If `A != A'` and `S_i = S'_i`, then the two encoded round queries
-at level `i` are distinct. In an `n`-bit RO, conditioned on the existing view,
-`Pr[S_(i+1)=S'_(i+1)] = 2^-n` when both queries are fresh.
+## 3. Canonicality theorem (FORM-02)
 
-**Proof.** The anchor occupies its own TLV. By TH-01, unequal anchors cannot
-produce equal encoded round inputs even when context, index and state agree.
-Fresh RO answers to distinct inputs are independent uniform `n`-bit strings.
-Without anchor reinjection, equal states and indices give the same query and
-coalescence has probability one. EXP-03 illustrates this distinction at reduced
-width; it does not validate SHA3-512 as an RO.
+**TH-01 (injective accepted encodings).** `Enc` is injective over each accepted
+type: context, v2.2 WideEvidence, v2.2 CrossWideEvidence, digest,
+Argon2idParameters, SigmaKdfResult, PowParameters and signed commitment. It is
+also injective over framed StreamWide inputs and TreeWide leaves/nodes. For a
+fixed suite and message, conforming schedulers compute the same mathematical
+object.
 
-## TH-04 — Collision of a consecutive segment
+**Argument.** Integers have one fixed-width big-endian representation. TLV tags
+are positive, unique and strictly increasing; schemas are closed; every
+variable component has an exact count or length; parsers reject missing,
+unknown, duplicate, reordered, truncated and trailing fields. Context and
+evidence headers carry version and, for evidence, type and suite. Digest state
+width is fixed by the registered suite. Therefore decoding is a left inverse
+of encoding on every accepted type. Stream transcripts include a terminal
+domain and `|M|`; tree inputs include context, algorithm, range/height/length
+and child order. Backend configuration is absent from mathematical inputs.
 
-**Statement.** For `q` distinct messages and fixed valid `C`, under fresh,
-domain-separated RO queries,
+This theorem is conditional on the codecs satisfying their stated checks.
+Differential tests, KATs, property tests, fuzzing and mutation tests are the
+executable evidence; arbitrary third-party code does not inherit conformance.
 
-`Adv_coll(D_(t,k),q) <= Adv_coll(A,q) + binom(q,2)*2^(-k*n) + epsilon`.
+## 4. Anchor properties (FORM-03)
 
-**Proof sketch.** Split on whether any message pair has equal anchors. The first
-event is bounded by anchor collision advantage. Otherwise anchors differ. For a
-fixed pair to share `S_t`, its distinct query outputs must match; conditioned on
-that match, TH-03 gives another independent `2^-n` factor for every subsequent
-state while queries remain fresh. Multiplying gives `2^(-k*n)` and a union bound
-over pairs gives the formula. `epsilon` accounts for internal repeated queries,
-domain overlap or non-ideal instantiation. The statement does not claim that
-two published states contain a proof of how `S_t` was obtained.
+**TH-02 (retained-root collision reduction).** A collision in StreamWide or
+CrossWide evidence for distinct canonical inputs makes every retained branch
+root equal. For any selected collision-resistant branch `j`, this yields a
+collision in `H_j` on distinct framed inputs. CrossWide cannot become weaker
+merely by appending connections because the original roots remain present.
 
-## TH-05 — Generic classical work
+For TreeWide, equality of one sound branch root over unequal canonical leaf
+sequences recursively yields a collision in that branch's leaf or node hash.
+This uses ordered children and bound ranges; it does not claim equivalence to
+another tree standard.
 
-**Statement.** If the anchor exposes `a` effective collision bits and the
-segment behaves as `k*n` independent constrained bits, generic collision work is
-approximately
+**Corollary (conservative combiner).** If at least one retained branch is
+collision resistant on Sigma's canonical transcripts, the complete retained
+anchor is collision resistant. Constant, truncated or correlated other
+branches do not defeat this reduction. No analogous preimage or second-
+preimage conclusion follows from collision resistance.
 
-`2^(min(a,k*n)/2) * (C_A + (t+k-1) C_R)`.
+`alpha_pre(A)` and `alpha_2pre(A)` must therefore be assumed or reduced from
+the corresponding property of a retained branch under an appropriate
+composition model. `alpha_joint(A,J)` may exceed the conservative bound only
+when `J` explicitly defines independence/correlation and survives review.
 
-Generic target/preimage work is approximately
+## 5. Reinjection and segment collision (FORM-04, FORM-05)
 
-`2^min(a,k*n) * (C_A + (t+k-1) C_R)`.
+**TH-03 (conditioned non-coalescence).** Condition on `A != A'` and
+`S_i=S'_i`. The next WideOnce inputs are distinct because the anchor occupies
+its own injective field. If both RO queries are fresh, their outputs agree with
+probability exactly `2^-n`. Binding only the index does not prevent coalescence
+when indices and states agree; binding only the anchor and binding anchor plus
+index both separate unequal-anchor queries. The index additionally separates
+levels and prevents cross-level input reuse.
 
-**Justification.** The reachable segment space cannot exceed either the anchor
-image or the segment range. Birthday search takes the square root of the smaller
-effective range; target search takes the range itself. These are model-based
-generic estimates, not unconditional lower bounds, post-quantum estimates, or
-claims about a concrete branch's cryptanalysis. EXP-02 tests only reduced-width
-scaling and explicitly records censored trials.
+Let `Bad_Q` be the event that a proof step treats a query as fresh when its
+complete encoded input already occurred, or that two intended domains encode
+the same bytes. For an ideal `n`-bit oracle and at most `Q` distinct queries, a
+generic output-repeat union bound is
 
-## TH-06 — Sequential depth per candidate
+```text
+Pr[Bad_Q] <= Q(Q-1) / 2^(n+1) + epsilon_enc,
+```
 
-**Statement.** Evaluating one candidate to `D_(t,k)` requires
-`t+k-1` adaptive transition levels after `S_0`, unless the evaluator guesses an
-intermediate state or violates the transition assumptions.
+where canonical domain separation makes `epsilon_enc=0` for conforming v2.2
+encodings. Non-ideal primitive behavior belongs in an explicit instantiation
+term `epsilon_inst`.
 
-**Proof.** The query for level `i+1` contains `S_i`; its complete input is
-unknown before level `i` returns. Branches inside one Deep level can run in
-parallel, but the fold output is required by the next level. Independent
-candidates can be evaluated concurrently. Thus candidate throughput and
-per-candidate critical depth are different quantities. EXP-06 reports both
-exact query accounting and wall time; timing regression is not the proof.
+**TH-04 (collision of a consecutive WideOnce segment).** For `q` candidate
+messages under one valid context, assuming fresh separated RO calls,
 
-## TH-07 — Conservative combiner robustness
+```text
+Adv_seg-coll <= Adv_coll(A; q_A)
+                + binom(q,2) * 2^(-k*n)
+                + Pr[Bad_Q] + epsilon_inst.
+```
 
-**Statement.** For a concatenated retained-root anchor, collision resistance is
-preserved if at least one retained branch remains collision resistant on the
-canonical transcript.
+Split on equal anchors. Unequal anchors make the first matching published state
+an equality of answers to distinct inputs; TH-03 supplies another independent
+factor for each following state while freshness holds. Union-bound over message
+pairs. The theorem does not prove that the first published state has a valid
+prefix, and it does not apply unchanged to Deep/DeepVector without their
+assumptions below.
 
-**Reduction.** An anchor collision makes every retained component equal. Select
-any branch covered by the assumption and return the two distinct transcripts as
-its collision. Constant or correlated broken branches do not invalidate that
-reduction for the selected sound branch. Connections may improve diffusion or
-fault coverage but are not credited with extra security in this conservative
-bound. `Psi`, CrossOnly and independence-based sums are outside this theorem.
+For an ideal uniform image of `b` bits, the median first-collision query count
+is approximately
 
-## TH-08 — Input entropy bound
+```text
+sqrt(2 ln 2) * 2^(b/2),
+```
 
-**Statement.** If candidate messages have min-entropy `h`, Sigma cannot raise
-the cost of enumerating that message source beyond roughly `2^h` candidates;
-it only multiplies per-candidate evaluation cost.
+not merely `2^(b/2)`. Using `b=min(alpha_coll(A),k*n)` is a generic model under
+regularity assumptions, not an unconditional lower bound.
 
-**Argument.** The digest is a deterministic public function of message and
-context. An adversary enumerates the same ranked dictionary, evaluates Sigma
-for each candidate and compares the digest. No deterministic post-processing
-adds uncertainty about the original message. Password applications therefore
-require a standard salted memory-hard KDF such as Argon2id; any Sigma layer must
-be compared against Argon2id alone.
+## 6. Preimage and second preimage (FORM-06)
 
-## TH-09 — Adjacent verification is not history verification
+**TH-05 (second-preimage decomposition).** Given `(C,M)`, any successful
+second preimage `M'` either has `A_C(M')=A_C(M)`, winning the anchor
+second-preimage game, or has a different anchor whose `k` published states
+match. Under the TH-04 freshness model,
 
-**Statement.** Checking `S_(t+1)=F(C,A,t,S_t)` proves only that single edge. It
-does not prove that `S_t` equals the state obtained from `S_0` after `t` levels.
+```text
+Adv_2pre(D) <= Adv_2pre(A; q_A) + q_M*2^(-k*n)
+               + Pr[Bad_Q] + epsilon_inst.
+```
 
-**Counterexample.** Choose any 512-bit value `X`, compute one public transition
-`Y=F(C,A,t,X)`, and present `(X,Y)`. The edge verifies regardless of whether `X`
-belongs to the canonical trajectory. Full verification must recompute the
-anchor and all preceding transitions, as `verify_full` does, or use a separately
-specified proof-of-sequential-work protocol. Sigma v2-1 contains no such proof.
+Here `q_M` counts distinct evaluated candidates. Collision resistance alone
+cannot replace `Adv_2pre(A)`.
 
-## Instantiation and review limits
+**TH-06 (target preimage is a separate assumption).** No preimage lower bound
+for `D` follows from TH-02 or TH-04. Under a declared regular-image model for
+the map `M -> (A,D)` and a target distribution independent of the adversary's
+fresh queries, generic work is modeled by
 
-- SHA3-512 is used both as one anchor branch and as the state/fold hash under
-  disjoint prefixes. This is domain separation, not a proof of independence.
-- SHA3-512 and SHAKE256 share Keccak structure. No orthogonality claim is made.
-- Multi-state output cannot exceed the effective binding of its anchor.
-- Python is not constant-time and EXP-13 is gated on a native implementation.
-- No hardware, energy, ASIC-resistance, signature, authentication, KDF or PoW
-  security property follows from TH-01–TH-09. The optional application modules
-  are compositions with separate assumptions, not consequences of these theorems.
-- External cryptographic review remains required before production use.
+```text
+2^min(alpha_pre(A), k*n)
+```
+
+candidate evaluations, capped by the message source min-entropy `h`. This is a
+model prediction, not a reduction from collision resistance. For a dictionary
+source the adversary enumerates at most about `2^h` candidates; deterministic
+Sigma processing adds cost per guess but no entropy.
+
+Multi-target estimates replace a single-target success probability by an
+explicit union bound in `u` (approximately `u*q_M/2^b` in the ideal uniform
+model). Every experiment must keep collision, preimage, second preimage and
+multi-target outcomes in separate fields.
+
+## 7. Parallel depth (FORM-07)
+
+**TH-07 (evaluation DAG, not universal lower bound).** For the specified
+evaluation algorithm, reaching the last published level needs `t+k-1`
+adaptive transitions after initialization.
+
+- WideOnce: one state-oracle layer per transition.
+- Deep serial implementation: `m` branch calls followed by one fold per level;
+  work `m+1`, parallel span two oracle layers.
+- Deep with ideal branch parallelism: one branch layer plus one fold layer.
+- DeepVector: one parallel branch layer per level because every component
+  consumes the complete previous vector; there is no scalar fold.
+
+Candidates are freely parallelizable. Threads/processes changing wall time do
+not alter the DAG. The data dependency proves the span of the specified
+straight-line evaluator only; a lower bound against every alternative
+algorithm requires a separate sequentiality theorem, which Sigma does not
+claim. Guessing an intermediate state succeeds with the relevant state/vector
+guessing probability and must be included in any such game.
+
+## 8. Deep and DeepVector failure models (FORM-08)
+
+**Deep.** Only the 512-bit fold state is published. Even with ideal independent
+branches, generic collision/preimage strength is capped by the fold width. If
+the fold is constant, adversarially malleable or collision-broken, retained
+branch outputs do not give a conservative final-digest reduction because they
+are hidden behind the fold. One sound branch is therefore insufficient for a
+Deep final-state theorem unless the fold also satisfies the named property and
+the composition assumption binds all branch outputs.
+
+**DeepVector.** Equality of a published vector makes every component equal.
+For distinct canonical component inputs, one sound retained branch gives the
+same conservative collision reduction as TH-02. A constant broken branch does
+not erase a sound component; correlated branches prevent additive claims but
+not that selected-branch reduction. Preimage/second-preimage require the
+corresponding branch and joint-input assumptions separately.
+
+Both modes consume the complete anchor at every level. Related or adversarially
+chosen anchors remain distinct inputs by TH-01/03, but their hash outputs are
+not assumed independent merely because their encodings differ. Any
+related-anchor theorem must name the oracle/related-input assumption. Backend
+reordering is normalized before Deep's fold and is only a conformance property.
+
+## 9. Signed commitment composition (FORM-09)
+
+The signed object contains `(C,A,states,algorithm,key_id)` under a dedicated
+domain and canonical encoding.
+
+**TH-08 (signature reuse decomposition).** A new accepted attestation over a
+record not submitted to the signing oracle yields either (a) an Ed25519
+EUF-CMA forgery, or (b) two distinct semantic records with one signing input,
+contradicting TH-01/domain separation. Thus
+
+```text
+Adv_reuse-attest <= Adv_EUF-CMA(Ed25519; q_S) + Adv_noncanonical.
+```
+
+Signing only `D[t,k]` authenticates those states/context but omits independently
+presented anchor evidence. Signing `(A,D[t,k])`, as v2.2 does, binds the claim
+to both. `verify_signed_attestation` proves only that the key authenticated the
+claim. `verify_full_signed` additionally recomputes `A` and the entire prefix,
+so reuse against a different message requires a signature forgery, an encoding
+failure, or a successful underlying anchor/digest equality attack. A verifier
+that checks one edge proves only that edge: arbitrary `X` and its public
+successor form a valid pair without showing that `X=S_t`.
+
+This theorem assumes correct key-to-identifier policy outside the codec and
+the standard security requirements of Ed25519; Sigma does not strengthen the
+signature scheme.
+
+## 10. Positioning and candidate novelty (FORM-10)
+
+- PBKDF2 and PRF iteration concern keyed password derivation; Sigma's public
+  reinjected anchor is not a secret PRF key or memory-hardening mechanism.
+- HAIFA binds salts/counters within a hash iteration. Sigma similarly values
+  explicit tweaks but commits an external retained wide anchor at every level.
+- Wide-/double-pipe designs enlarge internal state inside a hash. Sigma exposes
+  a multi-algorithm anchor and, only in DeepVector, a vector state.
+- Robust combiners motivate retaining component outputs. Short compressed
+  combiners face different limits; CrossWide connections are not credited as
+  independent roots.
+- Multicollision, herding and long-message second-preimage work warn against
+  deriving one property from another; Sigma states each game separately.
+- TupleHash/ParallelHash and tree hashes provide standardized tuple/parallel
+  hashing goals. Sigma is not offered as their replacement.
+- Hash chains, time-lock puzzles, VDFs and proofs of sequential work provide
+  different delay/proof guarantees. Sigma has no succinct proof and candidates
+  remain parallel.
+- Memory-hard functions and pebbling analyses target cumulative memory cost.
+  Sigma's Python hash iteration makes no such claim; the optional KDF obtains
+  memory hardness only from Argon2id.
+
+The candidate novelty is narrowly the combination of a canonically retained
+wide multi-hash anchor, complete anchor reinjection at each separated level,
+and a commitment to consecutive scalar or vector states. It is not the first
+use of iteration, counters, salts, trees, wide pipes or tweaks. Novelty and
+security still require literature review and external cryptanalysis.
+
+Primary comparison sources include the HAIFA proposal
+([Biham–Dunkelman](https://eprint.iacr.org/2007/278)), the impossibility result
+for short black-box collision-resistant combiners
+([Pietrzak](https://eprint.iacr.org/2006/348)), the wide-/double-pipe design
+principle ([Lucks](https://www.iacr.org/archive/asiacrypt2005/472/472.pdf)),
+the herding attack ([Kelsey–Kohno](https://eprint.iacr.org/2005/281)), NIST's
+standardized [TupleHash and ParallelHash](https://csrc.nist.gov/pubs/sp/800/185/final),
+the Cohen–Pietrzak
+[proof of sequential work](https://eprint.iacr.org/2018/183),
+[PBKDF2](https://www.rfc-editor.org/info/rfc8018/),
+[Argon2](https://www.rfc-editor.org/rfc/rfc9106.html), and the CFRG
+[Ed25519 specification](https://datatracker.ietf.org/doc/html/rfc8032). This is
+a scoped comparison set, not a claim that the literature search is complete.
+
+## 11. Claim boundaries and review checklist
+
+- Multiple branch widths are not added as “security bits” without `J`.
+- Multiple consecutive states are not a proof of their prefix.
+- SHA3-512 and SHAKE256 share Keccak structure; domain separation is not
+  primitive independence.
+- PoW verification recomputes all work and is neither succinct nor asymmetric.
+- Argon2id supplies the KDF's memory hardness; Sigma supplies deterministic
+  binding and overhead.
+- Python is not claimed constant-time. Native leakage claims need a reviewed
+  native core and measurements.
+- No ASIC, energy or resistance claim exists without RTL and synthesis data.
+- All theorem-to-code mappings require frozen vectors and reproducible tests.
+- External cryptographic review remains a release dependency.

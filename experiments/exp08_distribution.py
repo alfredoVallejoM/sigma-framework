@@ -3,7 +3,15 @@ import math
 from itertools import pairwise
 from typing import Any
 
-from sigma.presets import lightweight_v2, paranoid_deep_v2, paranoid_wide_v2
+from sigma.presets import (
+    lightweight_v2,
+    lightweight_v2_2,
+    paranoid_deep_v2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
+    paranoid_wide_v2,
+    paranoid_wide_v2_2,
+)
 from sigma.v2 import hash_bytes
 
 
@@ -23,7 +31,7 @@ def _message(corpus: str, index: int, size: int) -> bytes:
     raise ValueError(f"unsupported corpus: {corpus}")
 
 
-def _output(construction: str, message: bytes) -> bytes:
+def _output(construction: str, message: bytes, revised: bool = False) -> bytes:
     if construction == "sha256":
         return hashlib.sha256(message).digest()
     if construction == "sha512":
@@ -33,32 +41,65 @@ def _output(construction: str, message: bytes) -> bytes:
     if construction == "blake2b-512":
         return hashlib.blake2b(message, digest_size=64).digest()
     if construction == "sigma-wide":
-        return b"".join(hash_bytes(message, lightweight_v2()).states)
+        return b"".join(
+            hash_bytes(message, lightweight_v2_2() if revised else lightweight_v2()).states
+        )
     if construction == "sigma-cross":
-        return b"".join(hash_bytes(message, paranoid_wide_v2()).states)
+        return b"".join(
+            hash_bytes(message, paranoid_wide_v2_2() if revised else paranoid_wide_v2()).states
+        )
     if construction == "sigma-deep":
-        return b"".join(hash_bytes(message, paranoid_deep_v2()).states)
+        return b"".join(
+            hash_bytes(message, paranoid_deep_v2_2() if revised else paranoid_deep_v2()).states
+        )
+    if construction == "sigma-deep-vector" and revised:
+        return b"".join(hash_bytes(message, paranoid_deep_vector_v2_2()).states)
     raise ValueError(f"unsupported construction: {construction}")
+
+
+def _output_domains(construction: str, message: bytes, revised: bool) -> dict[str, bytes]:
+    """Return streams which never concatenate independently framed state objects."""
+
+    if not revised or not construction.startswith("sigma-"):
+        return {"digest": _output(construction, message, revised)}
+    context = {
+        "sigma-wide": lightweight_v2_2,
+        "sigma-cross": paranoid_wide_v2_2,
+        "sigma-deep": paranoid_deep_v2_2,
+        "sigma-deep-vector": paranoid_deep_vector_v2_2,
+    }.get(construction)
+    if context is None:
+        raise ValueError(f"unsupported construction: {construction}")
+    digest = hash_bytes(message, context())
+    return {f"state-{index}": state for index, state in enumerate(digest.states)}
 
 
 def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     count = int(config.get("messages", 1024))
     size = int(config.get("message_bytes", 32))
+    streams = int(config.get("streams", 1))
+    if streams < 1:
+        raise ValueError("EXP-08 streams must be positive")
+    revised = config.get("suite_family") == "v2-2"
     records = []
     for corpus in config["corpora"]:
         for construction in config["constructions"]:
-            for index in range(count):
-                message = _message(str(corpus), index, size)
-                output = _output(str(construction), message)
-                records.append(
-                    {
-                        "construction": construction,
-                        "corpus": corpus,
-                        "index": index,
-                        "message_sha256": hashlib.sha256(message).hexdigest(),
-                        "output_hex": output.hex(),
-                    }
-                )
+            for stream in range(streams):
+                for index in range(count):
+                    message = _message(str(corpus), stream * count + index, size)
+                    outputs = _output_domains(str(construction), message, revised)
+                    for domain, output in outputs.items():
+                        records.append(
+                            {
+                                "construction": construction,
+                                "corpus": corpus,
+                                "domain": domain,
+                                "index": index,
+                                "message_sha256": hashlib.sha256(message).hexdigest(),
+                                "output_hex": output.hex(),
+                                **({"stream": stream} if streams > 1 else {}),
+                            }
+                        )
     return records
 
 
@@ -139,13 +180,22 @@ def _tests(stream: bytes) -> dict[str, float]:
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    multiple_streams = any("stream" in record for record in records)
+    multiple_domains = any("domain" in record for record in records)
+    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for record in records:
-        grouped.setdefault((str(record["construction"]), str(record["corpus"])), []).append(record)
+        key = (
+            str(record["construction"]),
+            str(record["corpus"]),
+            *((str(record["domain"]),) if multiple_domains else ()),
+            *((int(record["stream"]),) if multiple_streams else ()),
+        )
+        grouped.setdefault(key, []).append(record)
     total_tests = len(grouped) * 4
     threshold = 0.05 / total_tests
     summaries = []
-    for (construction, corpus), group in sorted(grouped.items()):
+    for key, group in sorted(grouped.items()):
+        construction, corpus = key[:2]
         ordered = sorted(group, key=lambda item: int(item["index"]))
         stream = b"".join(bytes.fromhex(str(item["output_hex"])) for item in ordered)
         p_values = _tests(stream)
@@ -158,6 +208,36 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "failures_bonferroni": sum(value < threshold for value in p_values.values()),
                 "p_values": p_values,
                 "unique_outputs": len({item["output_hex"] for item in group}),
+                **({"domain": key[2]} if multiple_domains else {}),
+                **({"stream": key[-1]} if multiple_streams else {}),
             }
         )
+    calibration: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for item in summaries:
+        key = (
+            str(item["construction"]),
+            str(item["corpus"]),
+            *((str(item["domain"]),) if multiple_domains else ()),
+        )
+        calibration.setdefault(key, []).append(item)
+    for group in calibration.values():
+        values = sorted(float(value) for item in group for value in item["p_values"].values())
+        count = len(values)
+        ks = max(
+            max((index + 1) / count - value, value - index / count)
+            for index, value in enumerate(values)
+        )
+        qq_rmse = math.sqrt(
+            sum((value - (index + 0.5) / count) ** 2 for index, value in enumerate(values))
+            / count
+        )
+        common = {
+            "p_value_count": count,
+            "p_value_qq_rmse": qq_rmse,
+            "rejection_rate_0_05": sum(value < 0.05 for value in values) / count,
+            "stream_count": len(group),
+            "uniformity_ks_statistic": ks,
+        }
+        for item in group:
+            item.update(common)
     return summaries

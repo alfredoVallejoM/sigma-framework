@@ -112,6 +112,10 @@ en hosts controlados antes de cerrar R4.
   deliberadamente insuficiente (`16` frente a `566–677` muestras requeridas por
   bit de entrada), por lo que correlaciones máximas altas no son un hallazgo de
   producción ni permiten congelar el tamaño confirmatorio.
+- EXP-08R ya evita concatenar estados o dominios en un mismo stream y publica
+  calibración agregada de p-values frente a SHA-512/BLAKE2b. El piloto interno
+  no sustituye NIST SP 800-22, PractRand ni TestU01: sus ejecutables no están
+  instalados en este entorno y la campaña externa permanece como gate visible.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

@@ -1,5 +1,7 @@
 from experiments.exp02_collisions import run as run_collisions
+from experiments.exp02_collisions import summarize as summarize_collisions
 from experiments.exp03_persistence import run as run_persistence
+from experiments.exp03_persistence import summarize as summarize_persistence
 from experiments.exp04_anchor_robustness import run as run_anchors
 from experiments.reduced_oracle import ReducedOracle, trajectory
 
@@ -63,3 +65,55 @@ def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None
         if record["attack"] == "framing-ambiguity-control"
     }
     assert controls == {"unframed-concat-control": True, "canonical-framing-control": False}
+
+
+def test_revised_collision_controls_and_survival_are_reported() -> None:
+    records = run_collisions(
+        {
+            "anchor_multipliers": [1],
+            "constructions": [
+                "stationary-consecutive",
+                "indexed-consecutive",
+                "anchored-consecutive",
+                "anchored-indexed-consecutive",
+            ],
+            "master_seed": "controls",
+            "max_candidates": 1000,
+            "repetitions": 4,
+            "state_counts": [2],
+            "target_rounds": [1],
+            "widths": [4],
+        }
+    )
+    assert {record["construction"] for record in records} == {
+        "stationary-consecutive",
+        "indexed-consecutive",
+        "anchored-consecutive",
+        "anchored-indexed-consecutive",
+    }
+    assert all(group["survival"] for group in summarize_collisions(records))
+
+
+def test_revised_persistence_separates_anchor_relation_and_transition_controls() -> None:
+    records = run_persistence(
+        {
+            "anchor_relations": ["same", "different"],
+            "constructions": ["stationary", "indexed", "anchored", "anchored-indexed"],
+            "master_seed": "controls",
+            "segments": [2],
+            "trials": 32,
+            "widths": [4],
+        }
+    )
+    assert len(records) == 256
+    always = [
+        record
+        for record in records
+        if record["anchor_relation"] == "same"
+        or record["construction"] in {"stationary", "indexed"}
+    ]
+    assert all(record["persisted"] for record in always)
+    groups = summarize_persistence(records)
+    assert {group["anchor_relation"] for group in groups} == {"same", "different"}
+    assert all("compatible_holm_5pct" in group for group in groups)
+    assert all("interpretation" in group for group in groups)

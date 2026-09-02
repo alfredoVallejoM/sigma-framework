@@ -47,3 +47,33 @@ def trajectory(
         state = oracle.query("round-reinjected" if reinjected else "round-simple", n, *parts)
         states.append(state)
     return anchor, tuple(states[target_round : last + 1])
+
+
+def controlled_trajectory(
+    oracle: ReducedOracle,
+    candidate: int,
+    n: int,
+    anchor_bits: int,
+    target_round: int,
+    state_count: int,
+    construction: str,
+) -> tuple[int, tuple[int, ...]]:
+    """Evaluate one of the four causal transition controls used by EXP-02R/03R."""
+
+    if construction not in {"stationary", "indexed", "anchored", "anchored-indexed"}:
+        raise ValueError(f"unsupported reduced construction: {construction}")
+    candidate_bytes = candidate.to_bytes(16, "big")
+    anchor = oracle.query("anchor", anchor_bits, candidate_bytes)
+    anchor_bytes = encode_integer(anchor, anchor_bits)
+    state = oracle.query("init", n, anchor_bytes)
+    states = [state]
+    last = target_round + state_count - 1
+    for index in range(last):
+        parts = [encode_integer(state, n)]
+        if construction in {"indexed", "anchored-indexed"}:
+            parts.insert(0, index.to_bytes(8, "big"))
+        if construction in {"anchored", "anchored-indexed"}:
+            parts.insert(0, anchor_bytes)
+        state = oracle.query(f"round-{construction}", n, *parts)
+        states.append(state)
+    return anchor, tuple(states[target_round : last + 1])

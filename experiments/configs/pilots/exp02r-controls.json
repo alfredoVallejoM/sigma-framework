@@ -1,0 +1,23 @@
+{
+  "experiment": "EXP-02",
+  "master_seed": "sigma-exp02r-controls-pilot-v1",
+  "widths": [],
+  "state_counts": [1, 2, 3],
+  "target_rounds": [1, 4],
+  "anchor_multipliers": [1, 2],
+  "constructions": [
+    "stationary-single", "stationary-consecutive",
+    "indexed-single", "indexed-consecutive",
+    "anchored-single", "anchored-consecutive",
+    "anchored-indexed-single", "anchored-indexed-consecutive"
+  ],
+  "repetitions": 4,
+  "max_candidates": 10000,
+  "execution": {
+    "timeout_seconds": 300,
+    "tasks": [
+      {"label": "n4", "overrides": {"widths": [4]}},
+      {"label": "n8", "overrides": {"widths": [8]}}
+    ]
+  }
+}

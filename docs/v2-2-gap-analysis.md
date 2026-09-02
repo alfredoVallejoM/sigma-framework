@@ -80,6 +80,13 @@ en hosts controlados antes de cerrar R4.
   observaciones locales sin divergencias. Sigue pendiente la matriz de tamaños
   grandes, adaptadores adversariales y Linux/macOS/Windows; el piloto no es el
   confirmatorio.
+- EXP-02R/03R incorporan pilotos separados para los cuatro controles causales.
+  EXP-02R conserva censura y curva Kaplan–Meier/RMST por celda; EXP-03R usa un
+  oráculo independiente por trial, separa ancla igual/diferente, aplica Holm y
+  etiqueta celdas de eventos insuficientes como límites superiores. Los pilotos
+  locales produjeron 768 y 12 288 observaciones respectivamente. Un primer
+  piloto EXP-03 con oráculo compartido dio un resultado adverso y fue descartado
+  metodológicamente antes de congelar R4; permanece conservado fuera del repo.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

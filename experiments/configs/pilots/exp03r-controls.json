@@ -1,0 +1,16 @@
+{
+  "experiment": "EXP-03",
+  "master_seed": "sigma-exp03r-controls-pilot-v1",
+  "widths": [],
+  "segments": [1, 2, 3],
+  "constructions": ["stationary", "indexed", "anchored", "anchored-indexed"],
+  "anchor_relations": ["same", "different"],
+  "trials": 256,
+  "execution": {
+    "timeout_seconds": 300,
+    "tasks": [
+      {"label": "n4", "overrides": {"widths": [4]}},
+      {"label": "n8", "overrides": {"widths": [8]}}
+    ]
+  }
+}

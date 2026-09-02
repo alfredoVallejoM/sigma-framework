@@ -1,6 +1,6 @@
 # Auditoría de brecha y campañas Sigma v2-2
 
-Fecha de corte: 2026-09-02. Rama auditada: `sigma-v2-audit`. Baseline remoto:
+Fecha de corte: 2026-09-03. Rama auditada: `sigma-v2-audit`. Baseline remoto:
 `f6ce2eef838f48aa406957fe0c6be18b4dbff2f7`.
 
 Este documento contrasta el addendum v2-2 con artefactos comprobables del
@@ -32,7 +32,7 @@ bloqueadas por cambios del núcleo que pueden alterar mediciones y objetos.
 | LIB-10 | abierto | Deep ejecuta ramas secuencialmente dentro de cada ronda | backend intrarronda y equivalencia bajo reordenación |
 | LIB-11 | abierto | RealTime duplica matemáticamente Lightweight con otro `SuiteId` | decisión documentada y migración/versionado |
 | LIB-12 | abierto | no existe DeepVector/LinkedWide | diseño, implementación o descarte razonado |
-| LIB-13 | parcial | hay KAT de referencia, pero cobertura intermedia incompleta y sin segunda implementación | corpus completo y consumidor independiente |
+| LIB-13 | parcial | consumidor independiente completo para las seis suites; faltan aplicaciones y corpus KAT integral | corpus completo de aplicaciones y suites |
 | LIB-14 | parcial | existe fuzz mutacional determinista de cuatro parsers | property, coverage-guided, mutation, parsers nuevos y presupuestos |
 | LIB-15 | parcial | paquete `2.0.0a1`, suites `v2-1`, wire v2 y artefactos existen | nomenclatura unificada, política y tag limpio de campaña |
 
@@ -292,3 +292,20 @@ y someter a reproducción y revisión criptográfica externas.
 - El vector congelado conserva hashes SHA-256 de cada nivel y componente.
   LIB-13 permanece parcial hasta extender este consumidor a todas las suites y
   aplicaciones y completar límites de hojas TreeWide.
+
+### Tanda C2.8 — conformidad independiente de todas las suites LIB-13
+
+- El consumidor literal cubre ahora las seis suites v2-2: Reference,
+  Lightweight, Simultaneous TreeWide, Paranoid Wide, Paranoid Deep y
+  Paranoid DeepVector. Continúa sin importar `sigma`, enums ni codecs del
+  paquete auditado.
+- 118 casos diferenciales nuevos comparan contexto, raíces, conexiones,
+  evidencia, estados, ramas Deep y digest; incluyen vacío, `1/63/64/65`,
+  `1025`, límites de hoja `65535/65536/65537`, varias hojas y combinaciones de
+  `t/k`.
+- La primera ejecución descubrió y corrigió una traducción errónea del input
+  Deep en el propio consumidor, demostrando que se comparan intermedios y no
+  sólo el digest final. Validación global con Argon2 real: 489 pruebas sin
+  omisiones; Ruff y mypy verdes.
+- El tramo de suites de LIB-13 queda cerrado. El paquete permanece parcial
+  hasta completar vectores y reconstrucción independiente de PoW, KDF y firma.

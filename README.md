@@ -161,8 +161,9 @@ The formal claims and working paper are in
 [`experiments/README.md`](experiments/README.md).
 The dependency-free consumer in
 [`reference/independent_v22.py`](reference/independent_v22.py) deliberately
-imports no `sigma` code and differentially reconstructs every DeepVector
-intermediate from the published byte specification.
+imports no `sigma` code and differentially reconstructs all six v2.2 suite
+constructions, including every Deep/DeepVector intermediate and TreeWide leaf
+boundaries, directly from the published byte specification.
 
 ## Claims and limitations
 

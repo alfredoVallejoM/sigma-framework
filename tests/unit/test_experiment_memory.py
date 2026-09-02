@@ -47,3 +47,23 @@ def test_memory_experiment_models_depth_and_trace_policy_separately() -> None:
     )
     depth = [group for group in summarize(records) if group["dimension"] == "target_round"]
     assert len(depth) == 2
+
+
+def test_revised_memory_experiment_covers_final_modes() -> None:
+    profiles = ["wide-v2-2", "cross-wide-v2-2", "deep-v2-2", "deep-vector-v2-2"]
+    records = run(
+        {
+            "io_chunks": [1024],
+            "profiles": profiles,
+            "repetitions": 1,
+            "sizes": [0],
+            "state_counts": [2],
+            "target_rounds": [1],
+            "trace_policies": ["none"],
+            "timeout_seconds": 30,
+        }
+    )
+    assert {record["profile"] for record in records} == set(profiles)
+    assert all(record["rss_scope"] == "current-process" for record in records)
+    assert all(record["disk_temporary_bytes"] == 0 for record in records)
+    assert all("tracemalloc_peak" in group["memory_models"] for group in summarize(records))

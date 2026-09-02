@@ -121,6 +121,10 @@ en hosts controlados antes de cerrar R4.
   CPU y cambios de contexto y no expresa bytes/s para operaciones sin entrada
   de bytes. Archivo frío, verificación firmada, afinidad/ciclos y multihost
   continúan pendientes de infraestructura controlada.
+- EXP-10R mide los modos Wide/CrossWide/Deep/DeepVector y TreeWide v2-2 con
+  `tracemalloc`, RSS, frontera, temporales y política de trace. En Linux el
+  backend multiproceso muestrea RSS agregado padre+hijos; fuera de `/proc` el
+  dato queda ausente en vez de atribuir el RSS del padre al conjunto.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

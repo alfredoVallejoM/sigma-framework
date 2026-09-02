@@ -1,0 +1,14 @@
+{
+  "campaign": "pilot-v2-2",
+  "experiment": "EXP-10",
+  "io_chunks": [4096],
+  "master_seed": "sigma-v2-2-exp10r-pilot-2026-09-03",
+  "profiles": ["wide-v2-2", "cross-wide-v2-2", "deep-v2-2", "deep-vector-v2-2", "tree-wide-v2-2", "parallel-tree-v2-2"],
+  "repetitions": 2,
+  "sizes": [0, 65536, 131072],
+  "state_counts": [2],
+  "target_rounds": [1, 16],
+  "timeout_seconds": 120,
+  "trace_policies": ["none", "full"],
+  "workers": [1, 2]
+}

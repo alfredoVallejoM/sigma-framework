@@ -10,6 +10,7 @@ from sigma.anchors import (
     StreamWide,
     TreeWide,
 )
+from sigma.file_snapshot import stable_open
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
 
@@ -44,7 +45,7 @@ class SerialBackend(ExecutionBackend, FileExecutionBackend):
             engine = TreeWide(context)
         else:
             raise ValueError(f"unsupported anchor profile: {context.anchor_profile.name}")
-        with open(path, "rb") as reader:
+        with stable_open(path) as (reader, _identity):
             for chunk in iter(lambda: reader.read(64 * 1024), b""):
                 engine.update(chunk)
         return engine.finalize()

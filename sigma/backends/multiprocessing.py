@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Iterator, Tuple
 
 from sigma.anchors import AnchorEvidence, TreeWide
+from sigma.file_snapshot import immutable_snapshot
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
 from sigma.validation import require_int
@@ -88,20 +89,17 @@ class MultiprocessingTreeBackend(ExecutionBackend, FileExecutionBackend):
             return TreeWide.from_prehashed_leaves(context, bounded_results())
 
     def compute_anchor_file(self, path, context: SigmaContextV2) -> AnchorEvidence:
+        with immutable_snapshot(path) as (snapshot, _identity):
+            return self._compute_anchor_snapshot(snapshot, context)
+
+    def _compute_anchor_snapshot(self, path, context: SigmaContextV2) -> AnchorEvidence:
         if context.anchor_profile is not AnchorProfileId.TREE_WIDE:
             raise ValueError("multiprocessing backend only supports TreeWide")
         TreeWide(context)
         path_string = os.fspath(path)
         before = os.stat(path_string)
         if before.st_size == 0:
-            evidence = TreeWide.compute(context, ())
-            after = os.stat(path_string)
-            if (before.st_size, before.st_mtime_ns) != (
-                after.st_size,
-                after.st_mtime_ns,
-            ):
-                raise RuntimeError("input file changed while it was being hashed")
-            return evidence
+            return TreeWide.compute(context, ())
         leaf_count = (before.st_size + context.chunk_size - 1) // context.chunk_size
         context_bytes = context.to_bytes()
         effective_workers = min(self.workers, leaf_count)
@@ -133,7 +131,4 @@ class MultiprocessingTreeBackend(ExecutionBackend, FileExecutionBackend):
                 context,
                 bounded_results(),
             )
-        after = os.stat(path_string)
-        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-            raise RuntimeError("input file changed while it was being hashed")
         return evidence

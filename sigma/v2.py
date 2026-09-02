@@ -1,7 +1,7 @@
 """Safe, explicit facade for the Sigma v2 reference construction."""
 
 import hmac
-import os
+from dataclasses import dataclass
 from typing import BinaryIO, Iterable, Optional, Union
 
 from sigma.anchors import (
@@ -12,6 +12,7 @@ from sigma.anchors import (
     TreeWide,
 )
 from sigma.backends import SERIAL_BACKEND, ExecutionBackend, FileExecutionBackend
+from sigma.file_snapshot import FileIdentity, immutable_snapshot, stable_open
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY, PolicyViolation, ResourcePolicy
 from sigma.rounds import Deep, RoundTranscript, TraceConfig, WideOnce
@@ -20,6 +21,12 @@ from sigma.spec.ids import AnchorProfileId, RoundProfileId
 from sigma.validation import ValidationError, require_int
 
 DEFAULT_READ_SIZE = 64 * 1024
+
+
+@dataclass(frozen=True)
+class FileHashResult:
+    digest: SigmaDigestV2
+    source: FileIdentity
 
 
 def _anchor_engine(context: SigmaContextV2):
@@ -126,16 +133,30 @@ def hash_file(
     *,
     policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
 ) -> SigmaDigestV2:
+    return hash_file_with_snapshot(path, context, backend, policy=policy).digest
+
+
+def hash_file_with_snapshot(
+    path,
+    context: Optional[SigmaContextV2] = None,
+    backend: Optional[FileExecutionBackend] = None,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> FileHashResult:
     selected_context = context if context is not None else SigmaContextV2()
     policy.validate_context(selected_context)
-    policy.validate_message_size(os.stat(os.fspath(path)).st_size)
     if backend is None:
-        with open(os.fspath(path), "rb") as reader:
-            return hash_reader(reader, selected_context, policy=policy)
+        with stable_open(path) as (reader, identity):
+            policy.validate_message_size(identity.size)
+            digest = hash_reader(reader, selected_context, policy=policy)
+        return FileHashResult(digest, identity)
     if not isinstance(backend, FileExecutionBackend):
         raise TypeError("file backend must implement FileExecutionBackend")
-    anchor = backend.compute_anchor_file(path, selected_context)
-    return _round_engine(selected_context).evaluate_digest(anchor)
+    with immutable_snapshot(path) as (snapshot, identity):
+        policy.validate_message_size(identity.size)
+        anchor = backend.compute_anchor_file(snapshot, selected_context)
+        digest = _round_engine(selected_context).evaluate_digest(anchor)
+    return FileHashResult(digest, identity)
 
 
 def trace_bytes(

@@ -199,3 +199,16 @@ y someter a reproducción y revisión criptográfica externas.
   que aceptan la misma entrada producen exactamente el mismo digest.
 - Validación de cierre: 307 tests pasan y 1 opcional se omite; quality, tipos y
   compilación permanecen verdes.
+
+### Tanda C1.6 — snapshot de archivos LIB-06
+
+- La lectura serial conserva un solo descriptor y compara antes/después
+  dispositivo, file-id/inode, tamaño, `mtime` y `ctime`, además de la identidad
+  visible por el pathname.
+- Los backends de archivo reciben una copia privada inmutable; la fuente queda
+  vigilada durante toda la operación. Se rechazan modificación, truncado,
+  sustitución, desaparición y entradas no regulares.
+- `hash_file_with_snapshot()` expone el registro de identidad que debe
+  conservar una ejecución auditable sin incorporarlo al digest matemático.
+- Validación de cierre: 314 tests pasan, 1 opcional se omite; quality, tipos y
+  compilación permanecen verdes.

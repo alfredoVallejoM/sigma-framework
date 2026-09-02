@@ -75,6 +75,11 @@ en hosts controlados antes de cerrar R4.
   EXP-21 cubre dominios registrados, framing y downgrade. Continúan parciales:
   faltan atacantes avanzados de EXP-17, instrumentación completa de entradas de
   oráculo en EXP-21 y el plan estadístico confirmatorio congelado.
+- EXP-01R dispone de un piloto particionado de las seis suites v2-2 que compara
+  evidencia, transcript y digest con el consumidor independiente: 197
+  observaciones locales sin divergencias. Sigue pendiente la matriz de tamaños
+  grandes, adaptadores adversariales y Linux/macOS/Windows; el piloto no es el
+  confirmatorio.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

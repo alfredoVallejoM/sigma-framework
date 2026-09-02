@@ -37,7 +37,7 @@ estimates and internal review. A publishable invocation uses
 
 | ID | Primary endpoint | Confirmatory criterion | Partition key | Implementation state |
 |---|---|---|---|---|
-| EXP-01R | byte divergences | exactly zero | suite × adapter × size × partition × workers × OS | v2-2 corpus/independent consumer exist; runner revision pending |
+| EXP-01R | byte divergences | exactly zero | suite × adapter × size × partition × workers × OS | six-suite local pilot integrated; large inputs and OS matrix pending |
 | EXP-02R | collision-work survival curve | registered model comparison and slope CI contains 0.5 | construction × n × a × k × repetition | old reduced runner; survival/model revision pending |
 | EXP-03R | conditional persistence | exact interval/LR against the two registered probabilities | construction × anchor relation × n × length | two-construction pilot; four controls pending |
 | EXP-04R | anchor/digest collision work | report bottleneck and reuse without additive CrossWide claim | construction × fault × n × branches × repetition | pilot partial; faults/DeepVector pending |

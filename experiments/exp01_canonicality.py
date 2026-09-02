@@ -4,10 +4,17 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
+from reference.independent_v22 import (
+    ALGORITHMS,
+    LIGHT_ALGORITHMS,
+    deep_vector,
+    sequential_suite,
+    tree_suite,
+)
 from sigma.backends import SERIAL_BACKEND, MultiprocessingTreeBackend
 from sigma.incremental import IncrementalSigmaV2
 from sigma.presets import get_preset
-from sigma.spec.ids import AnchorProfileId
+from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import _anchor_engine, _round_engine, hash_file, hash_reader, hash_text
 
 from .common import derived_random
@@ -40,6 +47,50 @@ def _evaluate_chunks(context, chunks: Iterable[bytes]) -> tuple[str, str, str]:
         anchor.to_bytes().hex(),
         digest.hex(),
         hashlib.sha256(transcript_bytes).hexdigest(),
+    )
+
+
+def _independent_result(message: bytes, context) -> tuple[str, str, str] | None:
+    common = {
+        "target_round": context.target_round,
+        "state_count": context.state_count,
+        "salt": context.salt,
+        "challenge": context.challenge,
+        "application_context": context.application_context,
+    }
+    if context.suite_id is SuiteId.SIMULTANEOUS_TREE_WIDE_V2_2:
+        result = tree_suite(message, chunk_size=context.chunk_size, **common)
+        states = result["states"]
+        outputs: list[list[bytes]] = []
+    elif context.suite_id is SuiteId.PARANOID_DEEP_VECTOR_V2_2:
+        result = deep_vector(message, **common)
+        states = result["vectors"]
+        outputs = result["components"]
+    else:
+        parameters = {
+            SuiteId.REFERENCE_STREAM_WIDE_V2_2: (1, 1, ALGORITHMS),
+            SuiteId.LIGHTWEIGHT_STREAM_WIDE_V2_2: (1, 1, LIGHT_ALGORITHMS),
+            SuiteId.PARANOID_CROSS_WIDE_V2_2: (3, 1, ALGORITHMS),
+            SuiteId.PARANOID_DEEP_V2_2: (3, 2, ALGORITHMS),
+        }.get(context.suite_id)
+        if parameters is None:
+            return None
+        anchor_profile, round_profile, algorithms = parameters
+        result = sequential_suite(
+            message,
+            int(context.suite_id),
+            anchor_profile,
+            round_profile,
+            algorithms=algorithms,
+            **common,
+        )
+        states = result["states"]
+        outputs = result["branch_outputs"]
+    transcript = b"".join(states) + b"".join(value for row in outputs for value in row)
+    return (
+        result["evidence"].hex(),
+        result["digest"].hex(),
+        hashlib.sha256(transcript).hexdigest(),
     )
 
 
@@ -146,6 +197,23 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                 "transcript_sha256": text_reference[2],
             }
         )
+        independent_text = _independent_result(text_bytes, context)
+        if independent_text is not None:
+            records.append(
+                {
+                    "adapter": "independent-consumer-text",
+                    "anchor_hex": independent_text[0],
+                    "anchor_match": independent_text[0] == text_reference[0],
+                    "context_hex": context.to_bytes().hex(),
+                    "digest_hex": independent_text[1],
+                    "digest_match": independent_text[1] == text_digest,
+                    "message_sha256": hashlib.sha256(text_bytes).hexdigest(),
+                    "preset": preset_name,
+                    "size": len(text_bytes),
+                    "transcript_match": independent_text[2] == text_reference[2],
+                    "transcript_sha256": independent_text[2],
+                }
+            )
         for size in sizes:
             rng = derived_random(master_seed, f"EXP-01/{preset_name}/{size}")
             if size > max_in_memory:
@@ -154,6 +222,11 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
             message = rng.randbytes(size)
             reference = _evaluate_chunks(context, [message])
             adapters: list[tuple[str, tuple[str, str, str]]] = [("bytes", reference)]
+            independent_limit = int(config.get("independent_max_bytes", 1024 * 1024))
+            if size <= independent_limit:
+                independent = _independent_result(message, context)
+                if independent is not None:
+                    adapters.append(("independent-consumer", independent))
 
             random_sizes = [rng.randint(1, 131071) for _ in range(max(1, size // 32768 + 2))]
             adapters.append(

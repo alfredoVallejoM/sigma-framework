@@ -1,0 +1,19 @@
+{
+  "experiment": "EXP-01",
+  "master_seed": "sigma-exp01r-v2-2-pilot-v1",
+  "presets": [],
+  "sizes": [],
+  "workers": [1, 2],
+  "independent_max_bytes": 1048576,
+  "execution": {
+    "timeout_seconds": 300,
+    "tasks": [
+      {"label": "reference", "overrides": {"presets": ["reference-v2-2"], "sizes": [0, 1, 63, 64, 65]}},
+      {"label": "lightweight", "overrides": {"presets": ["lightweight-v2-2"], "sizes": [0, 1, 63, 64, 65]}},
+      {"label": "tree", "overrides": {"presets": ["simultaneous-v2-2"], "sizes": [0, 1, 65535, 65536, 65537]}},
+      {"label": "cross-wide", "overrides": {"presets": ["paranoid-wide-v2-2"], "sizes": [0, 1, 63, 64, 65]}},
+      {"label": "deep", "overrides": {"presets": ["paranoid-deep-v2-2"], "sizes": [0, 1, 63, 64, 65]}},
+      {"label": "deep-vector", "overrides": {"presets": ["paranoid-deep-vector-v2-2"], "sizes": [0, 1, 63, 64, 65]}}
+    ]
+  }
+}

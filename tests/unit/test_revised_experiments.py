@@ -23,3 +23,26 @@ def test_exp21_has_no_structural_violation() -> None:
     records = RUNNERS["EXP-21"](config)
     assert len(records) >= 100
     assert all(record["invariant_match"] is True for record in records)
+
+
+def test_exp01r_pilot_exercises_independent_consumer_for_all_v22_suites() -> None:
+    source = json.loads(
+        Path("experiments/configs/pilots/exp01r-v2-2.json").read_text(encoding="utf-8")
+    )
+    records = []
+    for task in source["execution"]["tasks"]:
+        config = {key: value for key, value in source.items() if key != "execution"}
+        config.update(task["overrides"])
+        records.extend(RUNNERS["EXP-01"](config))
+    independent = [record for record in records if record["adapter"] == "independent-consumer"]
+    assert {record["preset"] for record in independent} == {
+        "reference-v2-2",
+        "lightweight-v2-2",
+        "simultaneous-v2-2",
+        "paranoid-wide-v2-2",
+        "paranoid-deep-v2-2",
+        "paranoid-deep-vector-v2-2",
+    }
+    assert all(record["anchor_match"] for record in independent)
+    assert all(record["digest_match"] for record in independent)
+    assert all(record["transcript_match"] for record in independent)

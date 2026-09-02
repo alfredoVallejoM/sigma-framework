@@ -1,0 +1,11 @@
+{
+  "campaign": "pilot-v2-2",
+  "candidates": 8,
+  "experiment": "EXP-12",
+  "master_seed": "sigma-v2-2-exp12r-pilot-2026-09-03",
+  "memory_kib": [1024, 4096],
+  "modes": ["argon2id", "argon2id+wide", "argon2id+deep", "argon2id+deep-vector"],
+  "parallelism": 1,
+  "repetitions": 3,
+  "time_cost": [1, 2]
+}

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY, ResourcePolicy
-from sigma.presets import lightweight_v2_2
+from sigma.presets import get_preset
 from sigma.spec.encoding import DecodeError, decode_tlv, decode_uint, encode_tlv, encode_uint
 from sigma.v2 import hash_bytes
 from sigma.validation import require_int
@@ -15,6 +15,14 @@ ARGON2_VERSION_13 = 0x13
 KDF_MAGIC = b"SIGMAKDF2"
 KDF_RESULT_MAGIC = b"SIGMAKDR2"
 KDF_FINAL_DOMAIN = b"SIGMA-KDF-FINAL-V1"
+KDF_PRESETS = frozenset(
+    {
+        "lightweight-v2-2",
+        "paranoid-wide-v2-2",
+        "paranoid-deep-v2-2",
+        "paranoid-deep-vector-v2-2",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -181,11 +189,15 @@ def derive_argon2id_sigma(
     parameters: Argon2idParameters,
     *,
     policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+    preset: str = "lightweight-v2-2",
 ) -> SigmaKdfResult:
     """Return only the composed result; the intermediate Argon2 key is not exposed."""
 
     base_key = derive_argon2id(password, salt, parameters, policy=policy)
-    context = lightweight_v2_2(
+    if preset not in KDF_PRESETS:
+        raise ValueError(f"unsupported Sigma KDF preset: {preset}")
+    context = get_preset(
+        preset,
         salt=salt,
         application_context=KDF_FINAL_DOMAIN + parameters.to_bytes(),
     )
@@ -202,7 +214,9 @@ def verify_password(
     if not isinstance(result, SigmaKdfResult):
         raise TypeError("result must be SigmaKdfResult")
     try:
-        candidate = derive_argon2id_sigma(password, result.salt, result.parameters, policy=policy)
+        base_key = derive_argon2id(password, result.salt, result.parameters, policy=policy)
+        digest = hash_bytes(base_key, result.sigma_digest.context, policy=policy)
+        candidate = SigmaKdfResult.bind(result.parameters, result.salt, digest)
     except ValueError:
         return False
     return hmac.compare_digest(candidate.final_key, result.final_key)

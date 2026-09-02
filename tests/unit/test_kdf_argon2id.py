@@ -61,3 +61,37 @@ def test_default_kdf_policy_rejects_weak_profile_before_argon() -> None:
         min_argon2_time_cost=1,
     )
     testing.validate_argon2(parameters.memory_kib, parameters.time_cost)
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("argon2") is None, reason="optional argon2-cffi absent"
+)
+@pytest.mark.parametrize(
+    "preset",
+    ["lightweight-v2-2", "paranoid-deep-v2-2", "paranoid-deep-vector-v2-2"],
+)
+def test_kdf_composition_verifies_the_recorded_v22_preset(preset: str) -> None:
+    parameters = Argon2idParameters(1024, 1, 1)
+    policy = ResourcePolicy(min_argon2_memory_kib=1024, min_argon2_time_cost=1)
+    result = derive_argon2id_sigma(
+        b"password",
+        b"0123456789abcdef",
+        parameters,
+        policy=policy,
+        preset=preset,
+    )
+    assert verify_password(b"password", result, policy=policy)
+    assert not verify_password(b"wrong", result, policy=policy)
+
+
+def test_kdf_rejects_unregistered_composition_preset() -> None:
+    parameters = Argon2idParameters(1024, 1, 1)
+    policy = ResourcePolicy(min_argon2_memory_kib=1024, min_argon2_time_cost=1)
+    with pytest.raises(ValueError, match="unsupported Sigma KDF preset"):
+        derive_argon2id_sigma(
+            b"password",
+            b"0123456789abcdef",
+            parameters,
+            policy=policy,
+            preset="lightweight-v2",
+        )

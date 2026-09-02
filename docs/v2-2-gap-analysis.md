@@ -129,6 +129,10 @@ en hosts controlados antes de cerrar R4.
   reutilizado, replay, sustitución de challenge, downgrade de dificultad,
   alteración de digest y límite local de recursos. Falta medir escalado de
   miners por nonce; tampoco se transforma este PoW en PoSW o VDF.
+- EXP-12R permite componer Argon2id con Wide, CrossWide, Deep o DeepVector v2-2
+  sin exponer la clave intermedia; la verificación reconstruye el contexto
+  registrado. La campaña mantiene idéntico el presupuesto Argon2 y separa su
+  tiempo del postprocesado, sin atribuir nueva entropía ni memory-hardness.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

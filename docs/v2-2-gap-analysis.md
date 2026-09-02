@@ -101,6 +101,12 @@ en hosts controlados antes de cerrar R4.
   592 observaciones descubrió y corrigió una agregación entre estados de 512 y
   2048 bits que producía coberturas imposibles mayores que uno; ahora el preset
   forma parte de la clave y la cota `[0,1]` es control de calidad explícito.
+- EXP-06R incluye ya los tres modos v2-2, cuentas separadas de ancla,
+  inicialización y transición, work/span, CPU/wall, throughput, speedup y
+  eficiencia. El piloto de 324 observaciones mostró speedup menor que uno con
+  threads Python en este host, resultado negativo coherente con overhead/GIL y
+  que no se reinterpretará como paralelismo útil. Faltan regresión robusta,
+  ancla precalculada como operación separada y ejecución multihost controlada.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

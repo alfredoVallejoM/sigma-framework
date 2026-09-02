@@ -1,0 +1,13 @@
+{
+  "experiment": "EXP-06",
+  "master_seed": "sigma-exp06r-work-span-pilot-v1",
+  "suite_family": "v2-2",
+  "profiles": ["wide-once", "deep", "deep-vector"],
+  "target_rounds": [1, 4, 16],
+  "state_counts": [1, 2, 4],
+  "candidate_counts": [1, 4],
+  "candidate_workers": [1, 2, 4],
+  "message_bytes": 64,
+  "repetitions": 3,
+  "execution": {"timeout_seconds": 300}
+}

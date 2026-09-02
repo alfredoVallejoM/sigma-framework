@@ -24,3 +24,35 @@ def test_sac_experiment_separates_layers_and_builds_bit_matrix() -> None:
     } <= layers
     assert all(item["cells"] == item["input_bits"] * item["output_bits"] for item in summaries)
     assert all(0 <= item["structural_coverage"] <= 1 for item in summaries)
+    assert all(0 <= item["max_absolute_bic_correlation"] <= 1 for item in summaries)
+    assert all(item["simultaneous_bias_radius"] > 0 for item in summaries)
+
+
+def test_revised_sac_separates_modes_in_summary() -> None:
+    records = []
+    for preset in (
+        "paranoid-wide-v2-2",
+        "paranoid-deep-v2-2",
+        "paranoid-deep-vector-v2-2",
+    ):
+        records.extend(
+            run(
+                {
+                    "bic_output_stride": 64,
+                    "input_bit_stride": 4,
+                    "master_seed": "revised",
+                    "message_bytes": 1,
+                    "preset": preset,
+                    "samples": 4,
+                    "state_count": 2,
+                    "target_round": 1,
+                }
+            )
+        )
+    groups = summarize(records)
+    assert {group["preset"] for group in groups} == {
+        "paranoid-wide-v2-2",
+        "paranoid-deep-v2-2",
+        "paranoid-deep-vector-v2-2",
+    }
+    assert any(str(group["layer"]).startswith("round-") for group in groups)

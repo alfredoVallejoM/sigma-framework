@@ -1,10 +1,12 @@
 import hashlib
 import math
+import statistics
 from typing import Any
 
 from sigma.anchors import CrossWide
-from sigma.presets import paranoid_wide_v2
-from sigma.rounds import WideOnce
+from sigma.presets import get_preset, paranoid_wide_v2
+from sigma.rounds import Deep, DeepVector, WideOnce
+from sigma.spec.ids import RoundProfileId
 
 from .common import derived_random
 
@@ -37,7 +39,12 @@ def _no_reinjection(message: bytes, target: int, state_count: int) -> bytes:
 
 def _outputs(message: bytes, context) -> dict[str, bytes]:
     evidence = CrossWide.compute(context, (message,))
-    digest, transcript = WideOnce(context).evaluate(evidence)
+    engine = {
+        RoundProfileId.WIDE_ONCE: WideOnce,
+        RoundProfileId.DEEP: Deep,
+        RoundProfileId.DEEP_VECTOR: DeepVector,
+    }[context.round_profile](context)
+    digest, transcript = engine.evaluate(evidence)
     result = _primitive_outputs(message)
     result["anchor-roots"] = b"".join(evidence.roots)
     result["anchor-connections"] = b"".join(evidence.cross_roots)
@@ -49,6 +56,9 @@ def _outputs(message: bytes, context) -> dict[str, bytes]:
     result["digest-no-reinjection"] = _no_reinjection(
         message, context.target_round, context.state_count
     )
+    for level, row in zip(transcript.branch_output_indices, transcript.branch_outputs, strict=True):
+        for position, value in enumerate(row):
+            result[f"round-{level}-branch-{position}"] = value
     return result
 
 
@@ -59,9 +69,14 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     stride = int(config.get("input_bit_stride", 1))
     family_alpha = float(config.get("family_alpha", 0.05))
     detectable_bias = float(config.get("detectable_bias", 0.05))
-    context = paranoid_wide_v2(
-        target_round=int(config.get("target_round", 2)),
-        state_count=int(config.get("state_count", 2)),
+    parameters = {
+        "target_round": int(config.get("target_round", 2)),
+        "state_count": int(config.get("state_count", 2)),
+    }
+    context = (
+        get_preset(str(config["preset"]), **parameters)
+        if "preset" in config
+        else paranoid_wide_v2(**parameters)
     )
     rng = derived_random(str(config["master_seed"]), "EXP-07/messages")
     for sample in range(samples):
@@ -83,6 +98,8 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                         "output_bits": len(difference) * 8,
                         "sample": sample,
                         "source_bit": source_bit,
+                        "bic_output_stride": int(config.get("bic_output_stride", 8)),
+                        **({"preset": config["preset"]} if "preset" in config else {}),
                     }
                 )
     return records
@@ -94,11 +111,14 @@ def _two_sided_binomial_half(successes: int, trials: int) -> float:
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    layers: dict[str, list[dict[str, Any]]] = {}
+    revised = any("preset" in record for record in records)
+    layers: dict[tuple[str, ...], list[dict[str, Any]]] = {}
     for record in records:
-        layers.setdefault(str(record["layer"]), []).append(record)
+        key = (str(record["layer"]), *((str(record["preset"]),) if revised else ()))
+        layers.setdefault(key, []).append(record)
     summaries = []
-    for layer, group in sorted(layers.items()):
+    for key, group in sorted(layers.items()):
+        layer = key[0]
         samples = len({int(item["sample"]) for item in group})
         source_bits = sorted({int(item["source_bit"]) for item in group})
         output_bits = int(group[0]["output_bits"])
@@ -119,6 +139,36 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         significant = sum(
             _two_sided_binomial_half(count, samples) < threshold for count in counts.values()
         )
+        radius = math.sqrt(math.log(2 * len(counts) / family_alpha) / (2 * samples))
+        pair_stride = max(1, int(group[0].get("bic_output_stride", 8)))
+        selected_outputs = range(0, output_bits, pair_stride)
+        observations: dict[tuple[int, int], list[int]] = {
+            (source, output): [] for source in source_bits for output in selected_outputs
+        }
+        for item in group:
+            source = int(item["source_bit"])
+            difference = bytes.fromhex(str(item["difference_hex"]))
+            for output in selected_outputs:
+                observations[(source, output)].append(
+                    (difference[output // 8] >> (7 - output % 8)) & 1
+                )
+        correlations: list[float] = []
+        selected = list(selected_outputs)
+        for source in source_bits:
+            for left_index, left in enumerate(selected):
+                xs = observations[(source, left)]
+                mean_x = statistics.fmean(xs)
+                variance_x = mean_x * (1 - mean_x)
+                for right in selected[left_index + 1 :]:
+                    ys = observations[(source, right)]
+                    mean_y = statistics.fmean(ys)
+                    variance_y = mean_y * (1 - mean_y)
+                    if variance_x == 0 or variance_y == 0:
+                        continue
+                    covariance = statistics.fmean(
+                        (x - mean_x) * (y - mean_y) for x, y in zip(xs, ys, strict=True)
+                    )
+                    correlations.append(covariance / math.sqrt(variance_x * variance_y))
         summaries.append(
             {
                 "bonferroni_alpha": threshold,
@@ -126,6 +176,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "input_bits": len(source_bits),
                 "layer": layer,
                 "max_absolute_bias": max(abs(value - 0.5) for value in probabilities),
+                "max_absolute_bic_correlation": max(map(abs, correlations), default=0.0),
                 "mean_flip_probability": sum(probabilities) / len(probabilities),
                 "output_bits": output_bits,
                 "planned_detectable_bias": detectable_bias,
@@ -134,6 +185,8 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "samples_per_input_bit": samples,
                 "significant_cells_bonferroni": significant,
                 "structural_coverage": sum(value > 0 for value in counts.values()) / len(counts),
+                "simultaneous_bias_radius": radius,
+                **({"preset": key[1]} if revised else {}),
             }
         )
     return summaries

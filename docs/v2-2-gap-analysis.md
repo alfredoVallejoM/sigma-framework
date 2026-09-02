@@ -107,6 +107,11 @@ en hosts controlados antes de cerrar R4.
   threads Python en este host, resultado negativo coherente con overhead/GIL y
   que no se reinterpretará como paralelismo útil. Faltan regresión robusta,
   ancla precalculada como operación separada y ejecución multihost controlada.
+- EXP-07R cubre capas y componentes de Wide/Deep/DeepVector, calcula peor sesgo
+  con radio simultáneo y correlación BIC muestreada. El piloto de 4 288 filas es
+  deliberadamente insuficiente (`16` frente a `566–677` muestras requeridas por
+  bit de entrada), por lo que correlaciones máximas altas no son un hallazgo de
+  producción ni permiten congelar el tamaño confirmatorio.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

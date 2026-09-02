@@ -1,0 +1,20 @@
+{
+  "experiment": "EXP-07",
+  "master_seed": "sigma-exp07r-sac-bic-pilot-v1",
+  "message_bytes": 1,
+  "samples": 16,
+  "input_bit_stride": 2,
+  "bic_output_stride": 32,
+  "target_round": 2,
+  "state_count": 2,
+  "family_alpha": 0.05,
+  "detectable_bias": 0.1,
+  "execution": {
+    "timeout_seconds": 300,
+    "tasks": [
+      {"label": "wide", "overrides": {"preset": "paranoid-wide-v2-2"}},
+      {"label": "deep", "overrides": {"preset": "paranoid-deep-v2-2"}},
+      {"label": "vector", "overrides": {"preset": "paranoid-deep-vector-v2-2"}}
+    ]
+  }
+}

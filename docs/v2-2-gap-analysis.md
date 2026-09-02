@@ -187,3 +187,15 @@ y someter a reproducción y revisión criptográfica externas.
   `hashlib`/`struct`.
 - Validación de cierre: 294 tests pasan, 1 opcional se omite; Ruff, mypy,
   compileall y 60.000 mutaciones totales permanecen verdes.
+
+### Tanda C1.5 — política de recursos LIB-05
+
+- `ResourcePolicy` queda fuera del wire y distingue contexto bien formado,
+  suite registrada y aceptación local.
+- Se aplican límites previos de `t`, `k`, bytes de mensaje, dificultad/intentos
+  PoW y parámetros Argon2. Hashing y actualización incremental rechazan antes
+  de invocar backends o mutar estado; verificación devuelve `False`.
+- Experimentos y benchmark CLI registran la política aplicada. Dos políticas
+  que aceptan la misma entrada producen exactamente el mismo digest.
+- Validación de cierre: 307 tests pasan y 1 opcional se omite; quality, tipos y
+  compilación permanecen verdes.

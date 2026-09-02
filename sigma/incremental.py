@@ -5,6 +5,7 @@ from typing import Union
 
 from sigma.anchors import CrossWide, StreamWide
 from sigma.outputs import SigmaDigestV2
+from sigma.policy import DEFAULT_RESOURCE_POLICY, ResourcePolicy
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
 from sigma.v2 import _round_engine
@@ -18,8 +19,15 @@ class SigmaCheckpointV2:
 
 
 class IncrementalSigmaV2:
-    def __init__(self, context: SigmaContextV2):
+    def __init__(
+        self,
+        context: SigmaContextV2,
+        *,
+        policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+    ):
+        policy.validate_context(context)
         self.context = context
+        self.policy = policy
         self._anchor: Union[StreamWide, CrossWide]
         if context.anchor_profile is AnchorProfileId.STREAM_WIDE:
             self._anchor = StreamWide(context)
@@ -33,8 +41,12 @@ class IncrementalSigmaV2:
     def update(self, data: bytes) -> None:
         if self._finalized:
             raise RuntimeError("incremental digest is already finalized")
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
+        new_offset = self._offset + len(data)
+        self.policy.validate_message_size(new_offset)
         self._anchor.update(data)
-        self._offset += len(data)
+        self._offset = new_offset
 
     def checkpoint(self) -> SigmaCheckpointV2:
         if self._finalized:

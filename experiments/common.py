@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from sigma.policy import DEFAULT_RESOURCE_POLICY
+
 
 def canonical_json(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -87,6 +89,7 @@ def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str
         "processor": platform.processor(),
         "python": platform.python_version(),
         "ram_bytes": ram_bytes,
+        "resource_policy": DEFAULT_RESOURCE_POLICY.as_dict(),
         "host_measurement_state": _host_measurement_state(),
         "schema": "sigma-experiment-manifest-v1",
         "started_utc": datetime.now(timezone.utc).isoformat(),

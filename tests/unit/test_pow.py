@@ -11,6 +11,7 @@ from sigma.applications.pow import (
     verify,
 )
 from sigma.outputs import SigmaDigestV2
+from sigma.policy import ResourcePolicy
 from sigma.spec import SigmaContextV2
 
 
@@ -76,3 +77,12 @@ def test_pow_predicate_rejects_malformed_state_width_without_crashing(state_size
     object.__setattr__(malformed, "context", SigmaContextV2())
     object.__setattr__(malformed, "states", (b"a" * state_size, b"b" * state_size))
     assert not accepts(malformed, _parameters(PowPredicate.CONCATENATED, 513))
+
+
+def test_pow_policy_rejects_before_nonce_search_and_verification() -> None:
+    parameters = _parameters(PowPredicate.SINGLE_STATE, 2)
+    strict = ResourcePolicy(max_pow_difficulty_bits=1)
+    with pytest.raises(ValueError, match="difficulty"):
+        solve(b"payload", parameters, policy=strict)
+    proof = evaluate_nonce(b"payload", 0, parameters)
+    assert not verify(b"payload", proof, parameters, policy=strict)

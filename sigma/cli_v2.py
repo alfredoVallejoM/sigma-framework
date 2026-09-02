@@ -10,6 +10,7 @@ from pathlib import Path
 
 from sigma.backends import MultiprocessingTreeBackend
 from sigma.outputs import SigmaDigestV2
+from sigma.policy import DEFAULT_RESOURCE_POLICY
 from sigma.presets import get_preset
 from sigma.v2 import hash_bytes, hash_file, verify_full, verify_full_file
 from sigma.vectors import ALL_VECTORS
@@ -157,6 +158,7 @@ def _benchmark_command(args) -> int:
         "preset": args.preset,
         "python": platform.python_version(),
         "repeats": args.repeats,
+        "resource_policy": DEFAULT_RESOURCE_POLICY.as_dict(),
     }
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 from sigma.outputs import SigmaDigestV2
+from sigma.policy import DEFAULT_RESOURCE_POLICY, PolicyViolation, ResourcePolicy
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError, decode_tlv, decode_uint, encode_tlv, encode_uint
 from sigma.suites.registry import get_suite
@@ -146,12 +147,31 @@ def accepts(digest: SigmaDigestV2, parameters: PowParameters) -> bool:
     return _has_leading_zero_bits(b"".join(digest.states), bits)
 
 
-def evaluate_nonce(payload: bytes, nonce: int, parameters: PowParameters) -> PowProof:
-    return PowProof(nonce, hash_bytes(_message(payload, nonce), parameters.context()))
+def evaluate_nonce(
+    payload: bytes,
+    nonce: int,
+    parameters: PowParameters,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> PowProof:
+    policy.validate_pow(parameters.difficulty_bits)
+    return PowProof(
+        nonce,
+        hash_bytes(_message(payload, nonce), parameters.context(), policy=policy),
+    )
 
 
-def verify(payload: bytes, proof: PowProof, parameters: PowParameters) -> bool:
-    expected = evaluate_nonce(payload, proof.nonce, parameters)
+def verify(
+    payload: bytes,
+    proof: PowProof,
+    parameters: PowParameters,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
+) -> bool:
+    try:
+        expected = evaluate_nonce(payload, proof.nonce, parameters, policy=policy)
+    except PolicyViolation:
+        return False
     return accepts(proof.digest, parameters) and hmac.compare_digest(
         expected.digest.to_bytes(), proof.digest.to_bytes()
     )
@@ -163,14 +183,16 @@ def solve(
     *,
     start_nonce: int = 0,
     max_attempts: int = 1_000_000,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
 ) -> tuple[PowProof, int]:
     require_int("start_nonce", start_nonce, minimum=0, maximum=MAX_NONCE)
     require_int("max_attempts", max_attempts, minimum=1, maximum=MAX_NONCE)
+    policy.validate_pow(parameters.difficulty_bits, max_attempts)
     for attempts in range(1, max_attempts + 1):
         nonce = start_nonce + attempts - 1
         if nonce > MAX_NONCE:
             break
-        proof = evaluate_nonce(payload, nonce, parameters)
+        proof = evaluate_nonce(payload, nonce, parameters, policy=policy)
         if accepts(proof.digest, parameters):
             return proof, attempts
     raise RuntimeError("no valid nonce found within max_attempts")

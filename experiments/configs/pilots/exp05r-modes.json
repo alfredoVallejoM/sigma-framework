@@ -8,6 +8,7 @@
   "target_round": 2,
   "state_count": 2,
   "include_round_components": true,
+  "structural_interventions": true,
   "execution": {
     "timeout_seconds": 300,
     "tasks": [

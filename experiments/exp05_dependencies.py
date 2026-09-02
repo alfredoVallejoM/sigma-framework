@@ -37,6 +37,18 @@ def _difference(
     }
 
 
+def _structural_difference(
+    perturbation: str,
+    component: str,
+    original: bytes,
+    changed: bytes,
+    sample: int,
+) -> dict[str, Any]:
+    record = _difference(perturbation, 0, component, original, changed, sample)
+    record["invariant_match"] = original != changed
+    return record
+
+
 def _engine(context):
     return {
         RoundProfileId.WIDE_ONCE: WideOnce,
@@ -159,6 +171,81 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                 sample,
             )
         )
+        if bool(config.get("structural_interventions", False)):
+            altered_evidence = {
+                "root-zero": CrossWideEvidence(
+                    evidence.algorithms,
+                    (bytes(len(evidence.roots[0])), *evidence.roots[1:]),
+                    evidence.cross_roots,
+                    evidence.message_length,
+                    evidence.suite_id,
+                ),
+                "cross-zero": CrossWideEvidence(
+                    evidence.algorithms,
+                    evidence.roots,
+                    (bytes(len(evidence.cross_roots[0])), *evidence.cross_roots[1:]),
+                    evidence.message_length,
+                    evidence.suite_id,
+                ),
+                "root-permutation": CrossWideEvidence(
+                    evidence.algorithms,
+                    tuple(reversed(evidence.roots)),
+                    evidence.cross_roots,
+                    evidence.message_length,
+                    evidence.suite_id,
+                ),
+                "cross-permutation": CrossWideEvidence(
+                    evidence.algorithms,
+                    evidence.roots,
+                    tuple(reversed(evidence.cross_roots)),
+                    evidence.message_length,
+                    evidence.suite_id,
+                ),
+                "message-length": CrossWideEvidence(
+                    evidence.algorithms,
+                    evidence.roots,
+                    evidence.cross_roots,
+                    evidence.message_length + 1,
+                    evidence.suite_id,
+                ),
+            }
+            for perturbation, changed_evidence in altered_evidence.items():
+                structural_outputs = _outputs(
+                    changed_evidence,
+                    context,
+                    include_round_components=include_round_components,
+                )
+                for target in ("initial-state", "first-transition", "digest"):
+                    records.append(
+                        _structural_difference(
+                            perturbation,
+                            target,
+                            baseline[target],
+                            structural_outputs[target],
+                            sample,
+                        )
+                    )
+            context_changes = {
+                "context-salt": replace(context, salt=b"EXP-05-salt"),
+                "context-challenge": replace(context, challenge=b"EXP-05-challenge"),
+                "context-application": replace(context, application_context=b"EXP-05-application"),
+                "context-target-round": replace(context, target_round=context.target_round + 1),
+            }
+            for perturbation, changed_context in context_changes.items():
+                context_outputs = _outputs(
+                    CrossWide.compute(changed_context, (message,)),
+                    changed_context,
+                    include_round_components=include_round_components,
+                )
+                records.append(
+                    _structural_difference(
+                        perturbation,
+                        "digest",
+                        baseline["digest"],
+                        context_outputs["digest"],
+                        sample,
+                    )
+                )
         for perturbation, branches in (
             ("branch-ablation", context.branches[:-1]),
             ("branch-permutation", tuple(reversed(context.branches))),

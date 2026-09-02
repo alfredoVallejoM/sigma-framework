@@ -101,7 +101,10 @@ en hosts controlados antes de cerrar R4.
   trata ablación/permutación no rechazadas como fallo determinista. El piloto de
   592 observaciones descubrió y corrigió una agregación entre estados de 512 y
   2048 bits que producía coberturas imposibles mayores que uno; ahora el preset
-  forma parte de la clave y la cota `[0,1]` es control de calidad explícito.
+  forma parte de la clave y la cota `[0,1]` es control de calidad explícito. La
+  matriz incluye además cero/permutación de raíces y conexiones, longitud del
+  evidence y salt/challenge/aplicación/profundidad de contexto, todos con gate
+  determinista contra no-ops.
 - EXP-06R incluye ya los tres modos v2-2, cuentas separadas de ancla,
   inicialización y transición, work/span, CPU/wall, throughput, speedup y
   eficiencia. El piloto de 324 observaciones mostró speedup menor que uno con

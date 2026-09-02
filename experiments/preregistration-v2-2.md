@@ -55,7 +55,7 @@ estimates and internal review. A publishable invocation uses
 | EXP-16 | none | blocked until RTL/toolchain/corner exist | — | blocked by design |
 | EXP-17 | cross-anchor reuse/TM frontier | effect/interval for each registered attacker | attacker × n × anchors × memory/chain × repetition | direct, distinguished, rho, Hellman, rainbow and multicollision reduced attackers implemented; scaled frontier pending |
 | EXP-18 | Fold/Vector collision work | separate physical width, conservative bound and joint model | mode × fault × n × branches × t × k × repetition | consecutive reduced trajectories, six faults, query work and censored RMST implemented; scaled grid pending |
-| EXP-19 | signed commitment reuse work | bound exactly the signed components | commitment × n × k × repetition | reduced runner implemented; Ed25519 not reduced |
+| EXP-19 | signed commitment reuse work | bound exactly the signed components | commitment × anchor width × n × t × k × repetition | reduced reuse event, search/verification queries, physical and bottleneck widths implemented; Ed25519 remains unreduced |
 | EXP-20R | preimage-family search work | separate fits for preimage, second-preimage and multi-target | game × target kind × construction × a × n × k × targets × repetition | reduced runner implemented; pilot only |
 | EXP-21R | framing/domain violations | exactly zero unexplained collisions or policy confusion | primitive × origin-domain × destination-domain × context mutation × suite/version | opt-in real primitive-input matrix plus codec/downgrade audit implemented; exhaustive mutation grid pending |
 

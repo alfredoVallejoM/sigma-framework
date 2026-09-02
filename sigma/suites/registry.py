@@ -27,6 +27,7 @@ class SuiteDescriptor:
     branches: Tuple[AlgorithmId, ...]
     state_algorithm: AlgorithmId
     state_size: int
+    suite_family: str = "v2-1"
     evidence_version: int = 1
     stable: bool = False
 
@@ -137,6 +138,7 @@ REFERENCE_STREAM_WIDE_V2_2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     evidence_version=2,
+    suite_family="v2-2",
 )
 
 LIGHTWEIGHT_STREAM_WIDE_V2_2 = SuiteDescriptor(
@@ -149,6 +151,7 @@ LIGHTWEIGHT_STREAM_WIDE_V2_2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     evidence_version=2,
+    suite_family="v2-2",
 )
 
 SIMULTANEOUS_TREE_WIDE_V2_2 = SuiteDescriptor(
@@ -161,6 +164,7 @@ SIMULTANEOUS_TREE_WIDE_V2_2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     evidence_version=2,
+    suite_family="v2-2",
 )
 
 PARANOID_CROSS_WIDE_V2_2 = SuiteDescriptor(
@@ -173,6 +177,7 @@ PARANOID_CROSS_WIDE_V2_2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     evidence_version=2,
+    suite_family="v2-2",
 )
 
 PARANOID_DEEP_V2_2 = SuiteDescriptor(
@@ -185,6 +190,7 @@ PARANOID_DEEP_V2_2 = SuiteDescriptor(
     state_algorithm=AlgorithmId.SHA3_512,
     state_size=64,
     evidence_version=2,
+    suite_family="v2-2",
 )
 
 _SUITES: Dict[SuiteId, SuiteDescriptor] = {

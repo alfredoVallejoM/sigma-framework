@@ -52,10 +52,9 @@ def _exercise(
     return accepted
 
 
-def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
-    if iterations <= 0:
-        raise ValueError("iterations must be positive")
-    rng = random.Random(seed)
+def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], ...]:
+    """Build one valid seed and its parser for every public binary codec."""
+
     context = SigmaContextV2(salt=b"salt", challenge=b"challenge")
     digest = hash_bytes(b"fuzz-seed", context)
     pow_parameters = PowParameters(b"challenge", 2, 2, PowPredicate.DUAL_STATE, 3)
@@ -72,24 +71,32 @@ def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
     wide_evidence = StreamWide.compute(wide_context, (b"fuzz-seed",))
     cross_context = paranoid_wide_v2_2()
     cross_evidence = CrossWide.compute(cross_context, (b"fuzz-seed",))
-    cases = {
-        "context": (context.to_bytes(), SigmaContextV2.from_bytes),
-        "digest": (digest.to_bytes(), SigmaDigestV2.from_bytes),
-        "pow": (pow_parameters.to_bytes(), PowParameters.from_bytes),
-        "kdf": (kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
-        "kdf-result": (kdf_result.to_bytes(), SigmaKdfResult.from_bytes),
-        "evidence-wide": (
+    return (
+        ("context", context.to_bytes(), SigmaContextV2.from_bytes),
+        ("digest", digest.to_bytes(), SigmaDigestV2.from_bytes),
+        ("pow", pow_parameters.to_bytes(), PowParameters.from_bytes),
+        ("kdf", kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
+        ("kdf-result", kdf_result.to_bytes(), SigmaKdfResult.from_bytes),
+        (
+            "evidence-wide",
             wide_evidence.to_bytes(),
             lambda data: AnchorEvidence.from_bytes(data, wide_context),
         ),
-        "evidence-cross": (
+        (
+            "evidence-cross",
             cross_evidence.to_bytes(),
             lambda data: CrossWideEvidence.from_bytes(data, cross_context),
         ),
-    }
+    )
+
+
+def fuzz(seed: int = 0x51A6A, iterations: int = 10_000) -> dict[str, int]:
+    if iterations <= 0:
+        raise ValueError("iterations must be positive")
+    rng = random.Random(seed)
     return {
         name: _exercise(rng, encoded, parser, lambda value: value.to_bytes(), iterations)
-        for name, (encoded, parser) in cases.items()
+        for name, encoded, parser in canonical_codec_cases()
     }
 
 

@@ -132,7 +132,9 @@ def accepts(digest: SigmaDigestV2, parameters: PowParameters) -> bool:
     if (
         len(digest.states) != digest.context.state_count
         or not digest.states
-        or any(not isinstance(state, bytes) or len(state) != expected_size for state in digest.states)
+        or any(
+            not isinstance(state, bytes) or len(state) != expected_size for state in digest.states
+        )
     ):
         return False
     if not hmac.compare_digest(digest.context.to_bytes(), expected_context.to_bytes()):

@@ -67,9 +67,7 @@ def test_policy_rejects_message_before_backend_work() -> None:
 
 
 def test_incremental_policy_rejects_before_mutating_state() -> None:
-    incremental = IncrementalSigmaV2(
-        lightweight_v2(), policy=ResourcePolicy(max_message_bytes=4)
-    )
+    incremental = IncrementalSigmaV2(lightweight_v2(), policy=ResourcePolicy(max_message_bytes=4))
     with pytest.raises(PolicyViolation, match="message size"):
         incremental.update(b"12345")
     assert incremental.checkpoint().offset == 0
@@ -81,18 +79,14 @@ def test_policy_is_not_part_of_digest_bytes() -> None:
     context = lightweight_v2(target_round=3)
     strict = ResourcePolicy(name="strict", max_target_round=3, max_message_bytes=3)
     relaxed = ResourcePolicy(name="relaxed", max_target_round=9, max_message_bytes=99)
-    assert hash_bytes(b"abc", context, policy=strict) == hash_bytes(
-        b"abc", context, policy=relaxed
-    )
+    assert hash_bytes(b"abc", context, policy=strict) == hash_bytes(b"abc", context, policy=relaxed)
     assert strict.as_dict()["name"] == "strict"
 
 
 def test_verifier_turns_policy_rejection_into_false() -> None:
     context = lightweight_v2(target_round=5)
     digest = hash_bytes(b"abc", context, policy=ResourcePolicy(max_target_round=5))
-    assert not verify_full(
-        b"abc", digest, policy=ResourcePolicy(max_target_round=4)
-    )
+    assert not verify_full(b"abc", digest, policy=ResourcePolicy(max_target_round=4))
 
 
 def test_pow_and_argon2_policy_limits_are_explicit() -> None:

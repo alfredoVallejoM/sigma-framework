@@ -42,18 +42,10 @@ class ResourcePolicy:
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name:
             raise ValidationError("policy name must be non-empty text")
-        require_int(
-            "min_target_round", self.min_target_round, minimum=0, maximum=MAX_TARGET_ROUND
-        )
-        require_int(
-            "max_target_round", self.max_target_round, minimum=0, maximum=MAX_TARGET_ROUND
-        )
-        require_int(
-            "min_state_count", self.min_state_count, minimum=1, maximum=MAX_STATE_COUNT
-        )
-        require_int(
-            "max_state_count", self.max_state_count, minimum=1, maximum=MAX_STATE_COUNT
-        )
+        require_int("min_target_round", self.min_target_round, minimum=0, maximum=MAX_TARGET_ROUND)
+        require_int("max_target_round", self.max_target_round, minimum=0, maximum=MAX_TARGET_ROUND)
+        require_int("min_state_count", self.min_state_count, minimum=1, maximum=MAX_STATE_COUNT)
+        require_int("max_state_count", self.max_state_count, minimum=1, maximum=MAX_STATE_COUNT)
         for name in (
             "max_message_bytes",
             "max_pow_difficulty_bits",
@@ -89,15 +81,11 @@ class ResourcePolicy:
             raise PolicyViolation("message size exceeds the local resource policy")
 
     def validate_pow(self, difficulty_bits: int, max_attempts: Optional[int] = None) -> None:
-        difficulty = require_int(
-            "difficulty_bits", difficulty_bits, minimum=0, maximum=0xFFFF
-        )
+        difficulty = require_int("difficulty_bits", difficulty_bits, minimum=0, maximum=0xFFFF)
         if difficulty > self.max_pow_difficulty_bits:
             raise PolicyViolation("PoW difficulty exceeds the local resource policy")
         if max_attempts is not None:
-            attempts = require_int(
-                "max_attempts", max_attempts, minimum=1, maximum=(1 << 64) - 1
-            )
+            attempts = require_int("max_attempts", max_attempts, minimum=1, maximum=(1 << 64) - 1)
             if attempts > self.max_pow_attempts:
                 raise PolicyViolation("PoW attempts exceed the local resource policy")
 

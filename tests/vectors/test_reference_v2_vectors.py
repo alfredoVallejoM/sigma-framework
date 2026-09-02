@@ -16,10 +16,7 @@ VECTOR_PATH = (
     / "reference-stream-wide-v2-draft1.json"
 )
 VECTOR_V22_PATH = (
-    Path(__file__).parents[2]
-    / "specification"
-    / "test-vectors"
-    / "reference-stream-wide-v2-2.json"
+    Path(__file__).parents[2] / "specification" / "test-vectors" / "reference-stream-wide-v2-2.json"
 )
 
 

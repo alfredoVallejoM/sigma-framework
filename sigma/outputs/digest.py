@@ -72,6 +72,8 @@ class SigmaDigestV2:
             "state_size": len(self.states[0]),
             "states_hex": [state.hex() for state in self.states],
             "suite_id": int(self.context.suite_id),
+            "suite_family": get_suite(self.context.suite_id).suite_family,
+            "interoperability_frozen": get_suite(self.context.suite_id).stable,
             "suite_name": get_suite(self.context.suite_id).name,
             "target_round": self.context.target_round,
         }

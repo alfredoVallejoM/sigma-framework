@@ -1,3 +1,7 @@
+import gc
+import statistics
+import tracemalloc
+
 from sigma.anchors import CrossWide
 from sigma.presets import paranoid_deep_v2, paranoid_wide_v2
 from sigma.rounds import Deep, TraceConfig, TracePolicy
@@ -39,9 +43,25 @@ def test_deep_rolling_evaluation_matches_full_trace() -> None:
     assert rolling == traced
     assert rolling.states == transcript.states[-context.state_count :]
 
-    no_trace_digest, transcript = engine.evaluate_trace(
-        anchor, TraceConfig(TracePolicy.NONE)
-    )
+    no_trace_digest, transcript = engine.evaluate_trace(anchor, TraceConfig(TracePolicy.NONE))
     assert no_trace_digest == rolling
     assert transcript.states == ()
     assert transcript.branch_outputs == ()
+
+
+def _deep_rolling_peak(target_round: int) -> int:
+    context = paranoid_deep_v2(target_round=target_round, state_count=3)
+    anchor = CrossWide.compute(context, (b"memory-regression",))
+    peaks = []
+    for _ in range(3):
+        gc.collect()
+        tracemalloc.start()
+        Deep(context).evaluate_digest(anchor)
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        peaks.append(peak)
+    return int(statistics.median(peaks))
+
+
+def test_deep_rolling_memory_does_not_retain_round_branches() -> None:
+    assert _deep_rolling_peak(512) <= _deep_rolling_peak(16) + 16 * 1024

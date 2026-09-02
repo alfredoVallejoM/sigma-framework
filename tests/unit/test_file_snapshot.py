@@ -45,9 +45,12 @@ def test_stable_open_rejects_concurrent_file_changes(tmp_path: Path, operation: 
 def test_private_snapshot_is_immutable_after_source_change_detection(tmp_path: Path) -> None:
     path = tmp_path / "input.bin"
     path.write_bytes(b"original")
-    with pytest.raises(RuntimeError, match="changed"), immutable_snapshot(path) as (
-        snapshot,
-        identity,
+    with (
+        pytest.raises(RuntimeError, match="changed"),
+        immutable_snapshot(path) as (
+            snapshot,
+            identity,
+        ),
     ):
         assert snapshot != path
         assert snapshot.read_bytes() == b"original"

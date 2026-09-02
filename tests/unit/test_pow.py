@@ -50,14 +50,20 @@ def test_pow_rejects_invalid_nonce_types_and_bounds(value: object) -> None:
         evaluate_nonce(b"payload", value, _parameters(PowPredicate.SINGLE_STATE))  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("name,value", [("start_nonce", True), ("start_nonce", 1.0), ("max_attempts", "1"), ("max_attempts", 0)])
+@pytest.mark.parametrize(
+    "name,value",
+    [("start_nonce", True), ("start_nonce", 1.0), ("max_attempts", "1"), ("max_attempts", 0)],
+)
 def test_pow_solver_rejects_invalid_numeric_inputs(name: str, value: object) -> None:
     arguments = {name: value}
     with pytest.raises(ValueError, match=name):
         solve(b"payload", _parameters(PowPredicate.SINGLE_STATE), **arguments)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("field,value", [("target_round", True), ("target_round", 1.0), ("state_count", "2"), ("difficulty_bits", 1.5)])
+@pytest.mark.parametrize(
+    "field,value",
+    [("target_round", True), ("target_round", 1.0), ("state_count", "2"), ("difficulty_bits", 1.5)],
+)
 def test_pow_parameters_reject_non_integer_numeric_fields(field: str, value: object) -> None:
     values = {
         "challenge": b"challenge",

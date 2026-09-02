@@ -132,9 +132,7 @@ class WideOnce:
         )
         return hash_once(self.suite.state_algorithm, domain_tag(DomainId.ROUND) + framed)
 
-    def evaluate_digest(
-        self, anchor: Union[AnchorEvidence, CrossWideEvidence]
-    ) -> SigmaDigestV2:
+    def evaluate_digest(self, anchor: Union[AnchorEvidence, CrossWideEvidence]) -> SigmaDigestV2:
         """Evaluate with memory bounded by the published state window ``k``."""
 
         self._validate_anchor(anchor)

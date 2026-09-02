@@ -39,7 +39,11 @@ def test_memory_experiment_models_depth_and_trace_policy_separately() -> None:
         }
     )
     assert len(records) == 8
-    assert all(record["trace_entries"] == 0 for record in records if record["trace_policy"] == "none")
-    assert all(record["trace_entries"] > 0 for record in records if record["trace_policy"] == "full")
+    assert all(
+        record["trace_entries"] == 0 for record in records if record["trace_policy"] == "none"
+    )
+    assert all(
+        record["trace_entries"] > 0 for record in records if record["trace_policy"] == "full"
+    )
     depth = [group for group in summarize(records) if group["dimension"] == "target_round"]
     assert len(depth) == 2

@@ -1,0 +1,15 @@
+"""Independent version axes for package, wire container and suite families."""
+
+PACKAGE_VERSION = "2.2.0a1"
+CONTEXT_WIRE_VERSION = 2
+DIGEST_WIRE_VERSION = 2
+EVIDENCE_WIRE_VERSION = 2
+SUPPORTED_SUITE_FAMILIES = ("v2-1", "v2-2")
+
+__all__ = [
+    "CONTEXT_WIRE_VERSION",
+    "DIGEST_WIRE_VERSION",
+    "EVIDENCE_WIRE_VERSION",
+    "PACKAGE_VERSION",
+    "SUPPORTED_SUITE_FAMILIES",
+]

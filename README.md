@@ -130,6 +130,9 @@ hardware-dependent and is intentionally excluded from canonical v1 vectors.
 python -m compileall -q sigma tests
 python -m pytest -q
 python -m scripts.fuzz_codecs --iterations 10000
+python scripts/fuzz_atheris.py --write-corpus /tmp/sigma-fuzz-corpus
+python scripts/fuzz_atheris.py /tmp/sigma-fuzz-corpus -atheris_runs=10000
+mutmut run 'sigma.spec.encoding*'
 ruff check sigma scripts experiments tests
 mypy sigma scripts experiments
 python -m build
@@ -139,6 +142,10 @@ python scripts/release_artifacts.py dist
 `constraints/experiments-py313.txt` freezes the currently validated Python
 3.13 analysis environment. Release artifacts receive SHA-256 checksums and a
 CycloneDX SBOM; the runtime package intentionally has no third-party dependencies.
+The coverage-guided and mutation campaigns use the optional `fuzz` and
+`mutation` dependency groups. Version dimensions and release eligibility are
+defined in [`docs/versioning.md`](docs/versioning.md); test campaign evidence is
+recorded in [`docs/testing-hardening.md`](docs/testing-hardening.md).
 
 The byte-level construction is specified in
 [`specification/sigma-v2.md`](specification/sigma-v2.md). Work packages, gates

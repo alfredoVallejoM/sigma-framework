@@ -224,3 +224,25 @@ y someter a reproducción y revisión criptográfica externas.
   EXP-12 declara una política de prueba separada y compara objetivos equivalentes.
 - Vector interoperable Argon2id+Sigma congelado. Validación con dependencia
   real: 317 pruebas sin skips y EXP-12 smoke con 24 observaciones/cero fallos.
+
+### Tanda C2.2 — propiedades, fuzzing y mutación LIB-14
+
+- Añadidas propiedades Hypothesis deterministas sobre codecs, contextos y
+  rechazo de tipos; el corpus mutacional cubre ahora contexto, digest, PoW,
+  parámetros/resultados KDF y ambas evidencias v2-2.
+- El objetivo Atheris selecciona los siete parsers desde el primer byte, limita
+  entradas a 64 KiB y comparte semillas canónicas con el fuzzer determinista.
+  Campaña local de 10.000 casos: cero crashes, `cov=265`, `ft=467`.
+- Mutmut queda configurado en un árbol aislado. La primera campaña TLV mató
+  125/189; tras ampliar fronteras mata 152/189. Los 37 supervivientes exigen
+  clasificación completa antes de cerrar LIB-14.
+
+### Tanda C2.3 — ejes de versión y release LIB-15
+
+- Paquete elevado a `2.2.0a1`; paquete, wire de contexto/digest/evidencia y
+  familia de suite se declaran como ejes independientes en `sigma.version`.
+- Los descriptores publican familia y estabilidad: v2-1 queda congelada/estable
+  y v2-2 continúa experimental. El digest auditable conserva esos metadatos.
+- El SBOM incorpora ejes de versión, commit, tag y árbol sucio. El modo
+  `--require-clean-tag` impide generar artefactos publicables fuera de un tag
+  exacto y limpio.

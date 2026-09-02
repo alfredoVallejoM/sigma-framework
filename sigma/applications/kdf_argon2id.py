@@ -202,9 +202,7 @@ def verify_password(
     if not isinstance(result, SigmaKdfResult):
         raise TypeError("result must be SigmaKdfResult")
     try:
-        candidate = derive_argon2id_sigma(
-            password, result.salt, result.parameters, policy=policy
-        )
+        candidate = derive_argon2id_sigma(password, result.salt, result.parameters, policy=policy)
     except ValueError:
         return False
     return hmac.compare_digest(candidate.final_key, result.final_key)

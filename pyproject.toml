@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sigma-framework"
-version = "2.0.0a1"
+version = "2.2.0a1"
 authors = [{ name = "Alfredo Vallejo Martín" }]
 description = "Experimental framework for canonical wide-input hash combiners"
 readme = "README.md"
@@ -18,10 +18,12 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8"]
+test = ["pytest>=8", "hypothesis>=6.100"]
 quality = ["mypy>=1.10", "ruff>=0.9", "build>=1.2"]
 analysis = ["matplotlib>=3.8", "numpy>=1.26", "scipy>=1.12"]
 kdf = ["argon2-cffi>=23.1"]
+fuzz = ["atheris"]
+mutation = ["mutmut>=3"]
 
 [project.scripts]
 sigmahash = "sigma.cli:main"
@@ -44,10 +46,15 @@ select = ["E", "F", "I", "B", "SIM", "RUF"]
 ignore = ["E501", "RUF002", "RUF003", "SIM115"]
 
 [[tool.mypy.overrides]]
-module = ["scipy", "scipy.*", "argon2", "argon2.*"]
+module = ["scipy", "scipy.*", "argon2", "argon2.*", "atheris"]
 ignore_missing_imports = true
 
 [tool.mypy]
 python_version = "3.10"
 check_untyped_defs = true
 warn_unused_ignores = true
+
+[tool.mutmut]
+source_paths = ["sigma/"]
+pytest_add_cli_args_test_selection = ["tests/unit/", "tests/property/"]
+also_copy = ["experiments/", "scripts/", "specification/"]

@@ -4,7 +4,17 @@ from typing import Any
 import pytest
 
 from sigma.spec.context import SigmaContextV2, parse_context, validate_registered_context
-from sigma.spec.encoding import DecodeError, decode_tlv, encode_tlv, encode_uint
+from sigma.spec.encoding import (
+    MAX_FIELD_LENGTH,
+    DecodeError,
+    decode_tlv,
+    decode_u16_sequence,
+    decode_uint,
+    domain_tag,
+    encode_tlv,
+    encode_u16_sequence,
+    encode_uint,
+)
 from sigma.spec.ids import (
     CONTEXT_MAGIC,
     AlgorithmId,
@@ -38,6 +48,21 @@ def test_integer_overflow_is_rejected(value: int, width: int) -> None:
         encode_uint(value, width)
 
 
+@pytest.mark.parametrize("width", [0, 3, 5, 16])
+def test_integer_width_is_closed(width: int) -> None:
+    with pytest.raises(ValueError, match="width"):
+        encode_uint(0, width)
+
+
+@pytest.mark.parametrize("width", [1, 2, 4, 8])
+def test_integer_codec_exact_boundaries(width: int) -> None:
+    maximum = (1 << (width * 8)) - 1
+    assert encode_uint(0, width) == b"\x00" * width
+    assert decode_uint(encode_uint(maximum, width), width) == maximum
+    with pytest.raises(DecodeError):
+        decode_uint(b"\x00" * (width + 1), width)
+
+
 def test_tlv_requires_strict_order_and_unique_tags() -> None:
     with pytest.raises(ValueError):
         encode_tlv(((2, b"a"), (1, b"b")))
@@ -45,11 +70,64 @@ def test_tlv_requires_strict_order_and_unique_tags() -> None:
         encode_tlv(((1, b"a"), (1, b"b")))
 
 
+def test_tlv_tag_and_value_boundaries_are_exact() -> None:
+    assert decode_tlv(
+        encode_tlv(((1, b""), (0xFFFF, b"x"))), allowed_tags=frozenset({1, 0xFFFF})
+    ) == {
+        1: b"",
+        0xFFFF: b"x",
+    }
+    for tag in (0, 0x10000, True, 1.0):
+        with pytest.raises((TypeError, ValueError)):
+            encode_tlv(((tag, b""),))  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="bytes"):
+        encode_tlv(((1, bytearray()),))  # type: ignore[arg-type]
+
+
+def test_tlv_field_length_budget_accepts_limit_and_rejects_next_byte() -> None:
+    at_limit = b"x" * MAX_FIELD_LENGTH
+    assert decode_tlv(encode_tlv(((1, at_limit),)), allowed_tags=frozenset({1}))[1] == at_limit
+    with pytest.raises(ValueError, match="limit"):
+        encode_tlv(((1, at_limit + b"x"),))
+
+
 def test_tlv_rejects_unknown_and_truncated_fields() -> None:
     with pytest.raises(DecodeError, match="unknown"):
         decode_tlv(struct.pack(">HI", 99, 0), allowed_tags=frozenset({1}))
     with pytest.raises(DecodeError, match="truncated"):
         decode_tlv(struct.pack(">HI", 1, 3) + b"x", allowed_tags=frozenset({1}))
+
+
+def test_tlv_rejects_every_truncated_header_and_noncanonical_order() -> None:
+    header = struct.pack(">HI", 1, 0)
+    for end in range(1, len(header)):
+        with pytest.raises(DecodeError, match="header"):
+            decode_tlv(header[:end], allowed_tags=frozenset({1}))
+    with pytest.raises(DecodeError, match="header"):
+        decode_tlv(header + b"\x00", allowed_tags=frozenset({1, 2}))
+    duplicate = struct.pack(">HI", 1, 0) * 2
+    with pytest.raises(DecodeError, match="order"):
+        decode_tlv(duplicate, allowed_tags=frozenset({1}))
+    descending = struct.pack(">HI", 2, 0) + struct.pack(">HI", 1, 0)
+    with pytest.raises(DecodeError, match="order"):
+        decode_tlv(descending, allowed_tags=frozenset({1, 2}))
+
+
+def test_u16_sequence_and_domain_boundaries() -> None:
+    assert decode_u16_sequence(b"\x00\x00") == ()
+    values = tuple(range(0xFFFF))
+    encoded = encode_u16_sequence(values)
+    assert decode_u16_sequence(encoded) == values
+    with pytest.raises(ValueError, match="too many"):
+        encode_u16_sequence((*values, 0))
+    with pytest.raises(DecodeError, match="truncated"):
+        decode_u16_sequence(b"\x00")
+    with pytest.raises(DecodeError, match="count"):
+        decode_u16_sequence(b"\x00\x01")
+    assert domain_tag(0).endswith(b"\x00\x00")
+    assert domain_tag(0xFFFF).endswith(b"\xff\xff")
+    with pytest.raises(ValueError):
+        domain_tag(0x10000)
 
 
 def test_context_rejects_trailing_bytes() -> None:

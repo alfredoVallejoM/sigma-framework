@@ -146,6 +146,9 @@ en hosts controlados antes de cerrar R4.
   offline/online, memoria, profundidad y reutilización para dos o más anclas.
   Son modelos E2 de anchura reducida; rho/Hellman/rainbow no representan por sí
   solos criptoanálisis completo de las primitivas de 512 bits.
+- EXP-18 ya compara trayectorias consecutivas Fold/DeepVector variando `t`, `k`,
+  ramas y seis fallos; separa anchura física, garantía conservadora y modelo
+  conjunto, conserva censura y contabiliza consultas primitivas.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
 - Las baterías externas, segunda implementación y matriz multiplataforma no
   están disponibles en el repositorio.

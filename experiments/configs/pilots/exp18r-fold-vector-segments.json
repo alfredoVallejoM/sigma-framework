@@ -1,0 +1,12 @@
+{
+  "branch_counts": [2, 4],
+  "campaign": "pilot-v2-2",
+  "experiment": "EXP-18",
+  "faults": ["normal", "constant-first", "correlated-first-two", "omitted-last", "permuted", "constant-fold"],
+  "master_seed": "sigma-v2-2-exp18r-pilot-2026-09-03",
+  "max_candidates": 1024,
+  "repetitions": 4,
+  "state_counts": [1, 2],
+  "target_rounds": [1, 4],
+  "widths": [4, 6]
+}

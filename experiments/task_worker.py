@@ -12,11 +12,31 @@ from typing import Any
 from .common import canonical_json
 from .runner import RUNNERS
 
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows has no resource module
+    resource = None  # type: ignore[assignment]
+
 
 def _atomic_json(path: Path, value: object) -> None:
     temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
     temporary.write_bytes(canonical_json(value) + b"\n")
     os.replace(temporary, path)
+
+
+def _usage() -> dict[str, float | int | None]:
+    if resource is None:
+        return {
+            "max_rss_platform_units": None,
+            "system_cpu_seconds": None,
+            "user_cpu_seconds": None,
+        }
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    return {
+        "max_rss_platform_units": usage.ru_maxrss,
+        "system_cpu_seconds": usage.ru_stime,
+        "user_cpu_seconds": usage.ru_utime,
+    }
 
 
 def main() -> int:
@@ -34,7 +54,7 @@ def main() -> int:
         records = RUNNERS[experiment](config)
         if not records:
             raise RuntimeError("experiment task produced no observations")
-        _atomic_json(args.result, {"records": records})
+        _atomic_json(args.result, {"records": records, "worker_usage": _usage()})
         return 0
     except Exception:
         traceback.print_exc()

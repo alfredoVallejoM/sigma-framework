@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from scripts.estimate_campaign_budget import estimate
+
 
 def _run(config: Path, output: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -51,6 +53,11 @@ def test_exp01_runner_writes_raw_summary_and_manifest(tmp_path: Path) -> None:
         == "test-seed"
     )
     assert all(record["digest_match"] == "True" for record in records)
+    budget = estimate(output, planned_tasks=4)
+    assert budget["pilot_tasks"] == 1
+    assert budget["planned_tasks"] == 4
+    assert budget["estimated_disk_bytes"] >= budget["pilot_disk_bytes"]
+    assert "worker_max_rss_platform_units" in budget
 
 
 def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path) -> None:
@@ -178,9 +185,7 @@ def test_runner_distinguishes_timeout_and_right_censoring(tmp_path: Path) -> Non
 
     recovered = _run(config, timeout_output, "--resume", "--task-timeout", "10")
     assert recovered.returncode == 0, recovered.stderr
-    recovered_summary = json.loads(
-        (timeout_output / "summary.json").read_text(encoding="utf-8")
-    )
+    recovered_summary = json.loads((timeout_output / "summary.json").read_text(encoding="utf-8"))
     assert recovered_summary["execution_complete"] is True
     assert recovered_summary["tasks"]["censored"] == 1
     attempts = list((timeout_output / "tasks").glob("*/attempts/0001-result.json"))

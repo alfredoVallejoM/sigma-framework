@@ -114,3 +114,14 @@ a publishable run: it refuses execution unless the tree is clean, `HEAD` has an
 exact tag and `artifact_path` identifies the installed wheel/executable whose
 SHA-256 is recorded. Two endpoint samples expose drift but do not replace
 external host stabilization or a higher-frequency hardware logger.
+
+After a pilot, derive a measured planning envelope with:
+
+```console
+python -m scripts.estimate_campaign_budget PILOT_RUN --planned-tasks 1000
+```
+
+The report extrapolates serial wall time, disk and observations from completed
+partitions and reports worker CPU/RSS data where the platform exposes it. RSS is
+kept in the operating system's native `getrusage` units (KiB on Linux, bytes on
+macOS), so cross-platform conversion must be explicit in the frozen protocol.

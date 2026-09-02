@@ -207,10 +207,12 @@ def _run_task(task: dict[str, Any], tasks_root: Path, timeout: float | None) -> 
         _atomic_bytes(stdout_path, completed.stdout.encode())
         _atomic_bytes(stderr_path, completed.stderr.encode())
         records: object = []
+        worker_usage: object = None
         status = "error"
         if completed.returncode == 0 and payload_path.is_file():
             payload = json.loads(payload_path.read_text(encoding="utf-8"))
             records = payload.get("records") if isinstance(payload, dict) else None
+            worker_usage = payload.get("worker_usage") if isinstance(payload, dict) else None
             if isinstance(records, list) and records:
                 status = (
                     "censored"
@@ -233,6 +235,7 @@ def _run_task(task: dict[str, Any], tasks_root: Path, timeout: float | None) -> 
             "status": status,
             "task_id": identifier,
             "host_measurements": [host_start, host_measurement_state()],
+            "worker_usage": worker_usage,
         }
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout.encode() if isinstance(exc.stdout, str) else exc.stdout or b""

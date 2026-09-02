@@ -159,6 +159,10 @@ The formal claims and working paper are in
 [`specification/security-analysis.md`](specification/security-analysis.md) and
 [`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment protocol and smoke configurations are documented in
 [`experiments/README.md`](experiments/README.md).
+The dependency-free consumer in
+[`reference/independent_v22.py`](reference/independent_v22.py) deliberately
+imports no `sigma` code and differentially reconstructs every DeepVector
+intermediate from the published byte specification.
 
 ## Claims and limitations
 

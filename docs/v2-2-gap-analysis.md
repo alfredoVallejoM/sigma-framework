@@ -281,3 +281,14 @@ y someter a reproducción y revisión criptográfica externas.
 - Se separan `anchor_component_size` y `state_size` en el registro: todas las
   suites previas conservan 64/64 y DeepVector usa 64/256. Tests cubren anchura,
   dependencia completa, trace, verificación, dominios y memoria O(k).
+
+### Tanda C2.7 — conformidad independiente inicial LIB-13
+
+- `reference/independent_v22.py` reconstruye DeepVector usando únicamente
+  `hashlib` y `struct`; no importa `sigma`, sus enums ni helpers de encoding.
+- 28 combinaciones diferenciales cruzan longitudes `0/1/63/64/65/1024/1025`,
+  `t=0/1/2/4`, `k=1/2/3`, parámetros autenticados y todos los intermedios:
+  contexto, raíces, conexiones, evidencia, componentes, vectores y digest.
+- El vector congelado conserva hashes SHA-256 de cada nivel y componente.
+  LIB-13 permanece parcial hasta extender este consumidor a todas las suites y
+  aplicaciones y completar límites de hojas TreeWide.

@@ -65,7 +65,7 @@ vectores incompletos.
 - Ejecutar EXP-01..10 con observaciones crudas, seeds y manifiestos.
 - PoW/Argon2id sólo tras protocolo y baseline; side channels sólo con núcleo
   nativo; ASIC/energía sólo con artefacto RTL y síntesis real.
-- Formalizar TH-01..09, reconstruir el paper y auditar correspondencia entre
+- Formalizar TH-01..08, reconstruir el paper y auditar correspondencia entre
   claim, código, evidencia y figura.
 
 Salida final: especificación, implementación, tests, datos, scripts, paper y
@@ -89,7 +89,7 @@ no una propiedad que pueda declarar el repositorio por sí solo.
   transcripts sin divergencias.
 - [x] CI definida para Linux 3.10–3.13, macOS y Windows; quality/build separado.
 - [x] Ruff, mypy, compileall, tests y build local pasan.
-- [x] Gate G4: CLI binaria/JSON, 186 tests, CI, wheel/sdist, instalación limpia,
+- [x] Gate G4: CLI binaria/JSON, suite automatizada amplia, CI, wheel/sdist, instalación limpia,
   constraints, checksums y SBOM CycloneDX.
 - [x] EXP-00: runner declarativo, semilla derivada, CSV crudo comprimido,
   resúmenes, manifiestos y checksums.
@@ -108,8 +108,12 @@ no una propiedad que pueda declarar el repositorio por sí solo.
 - [x] EXP-14: propagación/detección de fallos; se retiró el claim DFA.
 - [x] EXP-15 parcial: dimensiones, colisiones reducidas y difusión comparada de
   `Psi`; SAT/SMT/MILP y análisis algebraico completo siguen abiertos.
+- [x] Pilotos R de EXP-01–12, 14 y 17–21: controles causales, censura, modelos,
+  modos v2-2, metrología, atacantes reducidos e instrumentación de oráculo.
+- [x] Configuraciones piloto particionables, estimador de presupuesto y
+  exportador binario auditable para baterías externas.
 - [x] EXP-13/16 correctamente bloqueados por sus gates técnicos: no existe
   núcleo nativo ni RTL/síntesis, por lo que se prohíben esos claims.
-- [x] TH-01–09, matriz de trazabilidad, paper de trabajo y 14 figuras derivadas.
+- [x] TH-01–08, matriz de trazabilidad, paper de trabajo y 14 figuras derivadas.
 - [ ] Campañas confirmatorias completas/multiplataforma y dataset archivado/DOI.
 - [ ] Revisión criptográfica externa y resolución documentada de hallazgos.

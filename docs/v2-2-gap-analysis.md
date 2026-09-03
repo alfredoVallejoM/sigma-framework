@@ -10,11 +10,12 @@ fuente de instrucciones ejecutables.
 
 ## Veredicto
 
-La reconstrucción v2-1 cerró los gates históricos G1–G4, pero no los nuevos
-gates R1–R6. No debe ejecutarse ni publicarse todavía una campaña
-«confirmatoria»: las configuraciones existentes son prerregistros preliminares
-para EXP-01..10, no implementan la metodología revisada EXP-01R..21R y están
-bloqueadas por cambios del núcleo que pueden alterar mediciones y objetos.
+La reconstrucción v2-1 cerró los gates históricos G1–G4. La implementación
+v2-2 posterior cierra localmente R1–R3 y proporciona runners/configuraciones
+piloto para todas las campañas aplicables; R4 aún necesita congelación humana
+del prerregistro. No debe ejecutarse ni publicarse todavía una campaña
+«confirmatoria»: R5/R6 exigen tag limpio, hosts controlados, archivo persistente
+y revisión independiente.
 
 ## Brecha de librería
 
@@ -62,19 +63,19 @@ Implementado localmente: scheduler v2 con tareas deterministas aisladas por
 proceso, particiones atómicas, `--resume` sin duplicados, timeout duro y estados
 `success/error/timeout/censored`; conserva logs, commit/tag, hash de wheel,
 microcode y controles de host al inicio/fin de cada tarea. El resumen separa
-completitud, invariantes, hipótesis y controles de calidad. Falta subdividir y
-pilotar cada diseño EXP-01R..21R, congelar el prerregistro y validar la captura
-en hosts controlados antes de cerrar R4.
+completitud, invariantes, hipótesis y controles de calidad. Los diseños
+aplicables están subdivididos y pilotados; falta congelar el prerregistro y
+validar la captura en hosts controlados antes de cerrar R4.
 
 ### EXP-01R..21R
 
-- EXP-01..10 existentes son pilotos funcionales, no los diseños R revisados.
-- EXP-11, 12, 14 y 15 son smoke parciales y requieren los cambios declarados.
-- EXP-17..21 tienen ya runners y smoke deterministas iniciales. EXP-18/19/20
-  separan Fold/Vector, semánticas firmadas y los tres juegos de búsqueda;
-  EXP-21 cubre dominios registrados, framing y downgrade. Continúan parciales:
-  faltan atacantes avanzados de EXP-17, instrumentación completa de entradas de
-  oráculo en EXP-21 y el plan estadístico confirmatorio congelado.
+- Los resultados históricos EXP-01..15 siguen siendo smoke. Los runners R y
+  sus configuraciones piloto aplicables se han implementado por separado; no
+  se han promovido silenciosamente a evidencia confirmatoria.
+- EXP-17..21 incorporan atacantes direct/distinguished/rho/Hellman/rainbow/
+  multicollision, segmentos Fold/Vector, semánticas firmadas, tres juegos de
+  búsqueda e instrumentación real de entradas primitivas. Continúan pendientes
+  el escalado y la congelación del plan estadístico confirmatorio.
 - EXP-01R dispone de un piloto particionado de las seis suites v2-2 que compara
   evidencia, transcript y digest con el consumidor independiente: 197
   observaciones locales sin divergencias. Sigue pendiente la matriz de tamaños
@@ -134,9 +135,9 @@ en hosts controlados antes de cerrar R4.
   dato queda ausente en vez de atribuir el RSS del padre al conjunto.
 - EXP-11R trata los intentos agotados como censura derecha y comprueba challenge
   reutilizado, replay, sustitución de challenge, downgrade de dificultad,
-  alteración de digest y límite local de recursos. Falta medir escalado de
-  miners por nonce mediante lotes multiproceso disjuntos y registra speedup y
-  eficiencia. El piloto de dificultad 6 fue negativo por overhead: dos/cuatro
+  alteración de digest y límite local de recursos. El escalado de miners usa
+  lotes multiproceso de nonce disjuntos y registra speedup y eficiencia. El
+  piloto de dificultad 6 fue negativo por overhead: dos/cuatro
   workers tardaron ~34–35 ms frente a ~11 ms serial; no se presentará como
   aceleración. Esto no transforma el PoW en PoSW o VDF.
 - EXP-12R permite componer Argon2id con Wide, CrossWide, Deep o DeepVector v2-2
@@ -170,8 +171,9 @@ en hosts controlados antes de cerrar R4.
   (incluida una pendiente negativa en segunda preimagen); sirven para validar
   el análisis, no para sostener exponentes empíricos.
 - EXP-13 y EXP-16 permanecen correctamente bloqueados por núcleo nativo y RTL.
-- Las baterías externas, segunda implementación y matriz multiplataforma no
-  están disponibles en el repositorio.
+- Las baterías externas y la ejecución multiplataforma no están disponibles en
+  este entorno. Sí existe un consumidor independiente para las seis suites y
+  las tres aplicaciones, cubierto por corpus y pruebas diferenciales.
 
 ## Campañas y gates
 
@@ -432,7 +434,8 @@ y someter a reproducción y revisión criptográfica externas.
   dos dependen del default de `byteorder` de Python 3.11+ (la CI 3.10 los mata).
   Tras regenerar la caché, seis mutantes conductuales nuevos de tags/tamaños
   fueron muertos 6/6 por tests directos.
-- Cierre local: 493 pruebas sin omisiones con Argon2 real; Ruff y mypy verdes.
+- Cierre local de aquella tanda: 493 pruebas sin omisiones con Argon2 real;
+  Ruff y mypy verdes. La cifra es histórica y la suite continuó creciendo.
   R2 queda satisfecho en el repositorio, pendiente únicamente de reproducción
   multiplataforma/externa como condición posterior de R5, no de diseño.
 

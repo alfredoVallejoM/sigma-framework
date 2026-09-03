@@ -78,17 +78,17 @@ Current runners:
 - `EXP-14`: fault propagation/detection, explicitly not DFA.
 - `EXP-15`: structural and reduced-width legacy `Psi` analysis.
 - `EXP-16`: gated; requires RTL, toolchain, constraints and actual synthesis.
-- `EXP-17`: cross-anchor precomputation controls (direct and distinguished tables).
-- `EXP-18`: reduced Deep fold versus DeepVector collision comparison.
-- `EXP-19`: reduced commitment-reuse search with Ed25519 explicitly unreduced.
-- `EXP-20`: separate preimage, second-preimage and multi-target games.
-- `EXP-21`: deterministic registered-domain, TLV and downgrade-confusion audit.
+- `EXP-17`: six reduced precomputation/TM/multicollision attackers across anchors.
+- `EXP-18`: consecutive reduced Deep fold versus DeepVector trajectories.
+- `EXP-19`: reduced commitment-reuse events with Ed25519 explicitly unreduced.
+- `EXP-20`: separate preimage, second-preimage and multi-target games/attackers.
+- `EXP-21`: real primitive-input, registered-domain, TLV and downgrade audit.
 
-The EXP-17..21 smoke configurations are implementation pilots, not the full R
-campaigns. In particular, EXP-17 still needs rho/Hellman/rainbow and
-multicollision attackers; EXP-21 still needs the complete instrumented oracle
-input matrix. Their absence remains visible in the preregistration rather than
-being inferred from a passing smoke run.
+The EXP-17..21 smoke configurations are historical implementation pilots. The
+revised pilot configs under `configs/pilots` add rho/Hellman/rainbow/
+multicollision attackers, consecutive Fold/Vector segments, explicit signed
+components, three preimage attackers and opt-in capture of actual primitive
+inputs. They are still reduced pilots, not confirmatory evidence.
 
 Prepare independent EXP-08 streams for external batteries without changing
 their byte or bit order:

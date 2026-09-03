@@ -12,8 +12,8 @@ test or smoke experiment never upgrades the final column by itself.
 | Cross connections add no automatic strength | FORM-03 / TH-02 | original roots retained alongside connections | KAT and EXP-04 smoke | explicit conservative boundary |
 | Unequal anchors do not automatically coalesce | FORM-04 / TH-03 | complete anchor reinjection | exact control tests; EXP-03 smoke | conditional RO theorem stated |
 | Segment collisions require repeated equalities up to anchor bottleneck | FORM-05 / TH-04 | consecutive published states | reduced models EXP-02/03 smoke | conditional bound; confirmatory pending |
-| Second preimage is separate from collision | FORM-06 / TH-05 | full verifier recomputes all levels | reduced attack runner planned EXP-20R | theorem decomposition; evidence pending |
-| Target preimage is separate from collision | FORM-06 / TH-06 | no special shortcut claimed | EXP-20R planned | regular-image model only, no reduction claimed |
+| Second preimage is separate from collision | FORM-06 / TH-05 | full verifier recomputes all levels | EXP-20R random/exhaustive/table pilot | theorem decomposition; scaled confirmation pending |
+| Target preimage is separate from collision | FORM-06 / TH-06 | no special shortcut claimed | EXP-20R regular/uniform targets | regular-image model only, no reduction claimed |
 | Input entropy cannot be created | FORM-06 / TH-06 | Argon2id before Sigma | KDF KAT, independent binding, EXP-12 smoke | deterministic argument; Argon2 supplies memory hardness |
 | Per-candidate evaluation has the specified adaptive DAG | FORM-07 / TH-07 | WideOnce, Deep, DeepVector | exact query accounting, scheduler equality, EXP-06 smoke | evaluator span established; no universal sequentiality claim |
 | Deep fold caps scalar state and needs its own assumption | FORM-08 | Deep branch vector then SHA3-512 fold | fault backends, differential intermediates | limitation explicit |
@@ -24,11 +24,11 @@ test or smoke experiment never upgrades the final column by itself.
 | PoW predicates have configured reduced acceptance probability | application model | `applications/pow.py` | independent vector + EXP-11 smoke | protocol implemented; not PoSW/VDF |
 | StreamWide memory is constant in message size | algorithmic invariant | incremental branch hashers | EXP-10 smoke | tested locally; confirmatory pending |
 | TreeWide memory is logarithmic in leaves | algorithmic invariant | frontier reducer | unit invariant + EXP-10 smoke | tested locally; confirmatory pending |
-| Cross-anchor work is not automatically reusable after reinjection | FORM-04 / TH-03 | indexed anchor reinjection | EXP-17 smoke direct/distinguished tables | pilot only; advanced attackers pending |
-| DeepVector retains physical branch components; Fold has a narrow successor | FORM-08 / TH-07 | `Deep`, `DeepVector` | EXP-18 reduced smoke | pilot only; joint-security assumption remains explicit |
-| Signed-state reuse reduces to collision of exactly the signed commitment | FORM-09 / TH-08 | signed commitment profiles | EXP-19 reduced smoke | Ed25519 is never artificially reduced |
-| Collision, preimage, second-preimage and multi-target exponents are distinct | FORM-06 / TH-05/06 | reduced trajectories | EXP-20 reduced smoke | regular-image and uniform targets reported separately |
-| Registered domains/framing do not collide and suite downgrade changes context identity | FORM-02 / TH-01 | domain tags, TLV, closed suites | EXP-21 deterministic smoke | full instrumented oracle matrix pending |
+| Cross-anchor work is not automatically reusable after reinjection | FORM-04 / TH-03 | indexed anchor reinjection | EXP-17 six-attacker reduced pilot | stationary control separates reuse; scaled frontier pending |
+| DeepVector retains physical branch components; Fold has a narrow successor | FORM-08 / TH-07 | `Deep`, `DeepVector` | EXP-18 segment/fault pilot | physical/conservative/joint widths separate |
+| Signed-state reuse reduces to collision of exactly the signed commitment | FORM-09 / TH-08 | signed commitment profiles | EXP-19 component-specific pilot | Ed25519 is never artificially reduced |
+| Collision, preimage, second-preimage and multi-target exponents are distinct | FORM-06 / TH-05/06 | reduced trajectories | EXP-20 three-game/three-attacker pilot | slopes underpowered; target classes remain separate |
+| Registered domains/framing do not collide and suite downgrade changes context identity | FORM-02 / TH-01 | domain tags, TLV, closed suites, opt-in capture | EXP-21: 52,820 primitive-pair checks | zero pilot violations; exhaustive mutations pending |
 | Distribution/diffusion observations imply no hardness | claim prohibition | experiment runners | EXP-05/07/08 smoke | descriptive only |
 | Fault detection is not DFA resistance | claim prohibition | recomputation and typed codecs | EXP-14 smoke | fault coverage only |
 | Legacy `Psi` is non-bijective | pigeonhole fact only | `experimental/psi.py` | EXP-15 smoke | no collision-resistance claim |
@@ -41,8 +41,8 @@ test or smoke experiment never upgrades the final column by itself.
   `specification/security-analysis.md`.
 - FORM-10 has a primary-source comparison set, but completeness of the
   literature review and novelty judgment remain human-review obligations.
-- EXP references currently marked “smoke” validate code paths only. They must
-  be replaced by task-level, preregistered, clean-tag results before manuscript
-  result claims are updated.
+- Historical smoke and revised pilot references validate code paths and sizing
+  only. They must be replaced by task-level, preregistered, clean-tag results
+  before manuscript result claims are updated.
 - External review cannot be self-certified. Review reports and resolution links
   must be added here before any production-security claim.

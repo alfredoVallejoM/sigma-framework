@@ -1,11 +1,11 @@
 # Sigma: A Framework for Wide Input Commitments and Round-Separated Multi-State Hash Iteration
 
-Working manuscript — v2-1 alpha, 2026-09-02. This document reports internal
+Working manuscript — v2-2 alpha, 2026-09-03. This document reports internal
 analysis and preliminary smoke experiments, not an external security review.
 
 ## Abstract
 
-We describe Sigma v2-1, an experimental framework that separates a canonical
+We describe Sigma v2-2, an experimental framework that separates a canonical
 wide commitment to an input from an anchor-reinjected sequence of hash
 transitions and publishes consecutive states. The redesign addresses ambiguity
 and backend-dependent behavior found in an earlier prototype. Its principal
@@ -16,7 +16,7 @@ bounds: when two trajectories have different anchors but meet at one state,
 reinjection makes their next queries distinct, whereas an ordinary chain sends
 the same query. This does not make the output a proof of sequential work and
 does not overcome the effective collision width of the anchor. We provide a
-reference Python implementation, frozen test vector, 186 automated tests and a
+reference Python implementation, independent vectors, an automated regression suite and a
 reproducible experiment harness. Preliminary reduced-width and systems smoke
 runs exercise 72,013 observations across canonicality, collisions, dependency,
 diffusion, distribution, timing, memory and scoped application studies. These runs validate methodology and
@@ -34,7 +34,7 @@ concatenating several hash outputs can give a conservative robust-combiner
 property, while compressing them immediately returns the construction to the
 collision bound of the compressed output.
 
-Sigma v2-1 is therefore framed narrowly as an **input-bound, round-separated
+Sigma v2-2 is therefore framed narrowly as an **input-bound, round-separated
 iterated hash combiner with a multi-state trajectory commitment**. It has four
 design rules:
 
@@ -46,7 +46,7 @@ design rules:
 
 The contributions are a frozen wire construction; StreamWide, CrossWide and
 TreeWide anchors; WideOnce and Deep transitions; deterministic execution
-backends; explicit reductions TH-01–TH-09; and a data-first experiment pipeline.
+backends; explicit reductions TH-01–TH-08; and a data-first experiment pipeline.
 We make no claim of production readiness, post-quantum security, constant-time
 execution, ASIC resistance, or novelty equivalent to a proof-of-sequential-work
 protocol.
@@ -94,7 +94,7 @@ branch over the complete root vector. The connections are credited with
 diffusion, not extra conservative collision strength. TreeWide uses fixed
 65,536-byte leaves and canonical range/height/length node framing. Its frontier
 stores at most one perfect subtree per power of two and never duplicates an odd
-node. Although its recursive split resembles history trees, Sigma Tree v2-1 is
+node. Although its recursive split resembles history trees, Sigma Tree v2-2 is
 not the Certificate Transparency construction defined by
 [RFC 6962](https://www.rfc-editor.org/rfc/rfc6962.html).
 
@@ -117,7 +117,9 @@ D_(t,k) = E(C,S_t,...,S_(t+k-1)).
 ```
 
 Deep replaces each transition with parallel branch evaluations followed by a
-SHA3-512 fold. Branches at a level may run concurrently; levels remain adaptive.
+SHA3-512 fold. DeepVector instead retains every branch component and makes each
+successor component consume the complete previous vector. Branches at a level
+may run concurrently; levels remain adaptive.
 The binary digest carries the complete context and exactly `k` equal-width
 states. JSON and hexadecimal are presentation wrappers around those bytes.
 
@@ -132,11 +134,14 @@ In summary:
 - TH-03 proves distinct next queries after a collision under unequal anchors.
 - TH-04 bounds segment collisions by anchor advantage plus a conditional
   `binom(q,2) 2^(-kn)` RO term and an explicit non-ideal `epsilon`.
-- TH-05 identifies `min(a,kn)` as the generic effective output width.
-- TH-06 separates `t+k-1` adaptive levels from candidate-level parallelism.
-- TH-07 states only the conservative retained-branch combiner property.
-- TH-08 proves deterministic post-processing cannot create input entropy.
-- TH-09 gives a counterexample to interpreting one valid edge as history proof.
+- TH-05 decomposes second-preimage success into an anchor term and a segment
+  term; it does not derive second-preimage strength from collision resistance.
+- TH-06 treats target preimage as a separate regular-image model, capped by
+  the source entropy, and accounts explicitly for multiple targets.
+- TH-07 states the work/span DAG of each evaluator without claiming a universal
+  sequentiality lower bound.
+- TH-08 reduces signed-record reuse to Ed25519 or encoding failure and explains
+  why one valid edge does not establish its trajectory prefix.
 
 Robust hash combiners motivate retaining roots: Boneh and Boyen show limits on
 short black-box collision-resistant combiners that evaluate their components
@@ -175,6 +180,12 @@ SHA-256. Existing committed runs are exploratory smoke runs; confirmation
 requires clean commits, preregistered full configurations, additional hosts and
 archival publication.
 
+The v2-2 pilot configurations add causal controls, survival analysis, exact
+intervals, robust regressions, real primitive-input instrumentation, six
+precomputation attackers and separate collision/preimage/second-preimage games.
+Their outputs size and test the protocols; they are deliberately not substituted
+for clean-tag confirmatory datasets in the results below.
+
 EXP-01 compares complete context, anchor, transcript and digest across adapters
 and workers. EXP-02–04 use reduced oracles for collision and anchor questions.
 EXP-05/07 perturb the real v2 implementation and retain exact XOR masks. EXP-08
@@ -185,7 +196,7 @@ processes and reports Python allocations separately from scoped process RSS.
 
 ## 7. Preliminary smoke results
 
-The selected run manifests under `experiments/results` contain 72,013 raw
+The selected historical run manifests under `experiments/results` contain 72,013 raw
 observations. EXP-01 found no divergence in 266 observations spanning five
 presets, nine boundary sizes and tree worker counts 1, 2, 3, 4 and 8.
 
@@ -230,7 +241,9 @@ EXP-09 retains 990 timing observations but has only three repeats per cell and
 uncontrolled page cache; it validates the pipeline, not stable performance
 rankings. EXP-10 selected a constant allocation model for StreamWide and a
 logarithmic model for TreeWide and the parallel parent process through 4 MiB.
-Child-worker aggregate RSS was not measured and is not inferred.
+That historical run did not measure child-worker aggregate RSS and it is not
+inferred; the revised EXP-10R pilot now samples aggregate parent/child RSS on
+Linux, but remains excluded from these historical result claims.
 
 EXP-11 evaluated 384 reduced-difficulty PoW trials. All three predicates were
 configured for ideal acceptance probability 1/16; their observed mean attempts
@@ -264,9 +277,10 @@ must enforce acceptable parameter floors to prevent downgrade.
 
 The optional KDF composition first evaluates Argon2id v1.3 through
 `argon2-cffi`, then hashes its output in a Sigma context binding salt and all
-Argon2 parameters. It is deliberately compared with Argon2id alone. Signature
-use still requires an independent standard signature over context, anchor and
-digest; Sigma is not a signature.
+Argon2 parameters. Registered v2-2 Wide, CrossWide, Deep and DeepVector
+post-processing modes preserve the same Argon2 budget. The signed commitment
+profile uses standard Ed25519 over context, anchor and states and distinguishes
+attestation, full recomputation and one-edge checking; Sigma is not a signature.
 
 ## 9. Limitations and open cryptanalysis
 
@@ -295,7 +309,7 @@ are deliberately unsuitable for that claim.
 
 ## 11. Conclusion
 
-Sigma v2-1 replaces an ambiguous prototype with a testable construction whose
+Sigma v2-2 replaces an ambiguous prototype with a testable construction whose
 encoding, anchor evidence, transition inputs and limitations are explicit.
 Anchor reinjection changes conditional collision persistence in the idealized
 model, and consecutive states impose multiple equalities only up to the anchor

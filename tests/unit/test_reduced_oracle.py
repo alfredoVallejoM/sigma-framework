@@ -47,7 +47,9 @@ def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None
             "widths": [4],
         }
     )
-    assert len(records) == 18
+    # 12 birthday rows + 4 single-branch controls + 12 related-anchor rows
+    # + 2 framing controls.
+    assert len(records) == 30
     assert {
         record["construction"] for record in records if record["attack"] == "generic-birthday"
     } == {
@@ -65,6 +67,21 @@ def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None
         if record["attack"] == "framing-ambiguity-control"
     }
     assert controls == {"unframed-concat-control": True, "canonical-framing-control": False}
+    related = {
+        (record["construction"], record["relation"]): record["anchor_collision"]
+        for record in records
+        if record["attack"] == "related-anchor-differential"
+    }
+    assert {relation for _, relation in related} == {
+        "identical-control",
+        "one-component-bit",
+        "permuted-components",
+    }
+    assert all(
+        collision
+        for (_, relation), collision in related.items()
+        if relation == "identical-control"
+    )
 
 
 def test_revised_collision_controls_and_survival_are_reported() -> None:

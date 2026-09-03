@@ -55,6 +55,35 @@ def test_effective_task_rejects_invalid_v22_values_before_execution() -> None:
         _task_plan(config)
 
 
+def test_exp20_effective_tasks_reject_semantically_empty_cells() -> None:
+    base = {
+        "anchor_multipliers": [1],
+        "attackers": ["random-search"],
+        "constructions": ["reinjected"],
+        "experiment": "EXP-20",
+        "games": ["second-preimage"],
+        "master_seed": "schema-exp20-test",
+        "max_candidates": 16,
+        "repetitions": 1,
+        "schema_version": 1,
+        "state_counts": [1],
+        "target_counts": [1],
+        "target_kinds": ["uniform"],
+        "widths": [3],
+    }
+    with pytest.raises(ValueError, match="regular-image"):
+        validate_config(base)
+    with pytest.raises(ValueError, match=r"target_counts=\[1\]"):
+        validate_config(
+            {
+                **base,
+                "games": ["preimage"],
+                "target_counts": [4],
+                "target_kinds": ["regular-image"],
+            }
+        )
+
+
 def test_confirmatory_schema_requires_v22_artifact_and_preregistered_fields() -> None:
     config = {
         "campaign": "confirmatory-v2-2",

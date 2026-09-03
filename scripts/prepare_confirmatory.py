@@ -286,6 +286,10 @@ def _designs(pilot_root: Path) -> dict[str, dict[str, Any]]:
             "target_kinds",
             "constructions",
         ),
+        valid=lambda cell: (
+            (cell["games"] != "second-preimage" or cell["target_kinds"] == "regular-image")
+            and (cell["games"] == "multi-target" or cell["target_counts"] == 1)
+        ),
     )
 
     _without_tasks(designs["exp21r-domains.json"], timeout=14_400)
@@ -297,6 +301,7 @@ def prepare(
     pilot_root: Path,
     output: Path,
     artifact_path: str,
+    freeze_manifest: Path | None = None,
 ) -> list[Path]:
     """Write complete configs only after explicit human freeze of the protocol."""
 
@@ -311,7 +316,7 @@ def prepare(
     if len(designs) != 20:
         raise ValueError(f"expected exactly 20 current designs, found {len(designs)}")
     preregistration_hash = sha256_file(preregistration)
-    freeze_path = output / "freeze.json"
+    freeze_path = freeze_manifest or output / "freeze.json"
     output.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for filename, config in sorted(designs.items()):
@@ -344,9 +349,20 @@ def main() -> int:
     parser.add_argument("--pilot-root", type=Path, default=Path("experiments/configs/pilots"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--artifact-path", required=True)
+    parser.add_argument(
+        "--freeze-manifest",
+        type=Path,
+        help="manifest path embedded in configs (defaults to OUTPUT/freeze.json)",
+    )
     args = parser.parse_args()
     try:
-        written = prepare(args.preregistration, args.pilot_root, args.output, args.artifact_path)
+        written = prepare(
+            args.preregistration,
+            args.pilot_root,
+            args.output,
+            args.artifact_path,
+            args.freeze_manifest,
+        )
     except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         parser.error(str(exc))
     print(json.dumps({"configs": [str(path) for path in written]}, sort_keys=True))

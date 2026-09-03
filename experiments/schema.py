@@ -412,6 +412,19 @@ def validate_config(config: object) -> dict[str, Any]:
             )
         ):
             raise ValueError(f"{experiment} requires preset in every effective task")
+    if experiment == "EXP-20":
+        games = config.get("games")
+        target_kinds = config.get("target_kinds")
+        target_counts = config.get("target_counts")
+        if games == ["second-preimage"] and target_kinds == ["uniform"]:
+            raise ValueError("EXP-20 second-preimage requires a regular-image target")
+        if (
+            isinstance(games, list)
+            and len(games) == 1
+            and games[0] != "multi-target"
+            and target_counts != [1]
+        ):
+            raise ValueError("EXP-20 non-multi-target games require target_counts=[1]")
     for field in {"family_alpha", "detectable_bias"} & set(config):
         value = config[field]
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 < value < 1:

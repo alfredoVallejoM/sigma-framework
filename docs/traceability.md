@@ -1,6 +1,6 @@
 # Claim-to-evidence traceability
 
-Current line: Sigma `2.2.0a1`. Engineering gates F0–F6 are closed; the
+Current line: Sigma `2.2.0a2`. Engineering gates F0–F6 are closed; the
 confirmatory protocol and 20 configurations are hash-frozen and F7 is in
 progress. Production and security-review gates remain open; see
 [`project-status-2026-09-03.md`](project-status-2026-09-03.md).

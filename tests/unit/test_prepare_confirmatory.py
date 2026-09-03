@@ -25,7 +25,7 @@ EXPECTED_TASKS = {
     "exp17r-attacker-frontier.json": 54,
     "exp18r-fold-vector-segments.json": 288,
     "exp19r-signed-reuse.json": 144,
-    "exp20r-preimage-games.json": 3_888,
+    "exp20r-preimage-games.json": 1_944,
     "exp21r-domains.json": 1,
 }
 
@@ -52,7 +52,7 @@ def test_prepare_requires_human_freeze_and_emits_closed_configs(tmp_path: Path) 
         "artifacts/sigma_framework-2.2.0a1-py3-none-any.whl",
     )
     assert len(written) == 20
-    assert sum(EXPECTED_TASKS.values()) == 7_233
+    assert sum(EXPECTED_TASKS.values()) == 5_289
     for path in written:
         config = json.loads(path.read_text(encoding="utf-8"))
         assert validate_config(config) == config
@@ -73,6 +73,15 @@ def test_prepare_requires_human_freeze_and_emits_closed_configs(tmp_path: Path) 
         construction = overrides["constructions"][0]
         operation = overrides["operations"][0]
         assert construction in sigma_constructions or operation in file_operations
+
+    exp20 = json.loads((output / "exp20r-preimage-games.json").read_text(encoding="utf-8"))
+    for task in exp20["execution"]["tasks"]:
+        overrides = task["overrides"]
+        game = overrides["games"][0]
+        target_kind = overrides["target_kinds"][0]
+        target_count = overrides["target_counts"][0]
+        assert game != "second-preimage" or target_kind == "regular-image"
+        assert game == "multi-target" or target_count == 1
 
     with pytest.raises(ValueError, match="not empty"):
         prepare(

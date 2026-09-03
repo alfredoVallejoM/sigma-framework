@@ -1,6 +1,6 @@
 """Independent version axes for package, wire container and suite families."""
 
-PACKAGE_VERSION = "2.2.0a1"
+PACKAGE_VERSION = "2.2.0a2"
 CONTEXT_WIRE_VERSION = 2
 DIGEST_WIRE_VERSION = 2
 EVIDENCE_WIRE_VERSION = 2

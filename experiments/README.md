@@ -85,14 +85,14 @@ active product or campaign.
 ## Confirmatory freeze and execution
 
 The preregistration was human-approved and frozen on 2026-09-03. Its binding
-record covers the protocol plus 20 final configurations and 7,233 effective
+record covers the protocol plus 20 final configurations and 5,289 effective
 tasks. The reproducible preparation commands are:
 
 ```console
 python -m scripts.prepare_confirmatory \
   --preregistration experiments/preregistration-v2-2.md \
   --output experiments/configs/confirmatory-frozen \
-  --artifact-path dist/sigma_framework-2.2.0a1-py3-none-any.whl
+  --artifact-path dist/sigma_framework-2.2.0a2-py3-none-any.whl
 python -m experiments.freeze \
   --preregistration experiments/preregistration-v2-2.md \
   --config experiments/configs/confirmatory-frozen/EXP_CONFIG.json \

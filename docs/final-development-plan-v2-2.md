@@ -2,7 +2,7 @@
 
 Estado: **plan rector vigente**  
 Fecha de congelación de alcance: 2026-09-03  
-Línea activa: Sigma v2.2 (`2.2.0a1` durante el desarrollo)  
+Línea activa: Sigma v2.2 (`2.2.0a2` durante el desarrollo)
 Ejecución: fases 0–6 cerradas; F7 congelada y preparada para ejecución;
 F8–F9 pendientes
 
@@ -217,7 +217,7 @@ artículo.
 El propietario revisó y autorizó la ejecución el 2026-09-03. El prerregistro
 quedó congelado con SHA-256
 `373f7b7fcc244d755b5c8f3de9daa56eb98ef5b32c0de6b706bc55a06f9fc5f5`;
-el manifiesto vincula las 20 configuraciones y 7.233 tareas efectivas.
+el manifiesto vincula las 20 configuraciones y 5.289 tareas efectivas.
 
 Repetir los pilotos necesarios para validar runners, medir tiempo/RAM/disco,
 elegir tamaños, fijar potencia, exclusiones, censura, análisis y figuras antes

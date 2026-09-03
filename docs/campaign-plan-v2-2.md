@@ -2,7 +2,7 @@
 
 Estado: catálogo técnico subordinado al
 [`plan final`](final-development-plan-v2-2.md). F4 y F6 están cerradas: los 20
-pilotos finalizaron y las 20 configuraciones confirmatorias, con 7.233 tareas,
+pilotos finalizaron y las 20 configuraciones confirmatorias, con 5.289 tareas,
 están congeladas por hash. Ningún piloto de este documento es evidencia del
 artículo. F7 está en ejecución; estado global en
 [`project-status-2026-09-03.md`](project-status-2026-09-03.md).

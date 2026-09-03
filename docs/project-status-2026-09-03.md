@@ -5,7 +5,7 @@ Fecha de corte: 2026-09-03
 Baseline funcional: cambios F0–F6 preparados en la rama de auditoría; el hash
 definitivo se fijará al integrar y etiquetar el artefacto revisado.
 
-Versión de paquete: `2.2.0a1`
+Versión de paquete: `2.2.0a2`
 
 Veredicto revisado: **plataforma alpha de investigación avanzada; todavía no es
 una release candidate reproducible ni está aprobada para producción**.
@@ -31,7 +31,7 @@ revisión criptográfica independiente.
 
 | Área | Estado actual | Límite vigente |
 |---|---|---|
-| Paquete | `2.2.0a1`, Python 3.10+ | alpha de investigación |
+| Paquete | `2.2.0a2`, Python 3.10+ | alpha de investigación |
 | Wire | contexto/digest/evidencia/KDF/PoW/firma versionados y congelados | un cambio exige IDs nuevos; no garantiza seguridad |
 | Suites | seis v2.2 activas; IDs previos reservados, sin implementaciones v1/v2.1 publicables | un cambio wire exige IDs nuevos |
 | Anclas | StreamWide, CrossWide y TreeWide | conexiones Cross no reciben fuerza aditiva automática |
@@ -82,7 +82,7 @@ idéntico presupuesto Argon2id.
 | F3 — gate local | cerrado localmente | orden única, cobertura, build e instalación aislada |
 | F4 — experimentos | cerrado localmente | esquema/procedencia/concurrencia/scheduler verificados |
 | F5 — limpieza | cerrado | árbol actual sin evidencia ni implementación legacy |
-| F6 — pilotos/prerregistro | cerrado | 20 pilotos, protocolo y 20 configuraciones/7.233 tareas congelados por hash |
+| F6 — pilotos/prerregistro | cerrado | 20 pilotos, protocolo y 20 configuraciones/5.289 tareas congelados por hash |
 | R5 — confirmatorio | en curso | requiere completar dataset, hosts controlados y baterías externas |
 | R6 — publicación/revisión | abierto | requiere dataset/DOI, reproducción y revisión externa |
 

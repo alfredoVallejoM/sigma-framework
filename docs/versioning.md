@@ -1,6 +1,6 @@
 # Política de versiones de Sigma
 
-Estado actual: `2.2.0a1` es la única línea experimental activa. Las suites v1 y
+Estado actual: `2.2.0a2` es la única línea experimental activa. Las suites v1 y
 v2.1 fueron retiradas del árbol en F5; sus IDs permanecen reservados. Consulte
 [`project-status-2026-09-03.md`](project-status-2026-09-03.md) para los gates de
 promoción vigentes.
@@ -10,7 +10,7 @@ ellas no implica compatibilidad ni estabilidad.
 
 | Dimensión | Valor actual | Significado |
 |---|---:|---|
-| paquete Python | `2.2.0a1` | evolución de API, herramientas y distribución |
+| paquete Python | `2.2.0a2` | evolución de API, herramientas y distribución |
 | contexto wire | `2` | framing binario de `SigmaContextV2` |
 | digest wire | `2` | framing binario de `SigmaDigestV2` |
 | evidencia wire | `2` | envelope tipado `SIGMAAE` de las suites v2.2 |

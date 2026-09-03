@@ -5,6 +5,4 @@ recursive-include specification *.md *.json
 recursive-include constraints *.txt
 recursive-include scripts *.py
 recursive-include experiments *.py *.json *.md
-prune experiments/results
 recursive-include paper *.md *.bib
-recursive-include paper/figures *.svg *.png *.json

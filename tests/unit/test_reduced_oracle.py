@@ -29,11 +29,25 @@ def test_reduced_experiments_emit_individual_observations() -> None:
             "max_candidates": 1000,
         }
     )
-    persistence = run_persistence({**common, "widths": [4], "segments": [1, 2], "trials": 20})
+    persistence = run_persistence(
+        {
+            **common,
+            "anchor_relations": ["same", "different"],
+            "constructions": ["stationary", "indexed", "anchored", "anchored-indexed"],
+            "widths": [4],
+            "segments": [1, 2],
+            "trials": 20,
+        }
+    )
     assert len(collisions) == 16
     assert all(not record["censored"] for record in collisions)
-    assert len(persistence) == 80
-    assert all(record["persisted"] for record in persistence if record["construction"] == "simple")
+    assert len(persistence) == 320
+    assert all(
+        record["persisted"]
+        for record in persistence
+        if record["anchor_relation"] == "same"
+        or record["construction"] in {"stationary", "indexed"}
+    )
 
 
 def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None:
@@ -78,9 +92,7 @@ def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None
         "permuted-components",
     }
     assert all(
-        collision
-        for (_, relation), collision in related.items()
-        if relation == "identical-control"
+        collision for (_, relation), collision in related.items() if relation == "identical-control"
     )
 
 

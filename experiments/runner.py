@@ -41,8 +41,6 @@ from .exp12_kdf import run as run_exp12
 from .exp12_kdf import summarize as summarize_exp12
 from .exp14_faults import run as run_exp14
 from .exp14_faults import summarize as summarize_exp14
-from .exp15_psi import run as run_exp15
-from .exp15_psi import summarize as summarize_exp15
 from .exp17_precomputation import run as run_exp17
 from .exp17_precomputation import summarize as summarize_exp17
 from .exp18_deep_vector import run as run_exp18
@@ -53,6 +51,7 @@ from .exp20_preimages import run as run_exp20
 from .exp20_preimages import summarize as summarize_exp20
 from .exp21_domains import run as run_exp21
 from .exp21_domains import summarize as summarize_exp21
+from .schema import validate_config
 
 RUNNERS: dict[str, Callable[[dict[str, Any]], list[dict[str, Any]]]] = {
     "EXP-01": run_exp01,
@@ -68,7 +67,6 @@ RUNNERS: dict[str, Callable[[dict[str, Any]], list[dict[str, Any]]]] = {
     "EXP-11": run_exp11,
     "EXP-12": run_exp12,
     "EXP-14": run_exp14,
-    "EXP-15": run_exp15,
     "EXP-17": run_exp17,
     "EXP-18": run_exp18,
     "EXP-19": run_exp19,
@@ -88,7 +86,6 @@ SUMMARIZERS: dict[str, Callable[[list[dict[str, Any]]], list[dict[str, Any]]]] =
     "EXP-11": summarize_exp11,
     "EXP-12": summarize_exp12,
     "EXP-14": summarize_exp14,
-    "EXP-15": summarize_exp15,
     "EXP-17": summarize_exp17,
     "EXP-18": summarize_exp18,
     "EXP-19": summarize_exp19,
@@ -159,6 +156,7 @@ def _task_plan(config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, 
             effective["master_seed"] = hashlib.sha256(seed_material).hexdigest()
         if effective.get("experiment") != config["experiment"]:
             raise ValueError("execution tasks cannot change the experiment")
+        validate_config(effective)
         identity = {"config": effective, "label": label, "ordinal": ordinal}
         identifier = hashlib.sha256(b"sigma-exp-task-v2\0" + canonical_json(identity)).hexdigest()
         if identifier in identifiers:
@@ -170,18 +168,49 @@ def _task_plan(config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, 
 
 def _read_task_result(path: Path, identifier: str) -> dict[str, Any]:
     result = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(result, dict) or result.get("task_id") != identifier:
+    if (
+        not isinstance(result, dict)
+        or result.get("schema") != "sigma-experiment-task-result-v2"
+        or result.get("task_id") != identifier
+    ):
         raise ValueError(f"invalid task result: {path}")
     if result.get("status") not in {"success", "censored", "error", "timeout"}:
         raise ValueError(f"invalid task status: {path}")
+    integrity_path = path.with_name("integrity.json")
+    if not integrity_path.is_file():
+        raise ValueError(f"missing task integrity record: {integrity_path}")
+    integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+    expected = {
+        name: sha256_file(path.parent / name)
+        for name in ("config.json", "result.json", "stderr.log", "stdout.log")
+        if (path.parent / name).is_file()
+    }
+    if (
+        not isinstance(integrity, dict)
+        or integrity.get("schema") != "sigma-task-integrity-v1"
+        or integrity.get("artifacts") != expected
+    ):
+        raise ValueError(f"task artifact hash mismatch: {path.parent}")
     return result
+
+
+def _write_task_integrity(task_dir: Path) -> None:
+    artifacts = {
+        name: sha256_file(task_dir / name)
+        for name in ("config.json", "result.json", "stderr.log", "stdout.log")
+        if (task_dir / name).is_file()
+    }
+    _atomic_json(
+        task_dir / "integrity.json",
+        {"artifacts": artifacts, "schema": "sigma-task-integrity-v1"},
+    )
 
 
 def _archive_failed_attempt(task_dir: Path) -> None:
     attempts = task_dir / "attempts"
     attempts.mkdir(exist_ok=True)
     index = len(list(attempts.glob("*-result.json"))) + 1
-    for name in ("result.json", "stdout.log", "stderr.log"):
+    for name in ("result.json", "stdout.log", "stderr.log", "integrity.json"):
         source = task_dir / name
         if source.is_file():
             os.replace(source, attempts / f"{index:04d}-{name}")
@@ -199,7 +228,10 @@ def _run_task(task: dict[str, Any], tasks_root: Path, timeout: float | None) -> 
     _atomic_json(config_path, task["config"], pretty=False)
     started = _utc_now()
     host_start = host_measurement_state()
-    command = [sys.executable, "-m", "experiments.task_worker", str(config_path), str(payload_path)]
+    command = [sys.executable]
+    if sys.flags.isolated:
+        command.append("-I")
+    command.extend(("-m", "experiments.task_worker", str(config_path), str(payload_path)))
     try:
         completed = subprocess.run(
             command, check=False, capture_output=True, text=True, timeout=timeout
@@ -257,6 +289,7 @@ def _run_task(task: dict[str, Any], tasks_root: Path, timeout: float | None) -> 
         }
     payload_path.unlink(missing_ok=True)
     _atomic_json(result_path, result)
+    _write_task_integrity(task_dir)
     return result
 
 
@@ -277,7 +310,7 @@ def _false_values(items: list[dict[str, Any]], predicate: Callable[[str], bool])
     return sum(value is False for item in items for key, value in item.items() if predicate(key))
 
 
-def _validate_confirmatory_protocol(config: dict[str, Any]) -> bool:
+def _validate_confirmatory_protocol(config: dict[str, Any], config_path: Path) -> bool:
     campaign = config.get("campaign")
     if not isinstance(campaign, str) or not campaign.startswith("confirmatory"):
         return False
@@ -291,6 +324,16 @@ def _validate_confirmatory_protocol(config: dict[str, Any]) -> bool:
     path = Path(path_value)
     if not path.is_file() or sha256_file(path) != expected:
         raise ValueError("confirmatory preregistration file/hash mismatch")
+    from .freeze import verify_freeze
+
+    freeze_value = config.get("freeze_manifest")
+    if not isinstance(freeze_value, str):
+        raise ValueError("confirmatory campaign requires a freeze manifest")
+    freeze_path = Path(freeze_value)
+    freeze = verify_freeze(freeze_path)
+    relative_config = os.path.relpath(config_path.resolve(), freeze_path.parent.resolve())
+    if freeze["configs"].get(relative_config) != sha256_file(config_path):
+        raise ValueError("confirmatory config is not bound by the freeze manifest")
     return True
 
 
@@ -303,13 +346,11 @@ def execute(
     task_timeout: float | None = None,
     require_clean_tag: bool = False,
 ) -> dict[str, Any]:
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    if not isinstance(config, dict) or not isinstance(config.get("master_seed"), str):
-        raise ValueError("config must be an object with a string master_seed")
+    config = validate_config(json.loads(config_path.read_text(encoding="utf-8")))
     experiment = config.get("experiment")
     if experiment not in RUNNERS:
         raise ValueError(f"unsupported experiment: {experiment!r}")
-    confirmatory = _validate_confirmatory_protocol(config)
+    confirmatory = _validate_confirmatory_protocol(config, config_path)
     tasks, execution = _task_plan(config)
     configured_timeout = execution.get("timeout_seconds")
     timeout = task_timeout if task_timeout is not None else configured_timeout
@@ -330,9 +371,7 @@ def execute(
         _atomic_bytes(config_copy, expected_config)
 
     manifest = environment_manifest(config, command)
-    strict_source = (
-        require_clean_tag or execution.get("require_clean_tag") is True or confirmatory
-    )
+    strict_source = require_clean_tag or execution.get("require_clean_tag") is True or confirmatory
     if strict_source and not manifest["publishable_source"]:
         raise ValueError("publishable execution requires a clean exact tag and artifact_path hash")
 

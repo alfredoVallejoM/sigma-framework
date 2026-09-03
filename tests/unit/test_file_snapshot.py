@@ -4,17 +4,18 @@ from pathlib import Path
 import pytest
 
 from sigma.anchors import StreamWide
+from sigma.backends import MultiprocessingTreeBackend
 from sigma.backends.base import FileExecutionBackend
 from sigma.file_snapshot import immutable_snapshot, stable_open
-from sigma.presets import lightweight_v2
+from sigma.presets import lightweight_v2_2, simultaneous_v2_2
 from sigma.v2 import hash_bytes, hash_file_with_snapshot
 
 
 def test_file_hash_returns_auditable_source_identity(tmp_path: Path) -> None:
     path = tmp_path / "input.bin"
     path.write_bytes(b"snapshot bytes")
-    result = hash_file_with_snapshot(path, lightweight_v2())
-    assert result.digest == hash_bytes(b"snapshot bytes", lightweight_v2())
+    result = hash_file_with_snapshot(path, lightweight_v2_2())
+    assert result.digest == hash_bytes(b"snapshot bytes", lightweight_v2_2())
     assert result.source.size == len(b"snapshot bytes")
     assert set(result.source.as_dict()) == {
         "ctime_ns",
@@ -73,7 +74,21 @@ def test_file_facade_rejects_source_change_during_backend_work(tmp_path: Path) -
     path = tmp_path / "input.bin"
     path.write_bytes(b"original")
     with pytest.raises(RuntimeError, match="changed"):
-        hash_file_with_snapshot(path, lightweight_v2(), SourceMutatingBackend(path))
+        hash_file_with_snapshot(path, lightweight_v2_2(), SourceMutatingBackend(path))
+
+
+def test_file_facade_passes_one_snapshot_to_multiprocessing_backend(
+    tmp_path: Path, monkeypatch
+) -> None:
+    path = tmp_path / "input.bin"
+    path.write_bytes(b"snapshot once")
+    backend = MultiprocessingTreeBackend(1)
+
+    def reject_resnapshot(*_args, **_kwargs):
+        raise AssertionError("backend copied an already-immutable snapshot")
+
+    monkeypatch.setattr("sigma.backends.multiprocessing.immutable_snapshot", reject_resnapshot)
+    hash_file_with_snapshot(path, simultaneous_v2_2(), backend)
 
 
 def test_non_regular_files_are_rejected(tmp_path: Path) -> None:

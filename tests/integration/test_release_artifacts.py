@@ -28,8 +28,13 @@ def test_release_artifacts_contain_auditable_hashes(tmp_path: Path) -> None:
     properties = {item["name"]: item["value"] for item in sbom["metadata"]["properties"]}
     assert properties["sigma:context-wire-version"] == "2"
     assert properties["sigma:evidence-wire-version"] == "2"
+    assert properties["sigma:kdf-parameter-wire-version"] == "2"
+    assert properties["sigma:kdf-record-wire-version"] == "2"
+    assert properties["sigma:pow-wire-version"] == "3"
     assert properties["sigma:signed-commitment-wire-version"] == "2"
-    assert properties["sigma:suite-families"] == "v2-1,v2-2"
+    assert properties["sigma:active-suite-families"] == "v2-2"
+    assert properties["sigma:suite-families"] == "v2-2"
+    assert properties["sigma:transitional-suite-families"] == ""
     assert len(properties["sigma:git-commit"]) == 40
 
 

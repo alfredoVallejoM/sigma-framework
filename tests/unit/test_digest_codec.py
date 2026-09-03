@@ -40,7 +40,11 @@ def test_digest_json_is_a_strict_presentation_wrapper() -> None:
 def test_digest_metadata_is_complete_and_non_ambiguous() -> None:
     metadata = make_digest().metadata()
     assert metadata["format"] == "sigma-v2"
-    assert metadata["suite_name"] == "reference-stream-wide-v2-1"
+    assert metadata["suite_name"] == "reference-stream-wide-v2-2"
+    assert metadata["wire_frozen"] is True
+    assert metadata["vectors_frozen"] is True
+    assert metadata["suite_stable"] is True
+    assert metadata["security_reviewed"] is False
     assert metadata["target_round"] == 1
     assert metadata["state_count"] == 2
     assert metadata["state_size"] == 64

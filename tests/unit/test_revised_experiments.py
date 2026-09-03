@@ -6,9 +6,18 @@ import pytest
 from experiments.runner import RUNNERS, SUMMARIZERS
 
 
-@pytest.mark.parametrize("number", [17, 18, 19, 20, 21])
-def test_revised_smoke_experiment_is_deterministic_and_summarizable(number: int) -> None:
-    path = Path(f"experiments/configs/exp{number:02d}-smoke.json")
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "exp17r-attacker-frontier.json",
+        "exp18r-fold-vector-segments.json",
+        "exp19r-signed-reuse.json",
+        "exp20r-preimage-games.json",
+        "exp21r-domains.json",
+    ],
+)
+def test_current_reduced_pilot_is_deterministic_and_summarizable(filename: str) -> None:
+    path = Path("experiments/configs/pilots") / filename
     config = json.loads(path.read_text(encoding="utf-8"))
     experiment = str(config["experiment"])
     first = RUNNERS[experiment](config)
@@ -19,7 +28,9 @@ def test_revised_smoke_experiment_is_deterministic_and_summarizable(number: int)
 
 
 def test_exp21_has_no_structural_violation() -> None:
-    config = json.loads(Path("experiments/configs/exp21-smoke.json").read_text(encoding="utf-8"))
+    config = json.loads(
+        Path("experiments/configs/pilots/exp21r-domains.json").read_text(encoding="utf-8")
+    )
     records = RUNNERS["EXP-21"](config)
     assert len(records) >= 100
     assert all(record["invariant_match"] is True for record in records)

@@ -3,20 +3,18 @@
 Sigma is an experimental Python framework for canonical wide-input hash
 commitments, input-reinjected iteration and multi-state digests.
 
-> **Security status:** Sigma v2.2 is an alpha research implementation. Its wire
-> formats and current suite vectors are frozen for interoperability, but the
+> **Security status:** Sigma v2.2 is an alpha research implementation. Its wire,
+> vectors and suite definitions passed their local F2 freeze, but the
 > construction has not received independent cryptographic review. Do not treat
 > it as a password KDF, digital signature, authentication scheme, production
 > proof of work, or replacement for a standard hash function.
 
-The repository also retains the original v1 prototype for reproducibility.
-Those APIs are explicitly legacy and contain known design defects documented in
-[`docs/audit-2026-09-02.md`](docs/audit-2026-09-02.md); the v2.1 closure is
-preserved in
-[`docs/final-audit-2026-09-02.md`](docs/final-audit-2026-09-02.md). Both reports
-are historical. The current internal verdict, implemented scope and remaining
-external gates are recorded in
-[`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
+Sigma v2.2 is the only active and publishable line. Legacy v1/v2.1 code,
+vectors, configurations and result artifacts have been removed from the current
+tree; Git retains their history. The frozen scope is recorded in
+[`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md), and all remaining
+work is governed by
+[`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md).
 
 ## What v2.2 provides
 
@@ -39,12 +37,14 @@ The current reference implementation provides:
 - distinct reference, Lightweight, Simultaneous, Paranoid Wide, Paranoid Deep
   and Paranoid DeepVector v2.2 presets;
 - local `ResourcePolicy` enforcement and coherent file snapshots;
-- optional Argon2id composition, experimental PoW and Ed25519 commitments;
-- frozen known-answer vectors and an independent six-suite/application
+- non-serializable Argon2id+Sigma derived keys and separate public password
+  records;
+- explicitly v2.2-bound experimental PoW3 and Ed25519 commitments;
+- current known-answer vectors and an independent six-suite/application
   conformance consumer.
 
-`Psi` is not used by v2 and is not a root of trust. It remains only as part of
-the reproducible legacy prototype pending separate cryptanalysis.
+`Psi` is not used by v2 and is not a root of trust. Its legacy implementation
+and EXP-15 campaign are absent from the active tree.
 
 ## Installation
 
@@ -69,8 +69,8 @@ context = lightweight_v2_2(target_round=4, state_count=2)
 digest = hash_bytes(b"example", context)
 
 assert verify_full(b"example", digest)
-print(digest.hex())       # complete self-describing envelope
-print(digest.states)      # S_4 and S_5, both preserved in full
+print(digest.hex())  # complete self-describing envelope
+print(digest.states)  # S_4 and S_5, both preserved in full
 ```
 
 Use the Simultaneous suite with different worker counts without changing its
@@ -99,7 +99,7 @@ stream = IncrementalSigmaV2(lightweight_v2_2())
 stream.update(b"first packet")
 checkpoint = stream.checkpoint()  # provisional and bound to its byte offset
 stream.update(b"second packet")
-digest = stream.finalize()        # the only definitive complete-message digest
+digest = stream.finalize()  # the only definitive complete-message digest
 ```
 
 Calling `finalize()` twice or updating afterwards is an error. A checkpoint is
@@ -117,68 +117,50 @@ never presented as the final digest of a stream that may continue.
 | `paranoid-deep-vector-v2-2` | four-branch CrossWide | DeepVector | retains the complete branch vector per level |
 
 The names are convenience presets, not security grades. Different presets have
-different suite IDs and intentionally produce different digests. The five
-`*-v2` presets remain frozen v2.1 compatibility profiles; RealTime v2.2 is an
-incremental execution policy over `lightweight-v2-2`, not a distinct suite.
-
-## Legacy v1
-
-The `SigmaFactory` and current `sigmahash` command reproduce v1. Prefer explicit
-mode names such as `legacy-v1-lightweight`; short names remain temporary aliases.
-
-```console
-sigmahash --mode legacy-v1-lightweight example.bin
-```
-
-The legacy CLI is not a KDF or production integrity tool. Simultaneous v1 is
-hardware-dependent and is intentionally excluded from canonical v1 vectors.
+different suite IDs and intentionally produce different digests. RealTime is
+an incremental execution policy over `lightweight-v2-2`, not a distinct suite.
 
 ## Verification and development
 
 ```console
-python -m compileall -q sigma experiments reference scripts tests
-python -m pytest -q
-python -m scripts.fuzz_codecs --iterations 10000
-python scripts/fuzz_atheris.py --write-corpus /tmp/sigma-fuzz-corpus
-python scripts/fuzz_atheris.py /tmp/sigma-fuzz-corpus -atheris_runs=10000
-mutmut run 'sigma.spec.encoding*'
-ruff check sigma scripts experiments tests
-mypy sigma scripts experiments reference
-python -m build
-python -m scripts.release_artifacts dist
+python -m scripts.validate_project --fuzz-iterations 10000 --report /tmp/sigma-gate.json
 ```
+
+That gate runs formatting/lint/type checks, compilation, the full test and
+coverage suite, deterministic codec fuzzing, clean sdist/wheel builds, release
+metadata checks and isolated-wheel CLI/import smoke tests outside the checkout.
+It also rejects accidental build and coverage artifacts in the tree.
 
 `constraints/experiments-py313.txt` freezes the currently validated Python
 3.13 analysis environment. Release artifacts receive SHA-256 checksums and a
 CycloneDX SBOM; the runtime package intentionally has no third-party dependencies.
 The coverage-guided and mutation campaigns use the optional `fuzz` and
 `mutation` dependency groups. Version dimensions and release eligibility are
-defined in [`docs/versioning.md`](docs/versioning.md); test campaign evidence is
-recorded in [`docs/testing-hardening.md`](docs/testing-hardening.md).
+defined in [`docs/versioning.md`](docs/versioning.md).
 
 The current project snapshot and gate status are summarized in
 [`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
 The byte-level construction is specified in
-[`specification/sigma-v2.md`](specification/sigma-v2.md). Work packages, gates
-and remaining experimental/paper tasks are tracked in
-[`docs/implementation-roadmap.md`](docs/implementation-roadmap.md).
-The post-audit redesign, formal obligations, confirmatory experiments, metrics
-and planned paper figures are specified in
-[`docs/research-addendum-v2-2.md`](docs/research-addendum-v2-2.md).
+[`specification/sigma-v2.md`](specification/sigma-v2.md). The only executable
+roadmap is
+[`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md),
+and its frozen scope and cleanup inventory are in
+[`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md).
 The formal claims and working paper are in
 [`specification/security-analysis.md`](specification/security-analysis.md) and
 [`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment
-protocol, historical smoke data and revised pilot configurations are documented
-in
+protocol and current pilot configurations are documented in
 [`experiments/README.md`](experiments/README.md).
 The dependency-free consumer in
 [`reference/independent_v22.py`](reference/independent_v22.py) deliberately
 imports no `sigma` code and differentially reconstructs all six v2.2 suite
 constructions, including every Deep/DeepVector intermediate and TreeWide leaf
-boundaries, directly from the published byte specification. The frozen
+boundaries, directly from the published byte specification. The normative
 [`conformance-v2-2.json`](specification/test-vectors/conformance-v2-2.json)
-corpus covers those suites and PoW; separate frozen vectors cover KDF and the
-signed commitment.
+corpus covers complete trajectories for all suites, every active PoW/KDF/signed
+mode and all public codec families, including negative cases. The detailed F2
+closure is in
+[`docs/conformance-audit-v2-2.md`](docs/conformance-audit-v2-2.md).
 
 ## Claims and limitations
 

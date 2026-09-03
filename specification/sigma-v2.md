@@ -1,10 +1,9 @@
-# Sigma v2-1 and v2-2 wire specification
+# Sigma v2.2 wire specification
 
-Status: v2.1 compatibility bytes and the implemented v2.2 experimental family
-are frozen for interoperability. Gates R1–R3 are closed locally; R4–R6 and
-external review remain open. This denotes byte-level stability, not a security
-audit or production claim. Any incompatible change requires a new version or
-identifier and deliberate vector regeneration.
+Status: v2.2 is the only active family and remains experimental. F2 freezes its
+wire, vectors and mathematical suite definitions: incompatible changes require
+new identifiers. External cryptographic review remains open. Former v2.1 IDs
+`0x0001..0x0006` are reserved and are not accepted by the active registry.
 
 The security obligations and their explicit assumptions are stated separately
 in `security-analysis.md`.
@@ -38,8 +37,9 @@ The execution backend, adapter, read buffer and worker count are deliberately
 absent. Total message length is authenticated by anchor finalization because it
 may be unknown when this context is constructed.
 
-Initial registry values live in `sigma/spec/ids.py`. Suite `0x0001` identifies
-the frozen reference StreamWide/WideOnce construction.
+Registry values live in `sigma/spec/ids.py`. The default context selects active
+reference StreamWide/WideOnce suite `0x0101`; sensitive applications bind their
+suite explicitly.
 
 ## `SigmaDigestV2`
 
@@ -65,14 +65,14 @@ For branch `j`, indexed from zero, the branch prefix is:
 `DST(branch) || TLV(1,j:u16; 2,algorithm_id:u16; 3,context)`.
 
 The complete branch input is prefix, the exact message bytes, then
-`DST(branch-end) || message_length:u64`. The four draft-1 algorithms, in fixed
+`DST(branch-end) || message_length:u64`. The four v2.2 branch algorithms, in fixed
 order, are SHA-512, SHA3-512, BLAKE2b with a 64-byte digest, and SHAKE256 with
 exactly 64 output bytes. SHA3 and SHAKE share the Keccak family; no independence
 or “orthogonality” is presumed.
 
 `AnchorEvidence` is `DST(anchor-evidence) || count:u16`, followed for every
 root by `algorithm_id:u16 || root_length:u16 || root`, followed by
-`message_length:u64`. Draft-1 retains all four 64-byte roots (2048 physical
+`message_length:u64`. The reference suite retains all four 64-byte roots (2048 physical
 bits) and never passes them through `Psi`.
 
 Let `A` be that complete evidence encoding and `C` the context encoding. With
@@ -127,9 +127,9 @@ The digest publishes `V_t..V_(t+k-1)` as fixed 256-byte states. This avoids a
 single fold bottleneck but does not imply additive security across deterministic
 connections; any stronger claim requires an explicit joint assumption.
 
-## Sigma Tree v2.1/v2.2
+## Sigma Tree v2.2
 
-Suites `0x0003` and `0x0103` use a fixed leaf size of 65,536 bytes. Read-call
+Suite `0x0103` uses a fixed leaf size of 65,536 bytes. Read-call
 boundaries and worker count are execution details: bytes are rechunked into consecutive leaves
 of that exact size, except for a final shorter leaf. An empty message has no
 leaf. No odd leaf or subtree is duplicated.
@@ -149,16 +149,10 @@ height (`u32`), starting leaf (`u64`), leaf count (`u64`), cumulative byte lengt
 TLVs for context, algorithm and zero length. The streaming reference retains at
 most one frontier subtree per power of two and one leaf buffer: O(log N) state.
 
-## Frozen preset suites
+## Registered suites
 
 | ID | preset | anchor | rounds | branches |
 |---:|---|---|---|---|
-| 1 | reference-stream-wide-v2-1 | StreamWide | WideOnce | SHA-512, SHA3-512, BLAKE2b-512, SHAKE256-512 |
-| 2 | paranoid-wide-v2 | CrossWide | WideOnce | four reference branches |
-| 3 | simultaneous-v2 | TreeWide | WideOnce | four reference branches |
-| 4 | lightweight-v2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
-| 5 | realtime-v2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
-| 6 | paranoid-deep-v2 | CrossWide | Deep | four reference branches |
 | 257 | reference-stream-wide-v2-2 | StreamWide | WideOnce | four reference branches |
 | 258 | lightweight-v2-2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
 | 259 | simultaneous-v2-2 | TreeWide | WideOnce | four reference branches |
@@ -168,12 +162,14 @@ most one frontier subtree per power of two and one leaf buffer: O(log N) state.
 
 Presets have distinct suite IDs and therefore distinct contexts and digests.
 Backend name, worker count, mmap use and reader buffer size are never encoded.
+IDs 1–6 are permanently reserved former v2.1 values and cannot be reused.
+IDs 257–262 are the complete active v2.2 family.
 
 ## Optional application encodings
 
 These alpha profiles compose registered suites; they do not create new suite
-security claims. `PowParameters` currently composes frozen reference suite
-`0x0001` and encodes `"SIGMAPOW2"` followed by strict
+security claims. `PowParameters` composes active reference suite `0x0101` with
+typed evidence v2 and encodes `"SIGMAPOW3"` followed by strict
 TLVs for challenge, `t:u32`, `k:u16`, predicate ID and difficulty bits. Work
 messages encode the exact payload and `nonce:u64` as separate TLVs. Predicate 1
 checks leading zero bits of `S_t`; predicate 2 applies the configured per-state
@@ -186,18 +182,31 @@ Argon2id first, then hashes that key with a Sigma context containing the salt
 and encoded parameters. It adds deterministic binding and overhead, not
 password entropy or independent memory hardness.
 
-The v2-2 composition never returns the intermediate Argon2id key. It hashes the
-intermediate under `lightweight-stream-wide-v2-2`, binding
-`"SIGMA-KDF-FINAL-V1" || parameters` as application context, and derives the
-requested final length with SHAKE256 over that domain plus canonical TLVs for
-parameters, salt and complete Sigma digest. `SigmaKdfResult` encodes
-`"SIGMAKDR2"` followed by strict TLVs 1=parameters, 2=salt, 3=Sigma digest and
-4=final key. The parser recomputes the final derivation and rejects inconsistent
-records. Password verification reconstructs the exact recorded v2.2 context,
-recomputes the composition and compares final keys with a constant-time
-comparison provided by the runtime. The registered post-processing choices are
-Lightweight Wide, Paranoid Wide, Paranoid Deep and Paranoid DeepVector v2.2;
-all preserve the same Argon2 budget selected by the caller.
+The combined API never returns the intermediate Argon2id output `B`. It hashes
+`B` under a registered v2.2 KDF suite, binding
+`"SIGMA-KDF-BIND-V2" || parameters` as application context, to obtain digest
+`D`. The secret output is:
+
+```text
+SHAKE256("SIGMA-KDF-KEY-V2" || TLV(1=B, 2=parameters, 3=salt, 4=D), output_length)
+```
+
+`SigmaDerivedKey` holds that secret in memory and deliberately has no binary
+serializer, omits it from `repr` and rejects pickling. Python immutable bytes
+cannot promise secure zeroization, so callers must minimize its lifetime and
+must not persist the object. `SigmaPasswordRecord` is the separate public verifier:
+
+```text
+"SIGMAKVR2" || TLV(1=parameters, 2=salt, 3=D)
+```
+
+Its constructor and parser require an exact registered KDF suite, matching
+v2.2 family, salt, application context and parameters. Password verification
+recomputes Argon2id and the complete Sigma digest and compares the canonical
+digest envelopes in constant time. The public record neither contains nor
+permits reconstruction of the application key because that key also depends on
+`B`. Registered post-processing choices are Lightweight Wide, Paranoid Wide,
+Paranoid Deep and Paranoid DeepVector v2.2; all preserve the Argon2 budget.
 
 `SigmaSignedCommitmentV2` is a separate envelope, not a digest or a new
 signature primitive:
@@ -230,12 +239,21 @@ cost. Applications must supply a policy appropriate to their threat model;
 accepting the package default is an explicit local decision.
 
 File hashing holds a stable descriptor and validates device, file identifier,
-size, mtime and ctime before and after reading. Multiprocessing paths operate on
-a private immutable snapshot so that workers share one byte image. A detected
-replacement or mutation aborts instead of returning a digest over mixed file
-states.
+size, mtime and ctime before and after reading. The facade creates one private
+immutable snapshot and passes it through the backend's snapshot contract;
+multiprocessing workers share that byte image without copying it again. A
+detected replacement or mutation aborts instead of returning a mixed digest.
 
-Primitive-input capture is diagnostic and disabled by default. When enabled it
+Diagnostic tracing and primitive-input capture are disabled by default and
+remain subject to `ResourcePolicy`. When capture is enabled it
 records the complete algorithm/input pair actually delivered to each primitive
 for conformance and domain-separation audits. It does not alter the normative
 function or establish independence between concrete hash algorithms.
+
+## Normative conformance corpus
+
+`test-vectors/conformance-v2-2.json` is the only normative v2.2 corpus. It
+contains complete intermediate trajectories for all six suites, all PoW
+predicates, all four KDF compositions, signed commitments for all six suites
+and negative samples for every public binary codec. Specialized JSON files
+remaining during migration are non-normative fixtures scheduled for F5.

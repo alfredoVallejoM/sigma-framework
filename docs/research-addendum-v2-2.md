@@ -1,12 +1,10 @@
 # Addendum de investigación — fortalecimiento de Sigma v2 y campaña del artículo
 
-Estado original: plan de trabajo posterior a la reconstrucción `v2-1 alpha`.
-Estado de ejecución a 2026-09-03: R1–R3 cerrados localmente, runners y pilotos
-aplicables implementados, R4 pendiente de congelación humana y R5/R6 pendientes
-de infraestructura/publicación/revisión externa. El estado vigente y el mapa de
-evidencia están en [`project-status-2026-09-03.md`](project-status-2026-09-03.md);
-las secciones siguientes conservan los requisitos originales y no son
-instrucciones ejecutables.
+Estado: fundamento científico vigente, subordinado como planificación a
+[`final-development-plan-v2-2.md`](final-development-plan-v2-2.md). El estado
+operativo está en [`project-status-2026-09-03.md`](project-status-2026-09-03.md),
+el alcance en [`current-scope-v2-2.md`](current-scope-v2-2.md) y el protocolo
+ejecutable en `experiments/preregistration-v2-2.md`.
 
 Este addendum convierte los hallazgos de la revisión interna en un programa
 ejecutable de desarrollo, experimentación y publicación. Su propósito es que
@@ -732,18 +730,6 @@ incorrecto, reorder, truncado y corrupción del fold/vector.
 **Métricas.** Tasa de detección, latencia hasta propagación y distancia por
 capa. Mantener fuera cualquier claim de resistencia DFA sin modelo y análisis
 específico.
-
-### EXP-15 — Psi como control histórico
-
-Mantenerlo separado de v2. Si se continúa:
-
-- trails diferenciales reducidos;
-- análisis algebraico;
-- SAT/SMT/MILP en rondas reducidas;
-- búsqueda de simetrías, invariantes y fixed points;
-- comparación con SHA-512 sobre el mismo dominio.
-
-Ningún resultado de difusión rehabilitará Psi como raíz de confianza.
 
 ### EXP-16 — Hardware, condicionado
 

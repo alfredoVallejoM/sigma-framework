@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-01",
   "master_seed": "sigma-exp01r-v2-2-pilot-v1",
   "presets": [],

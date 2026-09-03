@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "branch_counts": [2, 4],
   "campaign": "pilot-v2-2",
   "experiment": "EXP-18",

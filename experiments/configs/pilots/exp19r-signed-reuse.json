@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "anchor_multipliers": [1, 2],
   "campaign": "pilot-v2-2",
   "commitments": ["one-state", "multi-state", "anchor-and-states"],

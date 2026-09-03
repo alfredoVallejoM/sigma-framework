@@ -5,62 +5,6 @@ from .common import derived_random
 from .reduced_oracle import ReducedOracle, encode_integer
 
 
-def _run_legacy(config: dict[str, Any]) -> list[dict[str, Any]]:
-    records = []
-    master_seed = str(config["master_seed"])
-    trials = int(config.get("trials", 4096))
-    for n_value in config["widths"]:
-        n = int(n_value)
-        for segment_value in config["segments"]:
-            segment = int(segment_value)
-            for construction in ("simple", "reinjected"):
-                label = f"EXP-03/{n}/{segment}/{construction}"
-                rng = derived_random(master_seed, label)
-                oracle = ReducedOracle(rng.randbytes(32))
-                for trial in range(trials):
-                    anchor = rng.getrandbits(n)
-                    other_anchor = rng.getrandbits(n)
-                    while other_anchor == anchor:
-                        other_anchor = rng.getrandbits(n)
-                    left = right = rng.getrandbits(n)
-                    persisted = True
-                    trial_bytes = trial.to_bytes(8, "big")
-                    for index in range(segment):
-                        common = (
-                            trial_bytes,
-                            index.to_bytes(8, "big"),
-                            encode_integer(left, n),
-                        )
-                        if construction == "simple":
-                            left = oracle.query("persist-simple", n, *common)
-                            right = oracle.query("persist-simple", n, *common)
-                        else:
-                            left = oracle.query(
-                                "persist-reinjected", n, encode_integer(anchor, n), *common
-                            )
-                            right = oracle.query(
-                                "persist-reinjected",
-                                n,
-                                encode_integer(other_anchor, n),
-                                index.to_bytes(8, "big"),
-                                encode_integer(right, n),
-                            )
-                        persisted = persisted and left == right
-                    records.append(
-                        {
-                            "construction": construction,
-                            "expected_probability": 1.0
-                            if construction == "simple"
-                            else 2.0 ** (-segment * n),
-                            "persisted": persisted,
-                            "segment_length": segment,
-                            "state_bits": n,
-                            "trial": trial,
-                        }
-                    )
-    return records
-
-
 def _controlled_transition(
     oracle: ReducedOracle,
     construction: str,
@@ -133,7 +77,7 @@ def _run_revised(config: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def run(config: dict[str, Any]) -> list[dict[str, Any]]:
-    return _run_revised(config) if "constructions" in config else _run_legacy(config)
+    return _run_revised(config)
 
 
 def _exact_binomial_p_value(successes: int, trials: int, probability: float) -> float:
@@ -184,16 +128,13 @@ def _clopper_pearson(successes: int, trials: int) -> tuple[float, float] | None:
 
 
 def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    revised = any("anchor_relation" in record for record in records)
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for record in records:
-        key = tuple(
-            [
-                str(record["construction"]),
-                int(record["state_bits"]),
-                int(record["segment_length"]),
-            ]
-            + ([str(record["anchor_relation"])] if revised else [])
+        key = (
+            str(record["construction"]),
+            int(record["state_bits"]),
+            int(record["segment_length"]),
+            str(record["anchor_relation"]),
         )
         grouped.setdefault(key, []).append(record)
     summaries = []
@@ -215,14 +156,13 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         observed_log_likelihood = _binomial_log_likelihood(successes, trials, probability)
         theory_log_likelihood = _binomial_log_likelihood(successes, trials, expected)
         unity_log_likelihood = _binomial_log_likelihood(successes, trials, 1.0)
-        exact_interval = _clopper_pearson(successes, trials) if revised else None
+        exact_interval = _clopper_pearson(successes, trials)
         lower = max(0.0, center - margin)
         upper = min(1.0, center + margin)
         summaries.append(
             {
-                **({"anchor_relation": key[3]} if revised else {}),
-                ("raw_compatible_exact_5pct" if revised else "compatible_exact_5pct"): exact_p_value
-                >= 0.05,
+                "anchor_relation": key[3],
+                "raw_compatible_exact_5pct": exact_p_value >= 0.05,
                 "construction": construction,
                 "expected_probability": expected,
                 "exact_binomial_p_value": exact_p_value,
@@ -245,15 +185,9 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "trials": trials,
                 "wilson_high": upper,
                 "wilson_low": lower,
-                **(
-                    {
-                        "exact_95_high": exact_interval[1] if exact_interval else None,
-                        "exact_95_low": exact_interval[0] if exact_interval else None,
-                        "quality_control_passed": exact_interval is not None,
-                    }
-                    if revised
-                    else {}
-                ),
+                "exact_95_high": exact_interval[1] if exact_interval else None,
+                "exact_95_low": exact_interval[0] if exact_interval else None,
+                "quality_control_passed": exact_interval is not None,
             }
         )
     tested = [item for item in summaries if 0.0 < float(item["expected_probability"]) < 1.0]

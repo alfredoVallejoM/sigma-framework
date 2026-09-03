@@ -26,6 +26,10 @@ def encode_uint(value: int, width: int) -> bytes:
 
 
 def decode_uint(data: bytes, width: int) -> int:
+    if not isinstance(data, bytes):
+        raise TypeError("encoded integer must be bytes")
+    if width not in (1, 2, 4, 8):
+        raise ValueError("integer width must be 1, 2, 4, or 8 bytes")
     if len(data) != width:
         raise DecodeError(f"expected {width}-byte integer")
     return int.from_bytes(data, "big")

@@ -6,8 +6,9 @@ ideal random oracle. Different standardized hash names, and distinct domain
 prefixes used with one primitive, do not by themselves establish independent
 random oracles.
 
-Implementation baseline: `453b483`; the project-wide R1–R6 status is maintained
-in [`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md).
+The project-wide gate status and eventual tagged implementation baseline are
+maintained in
+[`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md).
 
 ## 1. Objects and notation
 
@@ -79,7 +80,7 @@ depth are not interchangeable.
 
 **TH-01 (injective accepted encodings).** `Enc` is injective over each accepted
 type: context, v2.2 WideEvidence, v2.2 CrossWideEvidence, digest,
-Argon2idParameters, SigmaKdfResult, PowParameters and signed commitment. It is
+Argon2idParameters, SigmaPasswordRecord, PowParameters and signed commitment. It is
 also injective over framed StreamWide inputs and TreeWide leaves/nodes. For a
 fixed suite and message, conforming schedulers compute the same mathematical
 object.

@@ -1,8 +1,0 @@
-{
-  "experiment": "EXP-01",
-  "failures": 0,
-  "groups": [],
-  "observations": 266,
-  "passed": true,
-  "schema": "sigma-experiment-summary-v1"
-}

@@ -13,14 +13,17 @@ from enum import IntEnum
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY, PolicyViolation, ResourcePolicy
 from sigma.spec import SigmaContextV2
+from sigma.spec.context import MAX_STATE_COUNT, MAX_TARGET_ROUND
 from sigma.spec.encoding import DecodeError, decode_tlv, decode_uint, encode_tlv, encode_uint
+from sigma.spec.ids import SuiteId
 from sigma.suites.registry import get_suite
 from sigma.v2 import hash_bytes
 from sigma.validation import require_int
 
-POW_MAGIC = b"SIGMAPOW2"
+POW_MAGIC = b"SIGMAPOW3"
 MAX_NONCE = (1 << 64) - 1
 MAX_POW_WORKERS = 256
+POW_SUITE_ID = SuiteId.REFERENCE_STREAM_WIDE_V2_2
 
 
 class PowPredicate(IntEnum):
@@ -42,12 +45,17 @@ class PowParameters:
             raise ValueError("challenge must be non-empty bytes")
         if not isinstance(self.predicate, PowPredicate):
             raise TypeError("predicate must be PowPredicate")
-        require_int("target_round", self.target_round, minimum=0, maximum=1_000_000)
-        require_int("state_count", self.state_count, minimum=1, maximum=16)
+        require_int("target_round", self.target_round, minimum=0, maximum=MAX_TARGET_ROUND)
+        require_int("state_count", self.state_count, minimum=1, maximum=MAX_STATE_COUNT)
         require_int("difficulty_bits", self.difficulty_bits, minimum=0, maximum=0xFFFF)
         if self.predicate is PowPredicate.DUAL_STATE and self.state_count < 2:
             raise ValueError("dual-state predicate requires at least two states")
-        available = 512 * self.state_count if self.predicate is PowPredicate.CONCATENATED else 512
+        state_bits = get_suite(POW_SUITE_ID).state_size * 8
+        available = (
+            state_bits * self.state_count
+            if self.predicate is PowPredicate.CONCATENATED
+            else state_bits
+        )
         if self.difficulty_bits > available:
             raise ValueError(f"difficulty_bits must be at most {available}")
         # Reuse the normative context validation for round/count resource bounds.
@@ -91,6 +99,7 @@ class PowParameters:
             )
         )
         return SigmaContextV2(
+            suite_id=POW_SUITE_ID,
             target_round=self.target_round,
             state_count=self.state_count,
             challenge=self.challenge,

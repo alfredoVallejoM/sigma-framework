@@ -18,7 +18,13 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8", "hypothesis>=6.100"]
+test = [
+    "pytest>=8",
+    "hypothesis>=6.100",
+    "coverage[toml]>=7.6",
+    "argon2-cffi>=23.1",
+    "cryptography>=44",
+]
 quality = ["mypy>=1.10", "ruff>=0.9", "build>=1.2"]
 analysis = ["matplotlib>=3.8", "numpy>=1.26", "scipy>=1.12"]
 kdf = ["argon2-cffi>=23.1"]
@@ -27,7 +33,7 @@ mutation = ["mutmut>=3"]
 signatures = ["cryptography>=44"]
 
 [project.scripts]
-sigmahash = "sigma.cli:main"
+sigmahash = "sigma.cli_v2:main"
 sigmahash-v2 = "sigma.cli_v2:main"
 
 [tool.pytest.ini_options]
@@ -35,8 +41,17 @@ testpaths = ["tests"]
 addopts = "--strict-config --strict-markers"
 pythonpath = ["."]
 
+[tool.coverage.run]
+parallel = true
+patch = ["subprocess"]
+source = ["sigma", "scripts", "experiments", "reference"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+
 [tool.setuptools.packages.find]
-include = ["sigma*"]
+include = ["sigma*", "experiments*", "reference*"]
 
 [tool.ruff]
 target-version = "py310"

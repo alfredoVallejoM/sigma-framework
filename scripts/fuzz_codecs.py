@@ -9,7 +9,7 @@ from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWi
 from sigma.applications.kdf_argon2id import (
     KDF_FINAL_DOMAIN,
     Argon2idParameters,
-    SigmaKdfResult,
+    SigmaPasswordRecord,
 )
 from sigma.applications.pow import PowParameters, PowPredicate
 from sigma.applications.signed import SigmaSignedCommitmentV2
@@ -66,7 +66,7 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
         salt=kdf_salt,
         application_context=KDF_FINAL_DOMAIN + kdf_parameters.to_bytes(),
     )
-    kdf_result = SigmaKdfResult.bind(
+    kdf_record = SigmaPasswordRecord(
         kdf_parameters, kdf_salt, hash_bytes(b"diagnostic-base", kdf_context)
     )
     wide_context = lightweight_v2_2()
@@ -87,7 +87,7 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
         ("digest", digest.to_bytes(), SigmaDigestV2.from_bytes),
         ("pow", pow_parameters.to_bytes(), PowParameters.from_bytes),
         ("kdf", kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
-        ("kdf-result", kdf_result.to_bytes(), SigmaKdfResult.from_bytes),
+        ("kdf-record", kdf_record.to_bytes(), SigmaPasswordRecord.from_bytes),
         (
             "evidence-wide",
             wide_evidence.to_bytes(),

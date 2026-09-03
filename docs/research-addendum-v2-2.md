@@ -1,6 +1,12 @@
 # Addendum de investigación — fortalecimiento de Sigma v2 y campaña del artículo
 
-Estado: plan de trabajo posterior a la reconstrucción `v2-1 alpha`.
+Estado original: plan de trabajo posterior a la reconstrucción `v2-1 alpha`.
+Estado de ejecución a 2026-09-03: R1–R3 cerrados localmente, runners y pilotos
+aplicables implementados, R4 pendiente de congelación humana y R5/R6 pendientes
+de infraestructura/publicación/revisión externa. El estado vigente y el mapa de
+evidencia están en [`project-status-2026-09-03.md`](project-status-2026-09-03.md);
+las secciones siguientes conservan los requisitos originales y no son
+instrucciones ejecutables.
 
 Este addendum convierte los hallazgos de la revisión interna en un programa
 ejecutable de desarrollo, experimentación y publicación. Su propósito es que

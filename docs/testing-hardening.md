@@ -3,9 +3,16 @@
 Fecha de corte: 2026-09-03. Estos resultados son campañas de desarrollo, no
 resultados confirmatorios ni evidencia criptográfica.
 
+El cierre integral posterior al endurecimiento dirigido ejecutó 540 pruebas,
+Ruff, mypy sobre 110 módulos y `compileall` sin fallos, y validó el wheel en un
+entorno limpio. Esta cifra corresponde al baseline funcional `453b483`; la CI
+es la fuente de verdad para revisiones posteriores.
+
 ## Capas permanentes
 
 - Tests de ejemplo y vectores para comportamiento exacto.
+- Consumidor independiente de las seis suites y PoW/KDF/firma, sin importar
+  código `sigma`, usado en pruebas diferenciales byte a byte.
 - Propiedades Hypothesis deterministas para contextos registrados, round-trip
   de digest/evidencia/KDF, bytes arbitrarios y rechazo sin coerciones.
 - Fuzzer mutacional reproducible (`scripts.fuzz_codecs`) sobre ocho codecs,

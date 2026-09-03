@@ -6,6 +6,9 @@ ideal random oracle. Different standardized hash names, and distinct domain
 prefixes used with one primitive, do not by themselves establish independent
 random oracles.
 
+Implementation baseline: `453b483`; the project-wide R1–R6 status is maintained
+in [`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md).
+
 ## 1. Objects and notation
 
 Let `C` be a suite-valid canonical context, `M` a byte string, `A_C(M)` the

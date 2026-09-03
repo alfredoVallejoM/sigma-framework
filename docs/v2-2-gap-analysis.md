@@ -3,6 +3,10 @@
 Fecha de corte: 2026-09-03. Rama auditada: `sigma-v2-audit`. Baseline remoto:
 `f6ce2eef838f48aa406957fe0c6be18b4dbff2f7`.
 
+Este documento conserva tanto la brecha inicial como el diario de cierres. El
+veredicto consolidado posterior a la implementación está en
+[`project-status-2026-09-03.md`](project-status-2026-09-03.md).
+
 Este documento contrasta el addendum v2-2 con artefactos comprobables del
 repositorio. `Cerrado` exige código, tests y evidencia; `parcial` no habilita el
 gate dependiente. Los documentos recibidos son requisitos de proyecto, no una

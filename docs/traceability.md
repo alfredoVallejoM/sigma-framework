@@ -1,5 +1,8 @@
 # Claim-to-evidence traceability
 
+Snapshot funcional: `453b483`, Sigma `2.2.0a1`. Gate de producción: abierto;
+véase [`project-status-2026-09-03.md`](project-status-2026-09-03.md).
+
 This matrix distinguishes an implemented mechanism, an internally reviewed
 argument, experimental evidence and an external security conclusion. Passing a
 test or smoke experiment never upgrades the final column by itself.

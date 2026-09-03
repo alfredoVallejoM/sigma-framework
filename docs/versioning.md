@@ -1,5 +1,10 @@
 # Política de versiones de Sigma
 
+Estado actual: `2.2.0a1` es la línea experimental activa; las suites v2.1 sólo
+se conservan para interoperabilidad. Consulte
+[`project-status-2026-09-03.md`](project-status-2026-09-03.md) para los gates de
+promoción vigentes.
+
 Sigma mantiene dimensiones independientes. Una coincidencia numérica entre
 ellas no implica compatibilidad ni estabilidad.
 

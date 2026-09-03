@@ -5,6 +5,8 @@ or stable-security claim, an independent reviewer must receive and assess:
 
 Current status: **not reviewed externally**. This checklist is a release gate,
 not evidence that the gate has passed.
+The implementation baseline and open R4–R6 gates are summarized in
+[`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md).
 
 - frozen v2.1 compatibility vectors and experimental `sigma-v2-2` wire,
   evidence, tree and application specifications;

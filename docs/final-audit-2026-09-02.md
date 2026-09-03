@@ -1,5 +1,12 @@
 # Auditoría de cierre interno — Sigma Framework v2-1 alpha
 
+> **Documento histórico y supersedido.** Conserva el cierre de v2.1 en su fecha
+> original. Sigma avanzó después a `2.2.0a1`, DeepVector, evidencia tipada,
+> aplicaciones revisadas y campañas R. Consulte
+> [`project-status-2026-09-03.md`](project-status-2026-09-03.md) para el estado
+> vigente. Las cifras, TH-01–09 y gates siguientes se leen aquí como fotografía
+> histórica, no como descripción actual.
+
 Fecha: 2026-09-02  
 Baseline auditado: `9cf55bca43bea0da11994e820fcddaed0a8eb1c4`  
 Veredicto: **candidato de investigación reproducible; no apto todavía para uso

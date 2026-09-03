@@ -1,5 +1,10 @@
 # Reproducible experiment harness
 
+Current state: the revised applicable runners and development pilots are
+implemented; the v2.2 confirmatory ledger remains draft. See
+[`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md)
+for the project-wide gate status.
+
 Experiments are simulations or measurements, never proofs. Every configuration
 contains a public master seed. The runner derives independent labelled PRNG
 streams, writes one CSV row per observation, derives a JSON summary, and records
@@ -62,20 +67,33 @@ retain their compressed raw observations, configuration and manifest together.
 
 Current runners:
 
-- `EXP-01`: exact adapter/chunk/backend/worker determinism.
-- `EXP-02`: deterministic reduced-oracle collision simulations.
-- `EXP-03`: conditional collision persistence with exact binomial checks.
-- `EXP-04`: reduced-width anchor bottlenecks under broken/correlated branches.
-- `EXP-05`: exact bit-difference masks across real v2 roots, connections and states.
-- `EXP-06`: exact work/depth accounting and measured candidate-level concurrency.
-- `EXP-07`: layer-separated SAC masks with exact binomial/Bonferroni analysis.
-- `EXP-08`: canonical output streams with frequency, runs and serial-dependence tests.
-- `EXP-09`: randomized multi-process timings with raw observations and bootstrap intervals.
-- `EXP-10`: fresh-process Python allocation/RSS measurements and explicit model selection.
-- `EXP-11`: reduced-difficulty, canonically specified multi-state PoW predicates.
-- `EXP-12`: Argon2id versus Argon2id-plus-Sigma dictionary cost (optional `kdf` extra).
+- `EXP-01`: six-suite adapter/chunk/backend/worker conformance against the
+  independent consumer.
+- `EXP-02`: four reduced transition controls with censoring, KM/RMST, bootstrap
+  slopes and registered-model RMSE.
+- `EXP-03`: same/different-anchor persistence with independent trial oracles,
+  exact intervals, likelihood/deviance and Holm correction.
+- `EXP-04`: anchor bottlenecks, branch/fold failures and related-anchor controls
+  with physical and conservative widths separated.
+- `EXP-05`: exact bit masks and structural root/cross/context interventions
+  across Wide, Deep and DeepVector.
+- `EXP-06`: exact anchor/init/transition work and span, precomputed-anchor
+  timing, Theil–Sen regressions, speedup and efficiency.
+- `EXP-07`: per-layer/round/branch SAC, sampled BIC, simultaneous uncertainty
+  and explicit power adequacy.
+- `EXP-08`: independent state/domain streams, internal calibration and an
+  auditable exporter for external batteries.
+- `EXP-09`: randomized full-hash/file/anchor/round/serialization/full/local
+  verification timing with CPU and context-switch metrology.
+- `EXP-10`: fresh-process allocations, aggregate Linux parent/child RSS,
+  frontier, temporary disk and trace-policy measurements.
+- `EXP-11`: geometric PoW calibration, protocol attacks, right-censoring and
+  deterministic disjoint multiprocess nonce search.
+- `EXP-12`: equal-budget Argon2id plus registered Sigma v2.2 modes with separate
+  component timings (optional `kdf` extra).
 - `EXP-13`: gated; requires a specified native implementation and leakage evidence.
-- `EXP-14`: fault propagation/detection, explicitly not DFA.
+- `EXP-14`: message/root/branch/index/state/codec/fold/vector fault propagation
+  and detection, explicitly not DFA.
 - `EXP-15`: structural and reduced-width legacy `Psi` analysis.
 - `EXP-16`: gated; requires RTL, toolchain, constraints and actual synthesis.
 - `EXP-17`: six reduced precomputation/TM/multicollision attackers across anchors.
@@ -84,11 +102,13 @@ Current runners:
 - `EXP-20`: separate preimage, second-preimage and multi-target games/attackers.
 - `EXP-21`: real primitive-input, registered-domain, TLV and downgrade audit.
 
-The EXP-17..21 smoke configurations are historical implementation pilots. The
-revised pilot configs under `configs/pilots` add rho/Hellman/rainbow/
-multicollision attackers, consecutive Fold/Vector segments, explicit signed
-components, three preimage attackers and opt-in capture of actual primitive
-inputs. They are still reduced pilots, not confirmatory evidence.
+The root `*-smoke.json` files preserve historical implementation pilots. The
+revised configurations under `configs/pilots` cover EXP-01R–12R, EXP-14R and
+EXP-17–20. The updated EXP-21R runner uses `exp21-smoke.json` for its current
+instrumented pilot. Together they include rho/Hellman/rainbow/multicollision
+attackers, consecutive Fold/Vector segments, explicit signed components, three
+preimage attackers and opt-in capture of actual primitive inputs. They are
+development pilots, not confirmatory evidence.
 
 Prepare independent EXP-08 streams for external batteries without changing
 their byte or bit order:
@@ -103,8 +123,8 @@ TestU01 executables as available or unavailable. It does not claim a battery
 was executed; full commands, versions and stdout/stderr belong in the archived
 external campaign.
 
-Each new run embeds a canonical `config.json`. To execute all ten smoke
-configurations and regenerate the complete figure set in one operation, use:
+Each new run embeds a canonical `config.json`. To reproduce the ten historical
+smoke configurations and their historical figure set in one operation, use:
 
 ```console
 python -m experiments.reproduce_all \

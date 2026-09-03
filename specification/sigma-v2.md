@@ -1,9 +1,10 @@
 # Sigma v2-1 and v2-2 wire specification
 
-Status: wire format frozen at Gate G1; reference suite implementation and vector
-frozen at Gate G2. This denotes interoperability stability, not an external
-security audit or production-security claim. Any incompatible change requires
-a new version or identifier and deliberate vector regeneration.
+Status: v2.1 compatibility bytes and the implemented v2.2 experimental family
+are frozen for interoperability. Gates R1–R3 are closed locally; R4–R6 and
+external review remain open. This denotes byte-level stability, not a security
+audit or production claim. Any incompatible change requires a new version or
+identifier and deliberate vector regeneration.
 
 The security obligations and their explicit assumptions are stated separately
 in `security-analysis.md`.
@@ -46,14 +47,18 @@ Envelope:
 `"SIGMADG2\\0" || context_length:u32 || context || state_count:u16 || states`.
 Each state is `state_length:u16 || state`. There must be exactly `k` states,
 each with the exact `state_size` registered by the selected suite (64 bytes for
-every current suite), and no trailing bytes.
+scalar suites and 256 bytes for the four-component DeepVector suite), and no
+trailing bytes.
 `.hex()` encodes this complete envelope, never a bare final state.
 
-## Transcript obligations reserved for Gate G2
+## Normative transcript domains
 
-Every domain tag is `"SIGMADST" || domain_id:u16`. Registered draft-1 IDs are:
+Every domain tag is `"SIGMADST" || domain_id:u16`. Registered IDs are:
 branch=1, branch-end=2, anchor-evidence=3, init=4, round=5, cross=6,
 deep=7, fold=8, output=9, tree-leaf=10, tree-node=11 and tree-empty=12.
+The v2.2 application/vector additions are signed-commitment=13,
+vector-init=14 and vector-round=15. Reusing an ID for different semantics is
+forbidden.
 
 For branch `j`, indexed from zero, the branch prefix is:
 
@@ -122,10 +127,10 @@ The digest publishes `V_t..V_(t+k-1)` as fixed 256-byte states. This avoids a
 single fold bottleneck but does not imply additive security across deterministic
 connections; any stronger claim requires an explicit joint assumption.
 
-## Sigma Tree v2-1
+## Sigma Tree v2.1/v2.2
 
-Suite `0x0003` uses a fixed leaf size of 65,536 bytes. Read-call boundaries and
-worker count are execution details: bytes are rechunked into consecutive leaves
+Suites `0x0003` and `0x0103` use a fixed leaf size of 65,536 bytes. Read-call
+boundaries and worker count are execution details: bytes are rechunked into consecutive leaves
 of that exact size, except for a final shorter leaf. An empty message has no
 leaf. No odd leaf or subtree is duplicated.
 
@@ -148,7 +153,7 @@ most one frontier subtree per power of two and one leaf buffer: O(log N) state.
 
 | ID | preset | anchor | rounds | branches |
 |---:|---|---|---|---|
-| 1 | reference | StreamWide | WideOnce | SHA-512, SHA3-512, BLAKE2b-512, SHAKE256-512 |
+| 1 | reference-stream-wide-v2-1 | StreamWide | WideOnce | SHA-512, SHA3-512, BLAKE2b-512, SHAKE256-512 |
 | 2 | paranoid-wide-v2 | CrossWide | WideOnce | four reference branches |
 | 3 | simultaneous-v2 | TreeWide | WideOnce | four reference branches |
 | 4 | lightweight-v2 | StreamWide | WideOnce | SHA-512, SHA3-512 |
@@ -166,8 +171,9 @@ Backend name, worker count, mmap use and reader buffer size are never encoded.
 
 ## Optional application encodings
 
-These alpha profiles compose the frozen reference suite; they do not create new
-suite security claims. `PowParameters` encodes `"SIGMAPOW2"` followed by strict
+These alpha profiles compose registered suites; they do not create new suite
+security claims. `PowParameters` currently composes frozen reference suite
+`0x0001` and encodes `"SIGMAPOW2"` followed by strict
 TLVs for challenge, `t:u32`, `k:u16`, predicate ID and difficulty bits. Work
 messages encode the exact payload and `nonce:u64` as separate TLVs. Predicate 1
 checks leading zero bits of `S_t`; predicate 2 applies the configured per-state
@@ -187,5 +193,49 @@ requested final length with SHAKE256 over that domain plus canonical TLVs for
 parameters, salt and complete Sigma digest. `SigmaKdfResult` encodes
 `"SIGMAKDR2"` followed by strict TLVs 1=parameters, 2=salt, 3=Sigma digest and
 4=final key. The parser recomputes the final derivation and rejects inconsistent
-records. Password verification recomputes the composition and compares final
-keys with a constant-time comparison provided by the runtime.
+records. Password verification reconstructs the exact recorded v2.2 context,
+recomputes the composition and compares final keys with a constant-time
+comparison provided by the runtime. The registered post-processing choices are
+Lightweight Wide, Paranoid Wide, Paranoid Deep and Paranoid DeepVector v2.2;
+all preserve the same Argon2 budget selected by the caller.
+
+`SigmaSignedCommitmentV2` is a separate envelope, not a digest or a new
+signature primitive:
+
+```text
+"SIGMASIG" || version:u16(2) || TLV(
+  1=context,
+  2=typed_anchor_evidence,
+  3=count:u16 || repeated(state_length:u16 || state),
+  4=signature_algorithm:u16,
+  5=public_key_id,
+  6=signature
+)
+```
+
+Only v2.2 suites and Ed25519 (`algorithm_id=1`) are accepted. `public_key_id`
+is 1..255 opaque bytes and key resolution remains an application responsibility.
+The signature input is `DST(signed-commitment) || unsigned_envelope`, where the
+unsigned envelope includes fields 1..5. Attestation verification authenticates
+that declaration only; full signed verification additionally recomputes the
+message anchor and complete trajectory. Neither operation turns one adjacent
+edge into proof of its prefix.
+
+## Operational acceptance and file consistency
+
+`ResourcePolicy` is deliberately not serialized into a digest. It distinguishes
+well-formed/suite-valid objects from values acceptable to a local consumer and
+sets bounds for message size, rounds, states, PoW attempts/difficulty and Argon2
+cost. Applications must supply a policy appropriate to their threat model;
+accepting the package default is an explicit local decision.
+
+File hashing holds a stable descriptor and validates device, file identifier,
+size, mtime and ctime before and after reading. Multiprocessing paths operate on
+a private immutable snapshot so that workers share one byte image. A detected
+replacement or mutation aborts instead of returning a digest over mixed file
+states.
+
+Primitive-input capture is diagnostic and disabled by default. When enabled it
+records the complete algorithm/input pair actually delivered to each primitive
+for conformance and domain-separation audits. It does not alter the normative
+function or establish independence between concrete hash algorithms.

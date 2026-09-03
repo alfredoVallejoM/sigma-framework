@@ -1,5 +1,10 @@
 # Hoja de ruta ejecutable de Sigma v2
 
+Estado a 2026-09-03: G1–G4 y R1–R3 cerrados localmente; R4 pendiente de
+congelación humana y R5/R6 pendientes de ejecución/archivo/revisión externos.
+El resumen vigente está en
+[`project-status-2026-09-03.md`](project-status-2026-09-03.md).
+
 Esta hoja traduce el plan maestro a gates comprobables. Un gate no se considera
 cerrado por tener código: requiere especificación, tests y artefactos indicados.
 
@@ -83,7 +88,8 @@ no una propiedad que pueda declarar el repositorio por sí solo.
   byte a byte. Estabilidad significa interoperabilidad, no seguridad auditada.
 - [x] CrossWide conserva raíces y conexiones sin compresión `Psi`.
 - [x] TreeWide serial canónico y streaming O(log N), sin duplicación impar.
-- [x] Backends serial/multiproceso+mmap, API incremental y cinco presets v2.
+- [x] Backends serial/multiproceso+mmap, API incremental, seis presets v2.2 y
+  cinco perfiles v2.1 conservados por compatibilidad.
 - [x] `Psi` aislado como legado experimental y fuera de todas las suites v2.
 - [x] Gate G3: corpus diferencial de adapters, particiones, workers, anclas y
   transcripts sin divergencias.
@@ -93,13 +99,13 @@ no una propiedad que pueda declarar el repositorio por sí solo.
   constraints, checksums y SBOM CycloneDX.
 - [x] EXP-00: runner declarativo, semilla derivada, CSV crudo comprimido,
   resúmenes, manifiestos y checksums.
-- [x] EXP-01 smoke: 261 observaciones y cero divergencias. La matriz de tamaños
+- [x] EXP-01 smoke histórico y EXP-01R piloto: cero divergencias. La matriz de tamaños
   grandes y plataformas de CI sigue pendiente antes de llamarlo completo.
 - [x] EXP-02/03 smoke: modelos reducidos, 49 920 observaciones totales y
   comprobaciones binomiales; no sustituyen las campañas completas.
 - [x] EXP-04–10 smoke: dependencia, profundidad, SAC, distribución, rendimiento
   y memoria con datos crudos; siguen siendo validaciones exploratorias.
-- [x] Flujo único EXP-01–10 → resúmenes → figuras, configuración embebida y
+- [x] Flujo histórico EXP-01–10 → resúmenes → figuras, configuración embebida y
   manifiesto de entorno/checksums.
 - [x] EXP-11: protocolo PoW canónico y smoke geométrico; no es un PoSW ni tiene
   verificación asimétricamente barata.

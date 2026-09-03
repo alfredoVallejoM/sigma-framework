@@ -16,12 +16,13 @@ bounds: when two trajectories have different anchors but meet at one state,
 reinjection makes their next queries distinct, whereas an ordinary chain sends
 the same query. This does not make the output a proof of sequential work and
 does not overcome the effective collision width of the anchor. We provide a
-reference Python implementation, independent vectors, an automated regression suite and a
-reproducible experiment harness. Preliminary reduced-width and systems smoke
+reference Python implementation, independent vectors, an automated regression
+suite and a reproducible experiment harness. Preliminary reduced-width and
+systems smoke
 runs exercise 72,013 observations across canonicality, collisions, dependency,
-diffusion, distribution, timing, memory and scoped application studies. These runs validate methodology and
-implementation paths only; full confirmatory campaigns and independent
-cryptanalysis remain future work.
+diffusion, distribution, timing, memory and scoped application studies. These
+runs validate methodology and implementation paths only; full confirmatory
+campaigns and independent cryptanalysis remain future work.
 
 ## 1. Introduction
 
@@ -155,18 +156,21 @@ states is not such a proof.
 
 ## 5. Execution profiles and reference library
 
-Lightweight and RealTime use a two-branch constant-memory StreamWide anchor.
+Lightweight uses a two-branch constant-memory StreamWide anchor; real-time
+incremental processing is an execution policy over that same v2.2 suite.
 Simultaneous uses the four-branch canonical tree and can distribute leaves
 without changing semantics. Paranoid Wide retains four roots plus four
 connections. Paranoid Deep uses the same CrossWide evidence and evaluates all
-four branches at each level. These names describe execution profiles, not
+four branches at each level; Paranoid DeepVector retains the four-component
+state instead of folding it. These names describe execution profiles, not
 security grades.
 
 The serial backend is normative. The multiprocessing backend hashes canonical
 tree leaves in bounded batches and reduces them with the serial tree algorithm.
-Files are checked for size/mtime changes. Incremental finalization is explicit;
-checkpoints are marked provisional. A full verifier recomputes the input,
-anchor and trajectory. The adjacent verifier is deliberately named and
+File paths and descriptors are checked for identity/metadata changes, and
+multiprocessing uses a private immutable snapshot. Incremental finalization is
+explicit; checkpoints are marked provisional. A full verifier recomputes the
+input, anchor and trajectory. The adjacent verifier is deliberately named and
 documented as insufficient for history.
 
 ## 6. Experimental methodology
@@ -196,7 +200,8 @@ processes and reports Python allocations separately from scoped process RSS.
 
 ## 7. Preliminary smoke results
 
-The selected historical run manifests under `experiments/results` contain 72,013 raw
+The selected historical run manifests under `experiments/results` contain
+72,013 raw
 observations. EXP-01 found no divergence in 266 observations spanning five
 presets, nine boundary sizes and tree worker counts 1, 2, 3, 4 and 8.
 
@@ -226,9 +231,9 @@ flip rates near one half. EXP-07 expanded this to 6,656 layer-separated SAC
 observations. The preregistered conservative power calculation requires at
 least 2,540 samples per input bit for 512-bit layers at detectable bias 0.05,
 whereas the smoke run has 32 and is explicitly underpowered. No
-cryptographic-layer cell survived Bonferroni correction; the full framed anchor correctly exposed constant structural
-bits, illustrating why framing bytes must not be scored as if they were hash
-output.
+cryptographic-layer cell survived Bonferroni correction; the full framed anchor
+correctly exposed constant structural bits, illustrating why framing bytes
+must not be scored as if they were hash output.
 
 EXP-08 generated 10,752 distinct outputs across seven constructions and three
 structured/adversarial corpora. None of the 84 published tests failed its
@@ -267,7 +272,8 @@ with a manifest binding every SVG to the selected run summaries/raw data.
 
 ## 8. Application scope
 
-The alpha PoW application canonically binds a non-empty challenge, `t`, `k`,
+The alpha PoW application currently composes the frozen reference v2.1 suite
+and canonically binds a non-empty challenge, `t`, `k`,
 predicate and difficulty, and encodes payload and 64-bit nonce without framing
 ambiguity. It supports a leading-zero predicate on one state, two predicates on
 the first two states, or one predicate on their concatenation. Verification
@@ -299,9 +305,10 @@ smoke studies and have not crossed those external-review or confirmatory gates.
 The repository contains the frozen specification/vector, experiment configs,
 raw smoke observations, summaries and manifests. `python -m
 experiments.reproduce --config CONFIG --output NEW_DIRECTORY` regenerates a
-run; `python -m experiments.reproduce_all` runs EXP-01–10 and regenerates their
-figures. The core runtime has no third-party dependency; Argon2 support is an
-optional extra. An exact Python 3.13 analysis
+run; `python -m experiments.reproduce_all` reproduces the historical EXP-01–10
+selection and its figures. Revised campaigns use the individual configs under
+`experiments/configs/pilots`. The core runtime has no third-party dependency;
+Argon2 support is an optional extra. An exact Python 3.13 analysis
 constraint snapshot is supplied. Release tooling builds wheel/sdist, SHA-256
 checksums and a CycloneDX SBOM. A final artifact release must be generated from
 a clean tagged commit and archived with a DOI; the current dirty-state manifests

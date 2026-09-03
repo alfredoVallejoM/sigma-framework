@@ -3,6 +3,8 @@
 Status: **draft; not frozen; no confirmatory data authorized**  
 Protocol basis: `docs/research-addendum-v2-2.md`, sections E–H.  
 Pilot data are development data and will never be pooled with confirmatory data.
+Implementation baseline: `453b483`; project status:
+[`../docs/project-status-2026-09-03.md`](../docs/project-status-2026-09-03.md).
 
 ## Global analysis contract
 

@@ -3,7 +3,7 @@
 Sigma is an experimental Python framework for canonical wide-input hash
 commitments, input-reinjected iteration and multi-state digests.
 
-> **Security status:** Sigma v2 is an alpha research implementation. Its wire
+> **Security status:** Sigma v2.2 is an alpha research implementation. Its wire
 > formats and current suite vectors are frozen for interoperability, but the
 > construction has not received independent cryptographic review. Do not treat
 > it as a password KDF, digital signature, authentication scheme, production
@@ -11,11 +11,14 @@ commitments, input-reinjected iteration and multi-state digests.
 
 The repository also retains the original v1 prototype for reproducibility.
 Those APIs are explicitly legacy and contain known design defects documented in
-[`docs/audit-2026-09-02.md`](docs/audit-2026-09-02.md).
-The current internal verdict and remaining external gates are recorded in
-[`docs/final-audit-2026-09-02.md`](docs/final-audit-2026-09-02.md).
+[`docs/audit-2026-09-02.md`](docs/audit-2026-09-02.md); the v2.1 closure is
+preserved in
+[`docs/final-audit-2026-09-02.md`](docs/final-audit-2026-09-02.md). Both reports
+are historical. The current internal verdict, implemented scope and remaining
+external gates are recorded in
+[`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
 
-## What v2 changes
+## What v2.2 provides
 
 Sigma v2 separates five concerns that v1 mixed together:
 
@@ -27,15 +30,18 @@ Sigma v2 separates five concerns that v1 mixed together:
 
 The current reference implementation provides:
 
-- strict canonical context and digest parsers;
+- strict canonical context, digest, typed-evidence and application parsers;
 - `StreamWide`, `CrossWide` and canonical `TreeWide` anchors;
-- `WideOnce` and `Deep` input-reinjected rounds;
+- `WideOnce`, `Deep` and vector-preserving `DeepVector` rounds;
 - genuine multi-state output `S_t..S_(t+k-1)`;
 - full-history and explicitly local adjacent verification;
 - serial, incremental and multiprocessing/mmap execution;
-- distinct Lightweight, Simultaneous, RealTime, Paranoid Wide and Paranoid
-  Deep presets;
-- frozen known-answer vectors and differential tests.
+- distinct reference, Lightweight, Simultaneous, Paranoid Wide, Paranoid Deep
+  and Paranoid DeepVector v2.2 presets;
+- local `ResourcePolicy` enforcement and coherent file snapshots;
+- optional Argon2id composition, experimental PoW and Ed25519 commitments;
+- frozen known-answer vectors and an independent six-suite/application
+  conformance consumer.
 
 `Psi` is not used by v2 and is not a root of trust. It remains only as part of
 the reproducible legacy prototype pending separate cryptanalysis.
@@ -56,10 +62,10 @@ No third-party package is required by the runtime v2 core. The optional
 Hash bytes with an explicit preset:
 
 ```python
-from sigma.presets import lightweight_v2
+from sigma.presets import lightweight_v2_2
 from sigma.v2 import hash_bytes, verify_full
 
-context = lightweight_v2(target_round=4, state_count=2)
+context = lightweight_v2_2(target_round=4, state_count=2)
 digest = hash_bytes(b"example", context)
 
 assert verify_full(b"example", digest)
@@ -72,10 +78,10 @@ mathematical result:
 
 ```python
 from sigma.backends import MultiprocessingTreeBackend
-from sigma.presets import simultaneous_v2
+from sigma.presets import simultaneous_v2_2
 from sigma.v2 import hash_file
 
-context = simultaneous_v2()
+context = simultaneous_v2_2()
 digest = hash_file(
     "large.bin",
     context,
@@ -87,9 +93,9 @@ Incremental RealTime finalization:
 
 ```python
 from sigma.incremental import IncrementalSigmaV2
-from sigma.presets import realtime_v2
+from sigma.presets import lightweight_v2_2
 
-stream = IncrementalSigmaV2(realtime_v2())
+stream = IncrementalSigmaV2(lightweight_v2_2())
 stream.update(b"first packet")
 checkpoint = stream.checkpoint()  # provisional and bound to its byte offset
 stream.update(b"second packet")
@@ -103,15 +109,17 @@ never presented as the final digest of a stream that may continue.
 
 | Preset | Anchor | Rounds | Intended property |
 |---|---|---|---|
-| `lightweight-v2` | two-branch StreamWide | WideOnce | O(1) message-size memory |
-| `simultaneous-v2` | canonical TreeWide | WideOnce | backend-neutral parallel leaves |
-| `realtime-v2` | two-branch StreamWide | WideOnce | incremental update and explicit EOF |
-| `paranoid-wide-v2` | four-branch CrossWide | WideOnce | retains roots plus connections |
-| `paranoid-deep-v2` | four-branch CrossWide | Deep | evaluates every branch per level |
+| `reference-v2-2` | four-branch StreamWide | WideOnce | normative reference profile |
+| `lightweight-v2-2` | two-branch StreamWide | WideOnce | O(1) message-size memory |
+| `simultaneous-v2-2` | canonical TreeWide | WideOnce | backend-neutral parallel leaves |
+| `paranoid-wide-v2-2` | four-branch CrossWide | WideOnce | retains roots plus connections |
+| `paranoid-deep-v2-2` | four-branch CrossWide | Deep | evaluates every branch per level |
 | `paranoid-deep-vector-v2-2` | four-branch CrossWide | DeepVector | retains the complete branch vector per level |
 
 The names are convenience presets, not security grades. Different presets have
-different suite IDs and intentionally produce different digests.
+different suite IDs and intentionally produce different digests. The five
+`*-v2` presets remain frozen v2.1 compatibility profiles; RealTime v2.2 is an
+incremental execution policy over `lightweight-v2-2`, not a distinct suite.
 
 ## Legacy v1
 
@@ -128,16 +136,16 @@ hardware-dependent and is intentionally excluded from canonical v1 vectors.
 ## Verification and development
 
 ```console
-python -m compileall -q sigma tests
+python -m compileall -q sigma experiments reference scripts tests
 python -m pytest -q
 python -m scripts.fuzz_codecs --iterations 10000
 python scripts/fuzz_atheris.py --write-corpus /tmp/sigma-fuzz-corpus
 python scripts/fuzz_atheris.py /tmp/sigma-fuzz-corpus -atheris_runs=10000
 mutmut run 'sigma.spec.encoding*'
 ruff check sigma scripts experiments tests
-mypy sigma scripts experiments
+mypy sigma scripts experiments reference
 python -m build
-python scripts/release_artifacts.py dist
+python -m scripts.release_artifacts dist
 ```
 
 `constraints/experiments-py313.txt` freezes the currently validated Python
@@ -148,6 +156,8 @@ The coverage-guided and mutation campaigns use the optional `fuzz` and
 defined in [`docs/versioning.md`](docs/versioning.md); test campaign evidence is
 recorded in [`docs/testing-hardening.md`](docs/testing-hardening.md).
 
+The current project snapshot and gate status are summarized in
+[`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
 The byte-level construction is specified in
 [`specification/sigma-v2.md`](specification/sigma-v2.md). Work packages, gates
 and remaining experimental/paper tasks are tracked in
@@ -157,7 +167,9 @@ and planned paper figures are specified in
 [`docs/research-addendum-v2-2.md`](docs/research-addendum-v2-2.md).
 The formal claims and working paper are in
 [`specification/security-analysis.md`](specification/security-analysis.md) and
-[`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment protocol and smoke configurations are documented in
+[`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment
+protocol, historical smoke data and revised pilot configurations are documented
+in
 [`experiments/README.md`](experiments/README.md).
 The dependency-free consumer in
 [`reference/independent_v22.py`](reference/independent_v22.py) deliberately

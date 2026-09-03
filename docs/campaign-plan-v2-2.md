@@ -2,6 +2,8 @@
 
 Estado: implementación y pilotos locales completos; prerregistro confirmatorio
 aún en borrador. Ningún piloto de este documento es evidencia E4.
+Baseline funcional de cierre: `453b483`; estado global en
+[`project-status-2026-09-03.md`](project-status-2026-09-03.md).
 
 ## Reglas de ejecución
 

@@ -50,7 +50,7 @@ class SuiteDescriptor:
         ):
             raise ValueError("stream-based suites require chunk_size=0")
         if self.anchor_profile is AnchorProfileId.TREE_WIDE and context.chunk_size != 65536:
-            raise ValueError("TreeWide v2-1 requires chunk_size=65536")
+            raise ValueError("TreeWide suites require chunk_size=65536")
 
 
 REFERENCE_STREAM_WIDE_V2 = SuiteDescriptor(

@@ -323,6 +323,11 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
     message_b = b"field-mutation-b"
     context, prepared_a = _prepared(message_a)
     prepared_b = prepare_input_v3(context, BytesSource(message_b))
+    foreign_context = SigmaContextV3.reference(
+        salt=b"single-field-context",
+        challenge=context.challenge,
+        application_context=context.application_context,
+    )
 
     init_a_layout = derive_layout_v3(
         context,
@@ -338,9 +343,17 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
         round_index=0,
         base_length=len(message_b),
     )
+    assert init_a_layout == init_b_layout
     init_a = InitFrame(context, prepared_a, init_a_layout, BytesSource(message_a)).to_bytes()
     init_b = InitFrame(context, prepared_b, init_b_layout, BytesSource(message_b)).to_bytes()
     assert init_a != init_b
+    with pytest.raises(ValueError):
+        InitFrame(
+            foreign_context,
+            prepared_a,
+            init_a_layout,
+            BytesSource(message_a),
+        )
 
     state = bytes(range(context.state_size))
     state_mutated = bytes((state[0] ^ 1,)) + state[1:]
@@ -365,6 +378,7 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
         round_index=0,
         base_length=len(state),
     )
+    assert round_binding_layout == round0_layout
     round_frames = {
         RoundFrame(context, prepared_a.binding, round0_layout, 0, state).to_bytes(),
         RoundFrame(context, prepared_a.binding, round1_layout, 1, state).to_bytes(),
@@ -372,6 +386,10 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
         RoundFrame(context, prepared_b.binding, round_binding_layout, 0, state).to_bytes(),
     }
     assert len(round_frames) == 4
+    with pytest.raises(ValueError, match="indices"):
+        RoundFrame(context, prepared_a.binding, round0_layout, 1, state)
+    with pytest.raises(ValueError):
+        RoundFrame(foreign_context, prepared_a.binding, round0_layout, 0, state)
 
     vector = b"v" * (len(context.joint_algorithms) * 64)
     vector_mutated = bytes((vector[0] ^ 1,)) + vector[1:]
@@ -389,12 +407,41 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
         round_index=1,
         base_length=len(vector),
     )
+    vector_binding_layout = derive_layout_v3(
+        context,
+        prepared_b.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(vector),
+    )
+    assert vector_binding_layout == vector0_layout
     vector0 = VectorRoundFrame(context, prepared_a.binding, vector0_layout, 0, vector)
     vector_changed = VectorRoundFrame(
         context, prepared_a.binding, vector0_layout, 0, vector_mutated
     )
     vector_next = VectorRoundFrame(context, prepared_a.binding, vector1_layout, 1, vector)
-    assert len({vector0.to_bytes(), vector_changed.to_bytes(), vector_next.to_bytes()}) == 3
+    vector_binding = VectorRoundFrame(context, prepared_b.binding, vector0_layout, 0, vector)
+    assert (
+        len(
+            {
+                vector0.to_bytes(),
+                vector_changed.to_bytes(),
+                vector_next.to_bytes(),
+                vector_binding.to_bytes(),
+            }
+        )
+        == 4
+    )
+    with pytest.raises(ValueError, match="indices"):
+        VectorRoundFrame(context, prepared_a.binding, vector0_layout, 1, vector)
+    with pytest.raises(ValueError):
+        VectorRoundFrame(
+            foreign_context,
+            prepared_a.binding,
+            vector0_layout,
+            0,
+            vector,
+        )
 
     branch0 = DeepBranchFrame(context, 0, 0, context.joint_algorithms[0], vector0)
     branch_changed_vector = DeepBranchFrame(
@@ -408,3 +455,11 @@ def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
         DeepBranchFrame(context, 0, 0, context.joint_algorithms[1], vector0)
     with pytest.raises(ValueError, match="round"):
         DeepBranchFrame(context, 0, 0, context.joint_algorithms[0], vector_next)
+    with pytest.raises(ValueError, match="context"):
+        DeepBranchFrame(
+            foreign_context,
+            0,
+            0,
+            foreign_context.joint_algorithms[0],
+            vector0,
+        )

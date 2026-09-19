@@ -273,3 +273,138 @@ def test_vector_frame_rejects_noncanonical_width() -> None:
             0,
             b"v" * wrong_width,
         )
+
+
+def test_frames_reject_layouts_derived_from_another_context() -> None:
+    message = b"foreign-layout"
+    context, prepared = _prepared(message)
+    foreign_context = SigmaContextV3.reference(
+        salt=b"foreign-R6-salt",
+        challenge=context.challenge,
+        application_context=context.application_context,
+    )
+    foreign_prepared = prepare_input_v3(foreign_context, BytesSource(message))
+
+    foreign_init = derive_layout_v3(
+        foreign_context,
+        foreign_prepared.binding,
+        kind=LayoutKindV3.INIT,
+        round_index=0,
+        base_length=len(message),
+    )
+    with pytest.raises(ValueError, match="not canonical"):
+        InitFrame(context, prepared, foreign_init, BytesSource(message))
+
+    state = b"s" * context.state_size
+    foreign_round = derive_layout_v3(
+        foreign_context,
+        foreign_prepared.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(state),
+    )
+    with pytest.raises(ValueError, match="not canonical"):
+        RoundFrame(context, prepared.binding, foreign_round, 0, state)
+
+    vector = b"v" * (len(context.joint_algorithms) * 64)
+    foreign_vector = derive_layout_v3(
+        foreign_context,
+        foreign_prepared.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(vector),
+    )
+    with pytest.raises(ValueError, match="not canonical"):
+        VectorRoundFrame(context, prepared.binding, foreign_vector, 0, vector)
+
+
+def test_each_normative_frame_field_is_sensitive_or_rejected() -> None:
+    message_a = b"field-mutation-a"
+    message_b = b"field-mutation-b"
+    context, prepared_a = _prepared(message_a)
+    prepared_b = prepare_input_v3(context, BytesSource(message_b))
+
+    init_a_layout = derive_layout_v3(
+        context,
+        prepared_a.binding,
+        kind=LayoutKindV3.INIT,
+        round_index=0,
+        base_length=len(message_a),
+    )
+    init_b_layout = derive_layout_v3(
+        context,
+        prepared_b.binding,
+        kind=LayoutKindV3.INIT,
+        round_index=0,
+        base_length=len(message_b),
+    )
+    init_a = InitFrame(context, prepared_a, init_a_layout, BytesSource(message_a)).to_bytes()
+    init_b = InitFrame(context, prepared_b, init_b_layout, BytesSource(message_b)).to_bytes()
+    assert init_a != init_b
+
+    state = bytes(range(context.state_size))
+    state_mutated = bytes((state[0] ^ 1,)) + state[1:]
+    round0_layout = derive_layout_v3(
+        context,
+        prepared_a.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(state),
+    )
+    round1_layout = derive_layout_v3(
+        context,
+        prepared_a.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=1,
+        base_length=len(state),
+    )
+    round_binding_layout = derive_layout_v3(
+        context,
+        prepared_b.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(state),
+    )
+    round_frames = {
+        RoundFrame(context, prepared_a.binding, round0_layout, 0, state).to_bytes(),
+        RoundFrame(context, prepared_a.binding, round1_layout, 1, state).to_bytes(),
+        RoundFrame(context, prepared_a.binding, round0_layout, 0, state_mutated).to_bytes(),
+        RoundFrame(context, prepared_b.binding, round_binding_layout, 0, state).to_bytes(),
+    }
+    assert len(round_frames) == 4
+
+    vector = b"v" * (len(context.joint_algorithms) * 64)
+    vector_mutated = bytes((vector[0] ^ 1,)) + vector[1:]
+    vector0_layout = derive_layout_v3(
+        context,
+        prepared_a.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=0,
+        base_length=len(vector),
+    )
+    vector1_layout = derive_layout_v3(
+        context,
+        prepared_a.binding,
+        kind=LayoutKindV3.ROUND,
+        round_index=1,
+        base_length=len(vector),
+    )
+    vector0 = VectorRoundFrame(context, prepared_a.binding, vector0_layout, 0, vector)
+    vector_changed = VectorRoundFrame(
+        context, prepared_a.binding, vector0_layout, 0, vector_mutated
+    )
+    vector_next = VectorRoundFrame(context, prepared_a.binding, vector1_layout, 1, vector)
+    assert len({vector0.to_bytes(), vector_changed.to_bytes(), vector_next.to_bytes()}) == 3
+
+    branch0 = DeepBranchFrame(context, 0, 0, context.joint_algorithms[0], vector0)
+    branch_changed_vector = DeepBranchFrame(
+        context, 0, 0, context.joint_algorithms[0], vector_changed
+    )
+    assert branch0.to_bytes() != branch_changed_vector.to_bytes()
+
+    with pytest.raises(ValueError, match="algorithm"):
+        DeepBranchFrame(context, 0, 1, context.joint_algorithms[0], vector0)
+    with pytest.raises(ValueError, match="algorithm"):
+        DeepBranchFrame(context, 0, 0, context.joint_algorithms[1], vector0)
+    with pytest.raises(ValueError, match="round"):
+        DeepBranchFrame(context, 0, 0, context.joint_algorithms[0], vector_next)

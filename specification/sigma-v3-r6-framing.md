@@ -1,6 +1,6 @@
 # Sigma v3 — framing normativo (R6)
 
-Estado: **normativo para frames v3**  
+Estado: **normativo para frames v3**
 Fecha: 2026-09-19
 
 Todos los frames usan el transcript R2 y tags crecientes. `InitFrame` usa domain

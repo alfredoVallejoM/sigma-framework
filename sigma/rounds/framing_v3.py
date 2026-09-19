@@ -8,7 +8,12 @@ from dataclasses import dataclass
 
 from sigma.binding.prepare import PreparedBindingV3, derive_length_signature_v3
 from sigma.binding.types import MAX_U64, PersistentBinding
-from sigma.layout import LayoutPlan, iter_placed_binding_v3, placed_binding_length_v3
+from sigma.layout import (
+    LayoutPlan,
+    derive_layout_v3,
+    iter_placed_binding_v3,
+    placed_binding_length_v3,
+)
 from sigma.sources import CanonicalSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import encode_uint
@@ -37,6 +42,26 @@ def _validate_index(index: int) -> None:
         raise ValueError("round_index is out of range")
 
 
+def _validate_canonical_layout(
+    context: SigmaContextV3,
+    binding: PersistentBinding,
+    layout: LayoutPlan,
+    *,
+    kind: LayoutKindV3,
+    round_index: int,
+    base_length: int,
+) -> None:
+    expected = derive_layout_v3(
+        context,
+        binding,
+        kind=kind,
+        round_index=round_index,
+        base_length=base_length,
+    )
+    if layout != expected:
+        raise ValueError("layout is not canonical for context and binding")
+
+
 @dataclass(frozen=True)
 class InitFrame:
     context: SigmaContextV3
@@ -58,6 +83,14 @@ class InitFrame:
             raise ValueError("init layout length does not match source")
         if self.prepared.binding.cardinality.byte_length != self.source.byte_length:
             raise ValueError("binding cardinality does not match source")
+        _validate_canonical_layout(
+            self.context,
+            self.prepared.binding,
+            self.layout,
+            kind=LayoutKindV3.INIT,
+            round_index=0,
+            base_length=self.source.byte_length,
+        )
 
     @property
     def encoded_length(self) -> int:
@@ -132,6 +165,14 @@ class RoundFrame:
             raise ValueError("state size does not match context")
         if self.layout.base_length != len(self.state):
             raise ValueError("layout length does not match state")
+        _validate_canonical_layout(
+            self.context,
+            self.binding,
+            self.layout,
+            kind=LayoutKindV3.ROUND,
+            round_index=self.round_index,
+            base_length=len(self.state),
+        )
 
     def to_bytes(self) -> bytes:
         placed = b"".join(iter_placed_binding_v3((self.state,), self.binding, self.layout))
@@ -170,6 +211,14 @@ class VectorRoundFrame:
             raise ValueError("vector width does not match joint algorithms")
         if self.layout.base_length != len(self.vector):
             raise ValueError("layout length does not match vector")
+        _validate_canonical_layout(
+            self.context,
+            self.binding,
+            self.layout,
+            kind=LayoutKindV3.ROUND,
+            round_index=self.round_index,
+            base_length=len(self.vector),
+        )
 
     def to_bytes(self) -> bytes:
         placed = b"".join(iter_placed_binding_v3((self.vector,), self.binding, self.layout))

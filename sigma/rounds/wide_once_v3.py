@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sigma.binding import (
     PreparedBindingV3,
@@ -30,12 +30,15 @@ class WideOnceEvaluationV3:
     states: tuple[bytes, ...]
     header: PublicTrajectoryHeader
     window: TrajectoryWindow
+    _source: CanonicalSource = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.context, SigmaContextV3):
             raise TypeError("context must be SigmaContextV3")
         if not isinstance(self.prepared, PreparedBindingV3):
             raise TypeError("prepared must be PreparedBindingV3")
+        if not isinstance(self._source, CanonicalSource):
+            raise TypeError("_source must be CanonicalSource")
         binding = self.prepared.binding
         expected_parameters = derive_trajectory_parameters(self.context, binding)
         if self.parameters != expected_parameters:
@@ -55,6 +58,18 @@ class WideOnceEvaluationV3:
             raise ValueError("one round layout is required per transition")
         if any(len(state) != self.context.state_size for state in self.states):
             raise ValueError("trace contains a state with incorrect width")
+        init_hash = HashAccumulator(
+            self.context.state_algorithm,
+            DomainIdV3.INIT_FRAME,
+        )
+        InitFrame(
+            self.context,
+            self.prepared,
+            self.init_layout,
+            self._source,
+        ).write_to(init_hash)
+        if self.states[0] != init_hash.digest():
+            raise ValueError("initial state does not match init frame and source")
         expected_header = PublicTrajectoryHeader(
             binding.cardinality,
             binding.anchor,
@@ -150,6 +165,7 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
         state_tuple,
         header,
         window,
+        source,
     )
 
 

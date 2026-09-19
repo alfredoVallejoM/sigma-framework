@@ -11,7 +11,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from reference.independent_v3 import evaluate as independent_evaluate
-from sigma.binding import TrajectoryParameters
+from sigma.binding import TrajectoryParameters, TrajectoryWindow
 from sigma.crypto.primitives import domain_tag_v3
 from sigma.rounds.framing_v3 import InitFrame, RoundFrame
 from sigma.sources import BytesSource, SpoolingStreamSource, StableFileSource
@@ -199,6 +199,38 @@ def test_evaluation_rejects_cross_message_artifacts() -> None:
         )
     with pytest.raises(ValueError, match="layout"):
         replace(first, init_layout=second.init_layout)
+
+
+def test_evaluation_rejects_forged_initial_state_and_source_identity() -> None:
+    evaluation = evaluate_wide_once_bytes_v3(_context(), b"root-authentication")
+    forged_states = [b"Z" * evaluation.context.state_size]
+    for index, layout in enumerate(evaluation.round_layouts):
+        frame = RoundFrame(
+            evaluation.context,
+            evaluation.prepared.binding,
+            layout,
+            index,
+            forged_states[-1],
+        )
+        forged_states.append(
+            hashlib.sha512(domain_tag_v3(DomainIdV3.ROUND_FRAME) + frame.to_bytes()).digest()
+        )
+
+    forged_state_tuple = tuple(forged_states)
+    forged_window = TrajectoryWindow(
+        evaluation.parameters,
+        forged_state_tuple[evaluation.parameters.target_round :],
+    )
+    with pytest.raises(ValueError, match="initial state"):
+        replace(
+            evaluation,
+            states=forged_state_tuple,
+            window=forged_window,
+        )
+
+    forged_prepared = replace(evaluation.prepared, source_sha256=b"\x00" * 32)
+    with pytest.raises(ValueError, match="source content"):
+        replace(evaluation, prepared=forged_prepared)
 
 
 def test_context_component_mutation_matrix_changes_trajectory() -> None:

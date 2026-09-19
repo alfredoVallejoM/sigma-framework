@@ -1,0 +1,207 @@
+"""Canonical Sigma v3 evidence and deliberately separated verification APIs."""
+
+from __future__ import annotations
+
+import hmac
+from dataclasses import dataclass
+from enum import IntEnum
+
+from sigma.binding import (
+    PersistentBinding,
+    PublicTrajectoryHeader,
+    TrajectoryWindow,
+    derive_length_signature_v3,
+    derive_trajectory_parameters,
+)
+from sigma.crypto.primitives import domain_tag_v3
+from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3, evaluate_wide_once_v3
+from sigma.sources import CanonicalSource
+from sigma.spec.codec_v3 import decode_record, encode_record
+from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.encoding import DecodeError, encode_uint
+from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3
+
+_DIGEST_MAGIC = b"SIGMA3DG"
+_AUDIT_MAGIC = b"SIGMA3EA"
+
+
+class _DigestField(IntEnum):
+    PROFILE = 1
+    DOMAIN = 2
+    CONTEXT = 3
+    HEADER = 4
+    WINDOW = 5
+
+
+class _AuditField(IntEnum):
+    PROFILE = 1
+    DOMAIN = 2
+    DIGEST = 3
+    BINDING = 4
+
+
+@dataclass(frozen=True)
+class SigmaDigestV3:
+    context: SigmaContextV3
+    header: PublicTrajectoryHeader
+    window: TrajectoryWindow
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.context, SigmaContextV3):
+            raise TypeError("context must be SigmaContextV3")
+        if not isinstance(self.header, PublicTrajectoryHeader):
+            raise TypeError("header must be PublicTrajectoryHeader")
+        if not isinstance(self.window, TrajectoryWindow):
+            raise TypeError("window must be TrajectoryWindow")
+        if self.context.output_profile is not OutputProfileIdV3.IMPLICIT_J:
+            raise ValueError("SigmaDigestV3 requires IMPLICIT_J context")
+        if self.header.anchor.suite_id != self.context.suite_id:
+            raise ValueError("header and context suites differ")
+        expected_length_signature = derive_length_signature_v3(
+            self.context,
+            self.header.cardinality,
+        )
+        if self.header.length_signature != expected_length_signature:
+            raise ValueError("header length signature does not match context")
+        if self.header.parameters != self.window.parameters:
+            raise ValueError("header and window parameters differ")
+        if any(len(state) != self.context.state_size for state in self.window.states):
+            raise ValueError("window state size does not match context")
+
+    def to_bytes(self) -> bytes:
+        return encode_record(
+            _DIGEST_MAGIC,
+            (
+                (_DigestField.PROFILE, encode_uint(OutputProfileIdV3.IMPLICIT_J, 2)),
+                (_DigestField.DOMAIN, domain_tag_v3(DomainIdV3.EVIDENCE)),
+                (_DigestField.CONTEXT, self.context.to_bytes()),
+                (_DigestField.HEADER, self.header.to_bytes()),
+                (_DigestField.WINDOW, self.window.to_bytes()),
+            ),
+        )
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> SigmaDigestV3:
+        fields = decode_record(
+            data,
+            magic=_DIGEST_MAGIC,
+            allowed_tags=frozenset(int(field) for field in _DigestField),
+        )
+        try:
+            if fields[_DigestField.PROFILE] != encode_uint(OutputProfileIdV3.IMPLICIT_J, 2):
+                raise ValueError("unexpected output profile")
+            if fields[_DigestField.DOMAIN] != domain_tag_v3(DomainIdV3.EVIDENCE):
+                raise ValueError("unexpected evidence domain")
+            return cls(
+                SigmaContextV3.from_bytes(fields[_DigestField.CONTEXT]),
+                PublicTrajectoryHeader.from_bytes(fields[_DigestField.HEADER]),
+                TrajectoryWindow.from_bytes(fields[_DigestField.WINDOW]),
+            )
+        except DecodeError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DecodeError("invalid Sigma v3 digest") from exc
+
+
+@dataclass(frozen=True)
+class ExplicitAuditEvidenceV3:
+    """Separate audit envelope; never confused with the IMPLICIT_J digest."""
+
+    digest: SigmaDigestV3
+    binding: PersistentBinding
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.digest, SigmaDigestV3):
+            raise TypeError("digest must be SigmaDigestV3")
+        if not isinstance(self.binding, PersistentBinding):
+            raise TypeError("binding must be PersistentBinding")
+        header = self.digest.header
+        if (
+            header.anchor != self.binding.anchor
+            or header.cardinality != self.binding.cardinality
+            or header.length_signature != self.binding.length_signature
+        ):
+            raise ValueError("explicit binding does not match public header")
+        if (
+            derive_trajectory_parameters(self.digest.context, self.binding)
+            != self.digest.header.parameters
+        ):
+            raise ValueError("explicit binding derives different trajectory parameters")
+
+    def to_bytes(self) -> bytes:
+        return encode_record(
+            _AUDIT_MAGIC,
+            (
+                (_AuditField.PROFILE, encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2)),
+                (_AuditField.DOMAIN, domain_tag_v3(DomainIdV3.EVIDENCE)),
+                (_AuditField.DIGEST, self.digest.to_bytes()),
+                (_AuditField.BINDING, self.binding.to_bytes()),
+            ),
+        )
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> ExplicitAuditEvidenceV3:
+        fields = decode_record(
+            data,
+            magic=_AUDIT_MAGIC,
+            allowed_tags=frozenset(int(field) for field in _AuditField),
+        )
+        try:
+            if fields[_AuditField.PROFILE] != encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2):
+                raise ValueError("unexpected audit profile")
+            if fields[_AuditField.DOMAIN] != domain_tag_v3(DomainIdV3.EVIDENCE):
+                raise ValueError("unexpected evidence domain")
+            return cls(
+                SigmaDigestV3.from_bytes(fields[_AuditField.DIGEST]),
+                PersistentBinding.from_bytes(fields[_AuditField.BINDING]),
+            )
+        except DecodeError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DecodeError("invalid explicit audit evidence") from exc
+
+
+@dataclass(frozen=True)
+class StructureVerificationV3:
+    evidence: SigmaDigestV3
+    structure_valid: bool = True
+    message_binding_verified: bool = False
+
+
+def digest_from_evaluation_v3(evaluation: WideOnceEvaluationV3) -> SigmaDigestV3:
+    if not isinstance(evaluation, WideOnceEvaluationV3):
+        raise TypeError("evaluation must be WideOnceEvaluationV3")
+    return SigmaDigestV3(evaluation.context, evaluation.header, evaluation.window)
+
+
+def verify_structure_v3(data: bytes) -> StructureVerificationV3:
+    """Parse syntax only; this never makes a message-binding claim."""
+
+    return StructureVerificationV3(SigmaDigestV3.from_bytes(data))
+
+
+def verify_prepared_v3(evaluation: WideOnceEvaluationV3, evidence: SigmaDigestV3) -> bool:
+    expected = digest_from_evaluation_v3(evaluation).to_bytes()
+    return hmac.compare_digest(expected, evidence.to_bytes())
+
+
+def verify_full_v3(source: CanonicalSource, evidence: SigmaDigestV3) -> bool:
+    """Recompute binding and the complete public window from canonical bytes."""
+
+    if not isinstance(source, CanonicalSource):
+        raise TypeError("source must be CanonicalSource")
+    if not isinstance(evidence, SigmaDigestV3):
+        raise TypeError("evidence must be SigmaDigestV3")
+    evaluation = evaluate_wide_once_v3(evidence.context, source)
+    return verify_prepared_v3(evaluation, evidence)
+
+
+def verify_explicit_full_v3(source: CanonicalSource, evidence: ExplicitAuditEvidenceV3) -> bool:
+    """Verify both public trajectory and the explicitly published internal binding."""
+
+    if not isinstance(evidence, ExplicitAuditEvidenceV3):
+        raise TypeError("evidence must be ExplicitAuditEvidenceV3")
+    evaluation = evaluate_wide_once_v3(evidence.digest.context, source)
+    return hmac.compare_digest(
+        evaluation.prepared.binding.to_bytes(), evidence.binding.to_bytes()
+    ) and verify_prepared_v3(evaluation, evidence.digest)

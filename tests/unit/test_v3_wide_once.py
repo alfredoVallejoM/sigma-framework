@@ -3,7 +3,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import io
-from dataclasses import replace
+from collections.abc import Iterator
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,12 @@ from reference.independent_v3 import evaluate as independent_evaluate
 from sigma.binding import TrajectoryParameters, TrajectoryWindow
 from sigma.crypto.primitives import domain_tag_v3
 from sigma.rounds.framing_v3 import InitFrame, RoundFrame
-from sigma.sources import BytesSource, SpoolingStreamSource, StableFileSource
+from sigma.sources import (
+    BytesSource,
+    CanonicalSource,
+    SpoolingStreamSource,
+    StableFileSource,
+)
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import DomainIdV3
 from sigma.v3 import evaluate_wide_once_bytes_v3, evaluate_wide_once_v3
@@ -26,6 +32,21 @@ def _context() -> SigmaContextV3:
         challenge=b"R7-challenge",
         application_context=b"tests/v3/wide-once",
     )
+
+
+class CountingSource(CanonicalSource):
+    def __init__(self, data: bytes) -> None:
+        self.data = data
+        self.replays = 0
+
+    @property
+    def byte_length(self) -> int:
+        return len(self.data)
+
+    def iter_chunks(self, chunk_size: int) -> Iterator[bytes]:
+        self.replays += 1
+        for offset in range(0, len(self.data), chunk_size):
+            yield self.data[offset : offset + chunk_size]
 
 
 def test_wide_once_is_deterministic_and_window_is_exact_tail() -> None:
@@ -229,8 +250,27 @@ def test_evaluation_rejects_forged_initial_state_and_source_identity() -> None:
         )
 
     forged_prepared = replace(evaluation.prepared, source_sha256=b"\x00" * 32)
-    with pytest.raises(ValueError, match="source content"):
+    with pytest.raises(ValueError, match="source identity"):
         replace(evaluation, prepared=forged_prepared)
+
+
+def test_evaluation_provenance_does_not_retain_or_replay_source() -> None:
+    source = CountingSource(b"three-pass-source")
+    evaluation = evaluate_wide_once_v3(_context(), source)
+    assert source.replays == 3
+    assert not hasattr(evaluation, "_source")
+    assert replace(evaluation) == evaluation
+    assert source.replays == 3
+    asdict(evaluation)
+
+    with SpoolingStreamSource(
+        io.BytesIO(b"closed-spool-source"),
+        max_memory_bytes=1,
+    ) as spool:
+        spooled_evaluation = evaluate_wide_once_v3(_context(), spool)
+
+    assert replace(spooled_evaluation) == spooled_evaluation
+    asdict(spooled_evaluation)
 
 
 def test_context_component_mutation_matrix_changes_trajectory() -> None:

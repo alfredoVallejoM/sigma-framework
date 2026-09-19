@@ -19,6 +19,23 @@ from sigma.sources import BytesSource, CanonicalSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import DomainIdV3, LayoutKindV3
 
+_PROVENANCE_TOKEN = object()
+
+
+@dataclass(frozen=True)
+class _EvaluationProvenanceV3:
+    initial_state: bytes
+    source_sha256: bytes
+    token: object = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if self.token is not _PROVENANCE_TOKEN:
+            raise ValueError("evaluation provenance must be created by evaluator")
+        if not isinstance(self.initial_state, bytes):
+            raise TypeError("initial_state must be bytes")
+        if not isinstance(self.source_sha256, bytes) or len(self.source_sha256) != 32:
+            raise ValueError("source_sha256 must contain exactly 32 bytes")
+
 
 @dataclass(frozen=True)
 class WideOnceEvaluationV3:
@@ -30,15 +47,19 @@ class WideOnceEvaluationV3:
     states: tuple[bytes, ...]
     header: PublicTrajectoryHeader
     window: TrajectoryWindow
-    _source: CanonicalSource = field(repr=False, compare=False)
+    _provenance: _EvaluationProvenanceV3 = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.context, SigmaContextV3):
             raise TypeError("context must be SigmaContextV3")
         if not isinstance(self.prepared, PreparedBindingV3):
             raise TypeError("prepared must be PreparedBindingV3")
-        if not isinstance(self._source, CanonicalSource):
-            raise TypeError("_source must be CanonicalSource")
+        if not isinstance(self._provenance, _EvaluationProvenanceV3):
+            raise TypeError("invalid evaluation provenance")
+        if self._provenance.token is not _PROVENANCE_TOKEN:
+            raise ValueError("invalid evaluation provenance")
+        if self.prepared.source_sha256 != self._provenance.source_sha256:
+            raise ValueError("prepared source identity does not match provenance")
         binding = self.prepared.binding
         expected_parameters = derive_trajectory_parameters(self.context, binding)
         if self.parameters != expected_parameters:
@@ -58,17 +79,7 @@ class WideOnceEvaluationV3:
             raise ValueError("one round layout is required per transition")
         if any(len(state) != self.context.state_size for state in self.states):
             raise ValueError("trace contains a state with incorrect width")
-        init_hash = HashAccumulator(
-            self.context.state_algorithm,
-            DomainIdV3.INIT_FRAME,
-        )
-        InitFrame(
-            self.context,
-            self.prepared,
-            self.init_layout,
-            self._source,
-        ).write_to(init_hash)
-        if self.states[0] != init_hash.digest():
+        if self.states[0] != self._provenance.initial_state:
             raise ValueError("initial state does not match init frame and source")
         expected_header = PublicTrajectoryHeader(
             binding.cardinality,
@@ -165,7 +176,11 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
         state_tuple,
         header,
         window,
-        source,
+        _EvaluationProvenanceV3(
+            state_tuple[0],
+            prepared.source_sha256,
+            _PROVENANCE_TOKEN,
+        ),
     )
 
 

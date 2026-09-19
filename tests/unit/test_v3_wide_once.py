@@ -208,9 +208,9 @@ def test_wide_once_matches_independent_reference_over_generated_inputs(
 def test_evaluation_rejects_cross_message_artifacts() -> None:
     first = evaluate_wide_once_bytes_v3(_context(), b"A")
     second = evaluate_wide_once_bytes_v3(_context(), b"BB")
-    with pytest.raises(ValueError, match="header"):
+    with pytest.raises(TypeError, match="evaluator"):
         replace(first, header=second.header)
-    with pytest.raises(ValueError, match="parameters"):
+    with pytest.raises(TypeError, match="evaluator"):
         replace(
             first,
             parameters=TrajectoryParameters(
@@ -218,7 +218,7 @@ def test_evaluation_rejects_cross_message_artifacts() -> None:
                 first.parameters.state_count,
             ),
         )
-    with pytest.raises(ValueError, match="layout"):
+    with pytest.raises(TypeError, match="evaluator"):
         replace(first, init_layout=second.init_layout)
 
 
@@ -242,7 +242,7 @@ def test_evaluation_rejects_forged_initial_state_and_source_identity() -> None:
         evaluation.parameters,
         forged_state_tuple[evaluation.parameters.target_round :],
     )
-    with pytest.raises(ValueError, match="initial state"):
+    with pytest.raises(TypeError, match="evaluator"):
         replace(
             evaluation,
             states=forged_state_tuple,
@@ -250,16 +250,18 @@ def test_evaluation_rejects_forged_initial_state_and_source_identity() -> None:
         )
 
     forged_prepared = replace(evaluation.prepared, source_sha256=b"\x00" * 32)
-    with pytest.raises(ValueError, match="source identity"):
+    with pytest.raises(TypeError, match="evaluator"):
         replace(evaluation, prepared=forged_prepared)
 
 
-def test_evaluation_provenance_does_not_retain_or_replay_source() -> None:
+def test_factory_only_evaluation_does_not_retain_or_replay_source() -> None:
     source = CountingSource(b"three-pass-source")
     evaluation = evaluate_wide_once_v3(_context(), source)
     assert source.replays == 3
     assert not hasattr(evaluation, "_source")
-    assert replace(evaluation) == evaluation
+    assert not hasattr(evaluation, "_provenance")
+    with pytest.raises(TypeError, match="evaluator"):
+        replace(evaluation)
     assert source.replays == 3
     asdict(evaluation)
 
@@ -269,7 +271,8 @@ def test_evaluation_provenance_does_not_retain_or_replay_source() -> None:
     ) as spool:
         spooled_evaluation = evaluate_wide_once_v3(_context(), spool)
 
-    assert replace(spooled_evaluation) == spooled_evaluation
+    with pytest.raises(TypeError, match="evaluator"):
+        replace(spooled_evaluation)
     asdict(spooled_evaluation)
 
 

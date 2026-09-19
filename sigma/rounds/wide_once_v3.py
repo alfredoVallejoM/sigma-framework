@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sigma.binding import (
     PreparedBindingV3,
@@ -19,25 +19,8 @@ from sigma.sources import BytesSource, CanonicalSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import DomainIdV3, LayoutKindV3
 
-_PROVENANCE_TOKEN = object()
 
-
-@dataclass(frozen=True)
-class _EvaluationProvenanceV3:
-    initial_state: bytes
-    source_sha256: bytes
-    token: object = field(repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        if self.token is not _PROVENANCE_TOKEN:
-            raise ValueError("evaluation provenance must be created by evaluator")
-        if not isinstance(self.initial_state, bytes):
-            raise TypeError("initial_state must be bytes")
-        if not isinstance(self.source_sha256, bytes) or len(self.source_sha256) != 32:
-            raise ValueError("source_sha256 must contain exactly 32 bytes")
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class WideOnceEvaluationV3:
     context: SigmaContextV3
     prepared: PreparedBindingV3
@@ -47,19 +30,15 @@ class WideOnceEvaluationV3:
     states: tuple[bytes, ...]
     header: PublicTrajectoryHeader
     window: TrajectoryWindow
-    _provenance: _EvaluationProvenanceV3 = field(repr=False, compare=False)
 
-    def __post_init__(self) -> None:
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("WideOnceEvaluationV3 is created only by its evaluator")
+
+    def _validate(self) -> None:
         if not isinstance(self.context, SigmaContextV3):
             raise TypeError("context must be SigmaContextV3")
         if not isinstance(self.prepared, PreparedBindingV3):
             raise TypeError("prepared must be PreparedBindingV3")
-        if not isinstance(self._provenance, _EvaluationProvenanceV3):
-            raise TypeError("invalid evaluation provenance")
-        if self._provenance.token is not _PROVENANCE_TOKEN:
-            raise ValueError("invalid evaluation provenance")
-        if self.prepared.source_sha256 != self._provenance.source_sha256:
-            raise ValueError("prepared source identity does not match provenance")
         binding = self.prepared.binding
         expected_parameters = derive_trajectory_parameters(self.context, binding)
         if self.parameters != expected_parameters:
@@ -79,8 +58,6 @@ class WideOnceEvaluationV3:
             raise ValueError("one round layout is required per transition")
         if any(len(state) != self.context.state_size for state in self.states):
             raise ValueError("trace contains a state with incorrect width")
-        if self.states[0] != self._provenance.initial_state:
-            raise ValueError("initial state does not match init frame and source")
         expected_header = PublicTrajectoryHeader(
             binding.cardinality,
             binding.anchor,
@@ -167,21 +144,17 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
         parameters,
     )
     window = TrajectoryWindow(parameters, state_tuple[parameters.target_round :])
-    return WideOnceEvaluationV3(
-        context,
-        prepared,
-        parameters,
-        init_layout,
-        tuple(round_layouts),
-        state_tuple,
-        header,
-        window,
-        _EvaluationProvenanceV3(
-            state_tuple[0],
-            prepared.source_sha256,
-            _PROVENANCE_TOKEN,
-        ),
-    )
+    evaluation = object.__new__(WideOnceEvaluationV3)
+    object.__setattr__(evaluation, "context", context)
+    object.__setattr__(evaluation, "prepared", prepared)
+    object.__setattr__(evaluation, "parameters", parameters)
+    object.__setattr__(evaluation, "init_layout", init_layout)
+    object.__setattr__(evaluation, "round_layouts", tuple(round_layouts))
+    object.__setattr__(evaluation, "states", state_tuple)
+    object.__setattr__(evaluation, "header", header)
+    object.__setattr__(evaluation, "window", window)
+    evaluation._validate()
+    return evaluation
 
 
 def evaluate_wide_once_bytes_v3(context: SigmaContextV3, message: bytes) -> WideOnceEvaluationV3:

@@ -5,6 +5,7 @@ from enum import IntEnum
 
 class SuiteIdV3(IntEnum):
     REFERENCE_IAP_V3 = 0x0301
+    EXPLICIT_AUDIT_V3 = 0x0302
 
 
 class InputProfileIdV3(IntEnum):
@@ -67,6 +68,7 @@ class DomainIdV3(IntEnum):
     EVIDENCE = 0x030C
     DEEP_BRANCH_FRAME = 0x030D
     VECTOR_ROUND_FRAME = 0x030E
+    EXPLICIT_EVIDENCE = 0x030F
 
 
 ALGORITHM_OUTPUT_SIZE_V3 = 64

@@ -113,9 +113,32 @@ REFERENCE_IAP_V3 = SuiteDescriptorV3(
     k_max=4,
 )
 
+EXPLICIT_AUDIT_V3 = SuiteDescriptorV3(
+    suite_id=SuiteIdV3.EXPLICIT_AUDIT_V3,
+    input_profile=InputProfileIdV3.CANONICAL_BYTES,
+    anchor_profile=AnchorProfileIdV3.STREAM_WIDE,
+    round_profile=RoundProfileIdV3.WIDE_ONCE,
+    output_profile=OutputProfileIdV3.EXPLICIT_BINDING,
+    cardinality_profile=CardinalityProfileIdV3.BYTE_LENGTH,
+    joint_profile=JointProfileIdV3.VECTOR,
+    layout_profile=LayoutProfileIdV3.SHAKE256_REJECTION,
+    trajectory_profile=TrajectoryProfileIdV3.BINDING_DERIVED,
+    anchor_algorithms=REFERENCE_ALGORITHMS_V3,
+    joint_algorithms=REFERENCE_ALGORITHMS_V3,
+    length_algorithm=AlgorithmId.SHA3_512,
+    state_algorithm=AlgorithmId.SHA512,
+    chunk_size=1 << 20,
+    state_size=64,
+    t_min=2,
+    t_max=32,
+    k_min=2,
+    k_max=4,
+)
+
 _SUITES_V3 = MappingProxyType(
     {
         REFERENCE_IAP_V3.suite_id: REFERENCE_IAP_V3,
+        EXPLICIT_AUDIT_V3.suite_id: EXPLICIT_AUDIT_V3,
     }
 )
 

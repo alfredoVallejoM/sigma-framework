@@ -12,6 +12,42 @@ MAX_SEQUENCE_ITEM_LENGTH = 1 << 16
 MAX_RECORD_BODY_LENGTH = 1 << 20
 
 
+def validate_record_prefix(
+    data: bytes,
+    *,
+    magic: bytes,
+    expected_fields: tuple[tuple[int, bytes], ...],
+) -> None:
+    """Reject fixed record discriminators before copying or decoding its body."""
+
+    if not isinstance(data, bytes):
+        raise DecodeError("record must be bytes")
+    if not isinstance(magic, bytes) or len(magic) != 8:
+        raise ValueError("record magic must be exactly 8 bytes")
+    if len(data) < 14 or data[:8] != magic:
+        raise DecodeError("invalid record magic or truncated header")
+    if decode_uint(data[8:10], 2) != RECORD_VERSION:
+        raise DecodeError("unsupported record version")
+    body_length = decode_uint(data[10:14], 4)
+    if body_length > MAX_RECORD_BODY_LENGTH:
+        raise DecodeError("record body is too large")
+    if len(data) != 14 + body_length:
+        raise DecodeError("record length does not match body")
+
+    offset = 14
+    for expected_tag, expected_value in expected_fields:
+        if offset + 6 > len(data):
+            raise DecodeError("truncated record discriminator")
+        tag = decode_uint(data[offset : offset + 2], 2)
+        length = decode_uint(data[offset + 2 : offset + 6], 4)
+        if tag != expected_tag or length != len(expected_value):
+            raise DecodeError("unexpected record discriminator")
+        end = offset + 6 + length
+        if end > len(data) or data[offset + 6 : end] != expected_value:
+            raise DecodeError("unexpected record discriminator")
+        offset = end
+
+
 def encode_record(magic: bytes, fields: Iterable[tuple[int, bytes]]) -> bytes:
     if not isinstance(magic, bytes) or len(magic) != 8:
         raise ValueError("record magic must be exactly 8 bytes")

@@ -60,6 +60,11 @@ suite durante R1–R3. Si se habilita, requerirá otro `SuiteId`, wire y claims:
 binding completo y un estado iguales, los estados posteriores coalescen por
 determinismo.
 
+R8 habilita ese perfil exclusivamente como envelope de auditoría bajo
+`EXPLICIT_AUDIT_V3 (0x0302)`, con wire y domain propios. La trayectoria contenida
+sigue identificada por el digest implícito anidado; el ID exterior identifica el
+perfil de publicación y sus claims adicionales.
+
 ## Layout tipado
 
 Todo plan declara `INIT` o `ROUND`. La inicialización y las rondas tendrán

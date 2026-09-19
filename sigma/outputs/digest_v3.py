@@ -16,10 +16,10 @@ from sigma.binding import (
 from sigma.crypto.primitives import domain_tag_v3
 from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3, evaluate_wide_once_v3
 from sigma.sources import CanonicalSource
-from sigma.spec.codec_v3 import decode_record, encode_record
+from sigma.spec.codec_v3 import decode_record, encode_record, validate_record_prefix
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_uint
-from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3
+from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3, SuiteIdV3
 
 _DIGEST_MAGIC = b"SIGMA3DG"
 _AUDIT_MAGIC = b"SIGMA3EA"
@@ -34,10 +34,11 @@ class _DigestField(IntEnum):
 
 
 class _AuditField(IntEnum):
-    PROFILE = 1
-    DOMAIN = 2
-    DIGEST = 3
-    BINDING = 4
+    SUITE = 1
+    PROFILE = 2
+    DOMAIN = 3
+    DIGEST = 4
+    BINDING = 5
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,20 @@ class SigmaDigestV3:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> SigmaDigestV3:
+        validate_record_prefix(
+            data,
+            magic=_DIGEST_MAGIC,
+            expected_fields=(
+                (
+                    int(_DigestField.PROFILE),
+                    encode_uint(OutputProfileIdV3.IMPLICIT_J, 2),
+                ),
+                (
+                    int(_DigestField.DOMAIN),
+                    domain_tag_v3(DomainIdV3.EVIDENCE),
+                ),
+            ),
+        )
         fields = decode_record(
             data,
             magic=_DIGEST_MAGIC,
@@ -132,8 +147,12 @@ class ExplicitAuditEvidenceV3:
         return encode_record(
             _AUDIT_MAGIC,
             (
+                (_AuditField.SUITE, encode_uint(SuiteIdV3.EXPLICIT_AUDIT_V3, 2)),
                 (_AuditField.PROFILE, encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2)),
-                (_AuditField.DOMAIN, domain_tag_v3(DomainIdV3.EVIDENCE)),
+                (
+                    _AuditField.DOMAIN,
+                    domain_tag_v3(DomainIdV3.EXPLICIT_EVIDENCE),
+                ),
                 (_AuditField.DIGEST, self.digest.to_bytes()),
                 (_AuditField.BINDING, self.binding.to_bytes()),
             ),
@@ -141,15 +160,35 @@ class ExplicitAuditEvidenceV3:
 
     @classmethod
     def from_bytes(cls, data: bytes) -> ExplicitAuditEvidenceV3:
+        validate_record_prefix(
+            data,
+            magic=_AUDIT_MAGIC,
+            expected_fields=(
+                (
+                    int(_AuditField.SUITE),
+                    encode_uint(SuiteIdV3.EXPLICIT_AUDIT_V3, 2),
+                ),
+                (
+                    int(_AuditField.PROFILE),
+                    encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2),
+                ),
+                (
+                    int(_AuditField.DOMAIN),
+                    domain_tag_v3(DomainIdV3.EXPLICIT_EVIDENCE),
+                ),
+            ),
+        )
         fields = decode_record(
             data,
             magic=_AUDIT_MAGIC,
             allowed_tags=frozenset(int(field) for field in _AuditField),
         )
         try:
+            if fields[_AuditField.SUITE] != encode_uint(SuiteIdV3.EXPLICIT_AUDIT_V3, 2):
+                raise ValueError("unexpected explicit audit suite")
             if fields[_AuditField.PROFILE] != encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2):
                 raise ValueError("unexpected audit profile")
-            if fields[_AuditField.DOMAIN] != domain_tag_v3(DomainIdV3.EVIDENCE):
+            if fields[_AuditField.DOMAIN] != domain_tag_v3(DomainIdV3.EXPLICIT_EVIDENCE):
                 raise ValueError("unexpected evidence domain")
             return cls(
                 SigmaDigestV3.from_bytes(fields[_AuditField.DIGEST]),

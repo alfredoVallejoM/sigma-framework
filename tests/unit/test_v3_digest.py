@@ -5,6 +5,7 @@ import hashlib
 import pytest
 
 from sigma.binding import JointSignature, PersistentBinding, derive_trajectory_parameters
+from sigma.crypto.primitives import domain_tag_v3
 from sigma.outputs.digest_v3 import (
     ExplicitAuditEvidenceV3,
     SigmaDigestV3,
@@ -17,6 +18,8 @@ from sigma.outputs.digest_v3 import (
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_tlv_field, encode_uint
+from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3, SuiteIdV3
+from sigma.suites.registry_v3 import get_suite_v3
 from sigma.v3 import evaluate_wide_once_bytes_v3
 
 
@@ -169,8 +172,103 @@ def test_digest_parser_rejects_unknown_duplicate_order_and_downgrade() -> None:
 
     downgraded = bytearray(encoded)
     downgraded[20:22] = encode_uint(0x0302, 2)
-    with pytest.raises(DecodeError, match="invalid"):
+    with pytest.raises(DecodeError):
         SigmaDigestV3.from_bytes(bytes(downgraded))
+
+
+def test_invalid_digest_profile_is_rejected_before_full_body_slice() -> None:
+    class TrackingBytes(bytes):
+        slices: list[slice]
+
+        def __new__(cls, value: bytes):
+            instance = super().__new__(cls, value)
+            instance.slices = []
+            return instance
+
+        def __getitem__(self, key):
+            if isinstance(key, slice):
+                self.slices.append(key)
+            return super().__getitem__(key)
+
+    _, digest = _digest()
+    fields = _fields(digest.to_bytes())
+    oversized_but_bounded = _with_fields(
+        digest.to_bytes(),
+        [
+            encode_tlv_field(1, encode_uint(OutputProfileIdV3.EXPLICIT_BINDING, 2)),
+            fields[1],
+            encode_tlv_field(3, b"x" * 900_000),
+            *fields[3:],
+        ],
+    )
+    tracked = TrackingBytes(oversized_but_bounded)
+
+    with pytest.raises(DecodeError, match="discriminator"):
+        SigmaDigestV3.from_bytes(tracked)
+    assert not any(item.start == 14 and item.stop is None for item in tracked.slices)
+
+
+def test_explicit_wire_rejects_malformed_discriminators_and_tlv() -> None:
+    evaluation, digest = _digest(b"explicit-negative-wire")
+    encoded = ExplicitAuditEvidenceV3(digest, evaluation.prepared.binding).to_bytes()
+    fields = _fields(encoded)
+
+    malformed = [
+        _with_fields(encoded, [*fields, encode_tlv_field(6, b"")]),
+        _with_fields(encoded, [fields[0], fields[0], *fields[1:]]),
+        _with_fields(encoded, [fields[1], fields[0], *fields[2:]]),
+        encoded + b"\x00",
+        _with_fields(
+            encoded,
+            [
+                encode_tlv_field(1, encode_uint(SuiteIdV3.REFERENCE_IAP_V3, 2)),
+                *fields[1:],
+            ],
+        ),
+        _with_fields(
+            encoded,
+            [
+                fields[0],
+                encode_tlv_field(2, encode_uint(OutputProfileIdV3.IMPLICIT_J, 2)),
+                *fields[2:],
+            ],
+        ),
+        _with_fields(
+            encoded,
+            [
+                *fields[:2],
+                encode_tlv_field(3, domain_tag_v3(DomainIdV3.EVIDENCE)),
+                *fields[3:],
+            ],
+        ),
+    ]
+    bad_length = bytearray(encoded)
+    bad_length[10:14] = encode_uint(len(encoded) - 13, 4)
+    malformed.append(bytes(bad_length))
+
+    for candidate in malformed:
+        with pytest.raises(DecodeError):
+            ExplicitAuditEvidenceV3.from_bytes(candidate)
+
+
+def test_explicit_wire_has_registered_suite_and_distinct_domain() -> None:
+    evaluation, digest = _digest(b"explicit-suite-domain")
+    encoded = ExplicitAuditEvidenceV3(digest, evaluation.prepared.binding).to_bytes()
+    fields = _fields(encoded)
+
+    assert fields[0] == encode_tlv_field(1, encode_uint(SuiteIdV3.EXPLICIT_AUDIT_V3, 2))
+    assert fields[2] == encode_tlv_field(3, domain_tag_v3(DomainIdV3.EXPLICIT_EVIDENCE))
+    assert get_suite_v3(SuiteIdV3.EXPLICIT_AUDIT_V3).output_profile is (
+        OutputProfileIdV3.EXPLICIT_BINDING
+    )
+
+
+def test_explicit_evidence_known_answer() -> None:
+    evaluation, digest = _digest(b"Sigma v3 R8 explicit KAT")
+    explicit = ExplicitAuditEvidenceV3(digest, evaluation.prepared.binding)
+    assert hashlib.sha256(explicit.to_bytes()).hexdigest() == (
+        "6f0243f6b85797807fcfab190ebad66449c79e78f9e97a9f7460b285ad22e51b"
+    )
 
 
 def test_digest_known_answer() -> None:

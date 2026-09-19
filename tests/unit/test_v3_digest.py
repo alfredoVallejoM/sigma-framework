@@ -19,7 +19,7 @@ from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_tlv_field, encode_uint
 from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3, SuiteIdV3
-from sigma.suites.registry_v3 import get_suite_v3
+from sigma.suites.registry_v3 import get_evidence_envelope_v3, get_suite_v3
 from sigma.v3 import evaluate_wide_once_bytes_v3
 
 
@@ -258,9 +258,18 @@ def test_explicit_wire_has_registered_suite_and_distinct_domain() -> None:
 
     assert fields[0] == encode_tlv_field(1, encode_uint(SuiteIdV3.EXPLICIT_AUDIT_V3, 2))
     assert fields[2] == encode_tlv_field(3, domain_tag_v3(DomainIdV3.EXPLICIT_EVIDENCE))
-    assert get_suite_v3(SuiteIdV3.EXPLICIT_AUDIT_V3).output_profile is (
-        OutputProfileIdV3.EXPLICIT_BINDING
-    )
+    descriptor = get_evidence_envelope_v3(SuiteIdV3.EXPLICIT_AUDIT_V3)
+    assert descriptor.output_profile is (OutputProfileIdV3.EXPLICIT_BINDING)
+    assert descriptor.inner_output_profile is OutputProfileIdV3.IMPLICIT_J
+    with pytest.raises(ValueError, match="unregistered Sigma v3 suite"):
+        get_suite_v3(SuiteIdV3.EXPLICIT_AUDIT_V3)
+    with pytest.raises(ValueError, match="unregistered Sigma v3 suite"):
+        SigmaContextV3.for_suite(
+            SuiteIdV3.EXPLICIT_AUDIT_V3,
+            salt=b"",
+            challenge=b"",
+            application_context=b"",
+        )
 
 
 def test_explicit_evidence_known_answer() -> None:

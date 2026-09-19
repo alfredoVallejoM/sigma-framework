@@ -21,7 +21,7 @@ from sigma.spec.encoding import (
 )
 from sigma.spec.ids import AlgorithmId
 from sigma.spec.ids_v3 import ALGORITHM_OUTPUT_SIZE_V3, SuiteIdV3
-from sigma.suites.registry_v3 import REFERENCE_ALGORITHMS_V3, get_suite_v3
+from sigma.suites.registry_v3 import get_suite_v3
 
 MAX_U64 = (1 << 64) - 1
 MAX_STATE_SIZE = 4096
@@ -142,11 +142,8 @@ class AnchorV3:
             raise TypeError("algorithms must contain AlgorithmId values")
         if len(self.algorithms) != len(set(self.algorithms)):
             raise ValueError("algorithms must not contain duplicates")
-        if (
-            self.suite_id is SuiteIdV3.REFERENCE_IAP_V3
-            and self.algorithms != REFERENCE_ALGORITHMS_V3
-        ):
-            raise ValueError("anchor algorithms do not match the reference suite")
+        if self.algorithms != get_suite_v3(self.suite_id).anchor_algorithms:
+            raise ValueError("anchor algorithms do not match suite")
         if not isinstance(self.components, tuple) or len(self.components) != len(self.algorithms):
             raise ValueError("components must match algorithms")
         for component in self.components:
@@ -276,11 +273,8 @@ class PersistentBinding:
             raise ValueError("anchor length must match cardinality")
         if self.length_signature.descriptor != self.cardinality:
             raise ValueError("length signature descriptor must match cardinality")
-        if (
-            self.anchor.suite_id is SuiteIdV3.REFERENCE_IAP_V3
-            and self.joint_signature.algorithms != REFERENCE_ALGORITHMS_V3
-        ):
-            raise ValueError("joint algorithms do not match the reference suite")
+        if self.joint_signature.algorithms != get_suite_v3(self.anchor.suite_id).joint_algorithms:
+            raise ValueError("joint algorithms do not match suite")
 
     def to_bytes(self) -> bytes:
         return encode_record(

@@ -7,6 +7,7 @@ from sigma.spec.ids import AlgorithmId
 from sigma.spec.ids_v3 import (
     AnchorProfileIdV3,
     CardinalityProfileIdV3,
+    DomainIdV3,
     InputProfileIdV3,
     JointProfileIdV3,
     LayoutProfileIdV3,
@@ -113,32 +114,41 @@ REFERENCE_IAP_V3 = SuiteDescriptorV3(
     k_max=4,
 )
 
-EXPLICIT_AUDIT_V3 = SuiteDescriptorV3(
-    suite_id=SuiteIdV3.EXPLICIT_AUDIT_V3,
-    input_profile=InputProfileIdV3.CANONICAL_BYTES,
-    anchor_profile=AnchorProfileIdV3.STREAM_WIDE,
-    round_profile=RoundProfileIdV3.WIDE_ONCE,
-    output_profile=OutputProfileIdV3.EXPLICIT_BINDING,
-    cardinality_profile=CardinalityProfileIdV3.BYTE_LENGTH,
-    joint_profile=JointProfileIdV3.VECTOR,
-    layout_profile=LayoutProfileIdV3.SHAKE256_REJECTION,
-    trajectory_profile=TrajectoryProfileIdV3.BINDING_DERIVED,
-    anchor_algorithms=REFERENCE_ALGORITHMS_V3,
-    joint_algorithms=REFERENCE_ALGORITHMS_V3,
-    length_algorithm=AlgorithmId.SHA3_512,
-    state_algorithm=AlgorithmId.SHA512,
-    chunk_size=1 << 20,
-    state_size=64,
-    t_min=2,
-    t_max=32,
-    k_min=2,
-    k_max=4,
-)
-
 _SUITES_V3 = MappingProxyType(
     {
         REFERENCE_IAP_V3.suite_id: REFERENCE_IAP_V3,
-        EXPLICIT_AUDIT_V3.suite_id: EXPLICIT_AUDIT_V3,
+    }
+)
+
+
+@dataclass(frozen=True)
+class EvidenceEnvelopeDescriptorV3:
+    suite_id: SuiteIdV3
+    output_profile: OutputProfileIdV3
+    domain: DomainIdV3
+    inner_output_profile: OutputProfileIdV3
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.suite_id, SuiteIdV3):
+            raise TypeError("suite_id must be SuiteIdV3")
+        if not isinstance(self.output_profile, OutputProfileIdV3):
+            raise TypeError("output_profile must be OutputProfileIdV3")
+        if not isinstance(self.domain, DomainIdV3):
+            raise TypeError("domain must be DomainIdV3")
+        if not isinstance(self.inner_output_profile, OutputProfileIdV3):
+            raise TypeError("inner_output_profile must be OutputProfileIdV3")
+
+
+EXPLICIT_AUDIT_ENVELOPE_V3 = EvidenceEnvelopeDescriptorV3(
+    suite_id=SuiteIdV3.EXPLICIT_AUDIT_V3,
+    output_profile=OutputProfileIdV3.EXPLICIT_BINDING,
+    domain=DomainIdV3.EXPLICIT_EVIDENCE,
+    inner_output_profile=OutputProfileIdV3.IMPLICIT_J,
+)
+
+_EVIDENCE_ENVELOPES_V3 = MappingProxyType(
+    {
+        EXPLICIT_AUDIT_ENVELOPE_V3.suite_id: EXPLICIT_AUDIT_ENVELOPE_V3,
     }
 )
 
@@ -148,3 +158,12 @@ def get_suite_v3(suite_id: SuiteIdV3) -> SuiteDescriptorV3:
         return _SUITES_V3[suite_id]
     except KeyError as exc:
         raise ValueError("unregistered Sigma v3 suite") from exc
+
+
+def get_evidence_envelope_v3(
+    suite_id: SuiteIdV3,
+) -> EvidenceEnvelopeDescriptorV3:
+    try:
+        return _EVIDENCE_ENVELOPES_V3[suite_id]
+    except KeyError as exc:
+        raise ValueError("unregistered Sigma v3 evidence envelope") from exc

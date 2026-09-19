@@ -245,6 +245,18 @@ def test_context_rejects_unknown_suite_identifier() -> None:
         SigmaContextV3.from_bytes(_record_with_fields(encoded, fields))
 
 
+def test_envelope_suite_cannot_be_used_for_context_or_binding() -> None:
+    with pytest.raises(ValueError, match="unregistered Sigma v3 suite"):
+        SigmaContextV3.for_suite(
+            SuiteIdV3.EXPLICIT_AUDIT_V3,
+            salt=b"",
+            challenge=b"",
+            application_context=b"",
+        )
+    with pytest.raises(ValueError, match="unregistered Sigma v3 suite"):
+        replace(binding().anchor, suite_id=SuiteIdV3.EXPLICIT_AUDIT_V3)
+
+
 @pytest.mark.parametrize(
     "encoded",
     (

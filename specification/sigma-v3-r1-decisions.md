@@ -60,10 +60,12 @@ suite durante R1–R3. Si se habilita, requerirá otro `SuiteId`, wire y claims:
 binding completo y un estado iguales, los estados posteriores coalescen por
 determinismo.
 
-R8 habilita ese perfil exclusivamente como envelope de auditoría bajo
-`EXPLICIT_AUDIT_V3 (0x0302)`, con wire y domain propios. La trayectoria contenida
-sigue identificada por el digest implícito anidado; el ID exterior identifica el
-perfil de publicación y sus claims adicionales.
+R8 habilita ese perfil exclusivamente como envelope de auditoría bajo el ID
+exterior `EXPLICIT_AUDIT_V3 (0x0302)`, con wire y domain propios. Se registra en
+el catálogo cerrado de envelopes, no en el de suites ejecutables: no puede crear
+un `SigmaContextV3`, ancla ni binding. La trayectoria contenida sigue identificada
+por el digest implícito anidado; el ID exterior identifica el perfil de
+publicación y sus claims adicionales.
 
 ## Layout tipado
 

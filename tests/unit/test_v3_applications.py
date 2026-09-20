@@ -211,6 +211,9 @@ def test_pow_v3_nonce_is_in_complete_canonical_input_and_proof_round_trips() -> 
 
     first = evaluate_nonce_v3(b"payload", 0, parameters)
     second = evaluate_nonce_v3(b"payload", 1, parameters)
+    assert first.digest.header.cardinality == second.digest.header.cardinality
+    assert first.digest.header.length_signature == second.digest.header.length_signature
+    assert first.digest.header.anchor != second.digest.header.anchor
     assert first.digest.to_bytes() != second.digest.to_bytes()
     assert first.digest.header.parameters != second.digest.header.parameters
     assert PowProofV3.from_bytes(first.to_bytes()) == first

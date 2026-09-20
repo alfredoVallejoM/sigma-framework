@@ -68,10 +68,12 @@ record(SIG3POWI,
        nonce=uint64_be(N))
 ```
 
-Por tanto ancla, cardinalidad, firmas `A/Λ/J`, parámetros derivados, `S0` y
-todas las rondas dependen de `N`. Queda prohibido derivar una trayectoria sobre
-`P` y añadir o comprobar el nonce después. Ésta es la resolución normativa de
-`SPEC-V3-010`.
+Por tanto el nonce se procesa antes de ancla, cardinalidad, firmas `A/Λ/J`,
+parámetros derivados, `S0` y rondas. Para un payload fijo el record usa un nonce
+`uint64` de ancho fijo: cardinalidad y `Λ` se recalculan pero pueden coincidir
+entre nonces. El ancla cambia y, mediante `A/J`, cambian parámetros, `S0`,
+rondas y digest. Queda prohibido derivar una trayectoria sobre `P` y añadir o
+comprobar el nonce después. Ésta es la resolución normativa de `SPEC-V3-010`.
 
 El único predicado R11 es `DIGEST_SHA512`: SHA-512 sobre dominio del predicado,
 parámetros PoW y wire del digest debe comenzar con `difficulty_bits` ceros. La

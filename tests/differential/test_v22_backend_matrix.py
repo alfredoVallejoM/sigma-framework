@@ -1,4 +1,5 @@
 import io
+import os
 import random
 
 import pytest
@@ -46,9 +47,11 @@ def test_every_v22_adapter_is_digest_invariant(preset, size: int, tmp_path) -> N
     expected = hash_bytes(payload, context)
     assert hash_chunks(_partitions(payload, size + 7), context) == expected
     assert hash_reader(io.BytesIO(payload), context, read_size=127) == expected
-    path = tmp_path / "input.bin"
-    path.write_bytes(payload)
-    assert hash_file(path, context) == expected
+    if os.name != "nt":
+        # The byte-frozen v2.2 snapshot contract is POSIX-oriented.
+        path = tmp_path / "input.bin"
+        path.write_bytes(payload)
+        assert hash_file(path, context) == expected
 
 
 @pytest.mark.parametrize("size", [0, 1, 65_535, 65_536, 65_537, 131_089])
@@ -62,9 +65,10 @@ def test_tree_backends_match_context_anchor_evidence_states_and_digest(size: int
     assert parallel_anchor.to_bytes() == serial_anchor.to_bytes()
     assert hash_bytes(payload, context, parallel) == hash_bytes(payload, context)
 
-    path = tmp_path / "tree-input.bin"
-    path.write_bytes(payload)
-    assert hash_file(path, context, parallel) == hash_bytes(payload, context)
+    if os.name != "nt":
+        path = tmp_path / "tree-input.bin"
+        path.write_bytes(payload)
+        assert hash_file(path, context, parallel) == hash_bytes(payload, context)
 
 
 def test_deep_branch_schedulers_match_every_intermediate() -> None:

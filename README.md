@@ -7,7 +7,7 @@ commitments, input-reinjected iteration and multi-state digests.
 > R12 has a traceable engineering/conformance PASS, but this is not a
 > cryptographic audit. A post-R12 semantic correction, R12.5, restores historical
 > feedback so prior trajectory state becomes part of the effective round binding.
-> Until R12.5–R16 are closed, no v3 suite is production-ready or security-stable.
+> R12.5 and R13 are closed research gates, but no v3 suite is production-ready or security-stable; R14–R16 remain open.
 
 Sigma v2.2 remains a frozen historical baseline and regression oracle. Sigma v3
 is developed on this branch with byte-exact specifications, an independent

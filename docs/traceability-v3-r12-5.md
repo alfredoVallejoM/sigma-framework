@@ -1,7 +1,7 @@
 # Sigma v3 R12.5 — implementation traceability
 
 Date: 2026-09-20.  
-Status: **implementation candidate; adversarial PASS not yet recorded**.
+Status: **R12.5 PASS recorded for candidate `5ac306bb23acae0e0a4ef03eb56b3062343c2127`**.
 
 R12 remains an immutable ablation baseline. R12.5 is represented by new suite
 IDs and new history-specific domains.
@@ -53,16 +53,24 @@ published R12 KATs. The new suites are `0x0321/0x0323/0x0324`.
 - `0x0323`: `f20d6f602264a5b024651faa9da29a3adbb4f9df9345c19dcab82dc119193258`
 - `0x0324`: `a2305b9e18a873224ddedef1f6dd6938d199b0bdfc1b59dfd3d37fcd41ee3809`
 
-## Closure requirements still pending
+## Closure evidence
 
-R12.5 is not marked PASS until the exact final commit:
+R12.5 is closed for the exact candidate
+`5ac306bb23acae0e0a4ef03eb56b3062343c2127`.
 
-1. passes the authoritative local-equivalent gate in CI;
-2. passes all platform/Python jobs;
-3. regenerates both R12 and R12.5 corpora exactly;
-4. passes the frozen v2.2 baseline guard from full Git history;
-5. has no unclassified parser/fuzz failure;
-6. receives a versioned adversarial review identifying the exact candidate
-   commit and its findings.
+- authoritative GitHub Actions run: `35516425867`;
+- all Linux Python 3.10–3.13 jobs: PASS;
+- macOS Python 3.13: PASS;
+- Windows Python 3.13: PASS;
+- quality/build: PASS;
+- frozen corpus regeneration: PASS;
+- authoritative gate: PASS;
+- v2.2 baseline guard: PASS;
+- R12 corpus check: PASS;
+- R12.5 corpus check: PASS;
+- history-feedback coverage: `90.3030303030303 %`;
+- adversarial report: `docs/adversarial-reviews/R12-5.md`.
 
-A PASS on any earlier intermediate commit does not close R12.5.
+This closes engineering/conformance R12.5 only. It does not constitute external
+cryptographic review. Any semantic or byte-level change to the reviewed R12.5
+construction invalidates this PASS.

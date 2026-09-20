@@ -18,12 +18,22 @@ from experiments.parameter_grinding_v3 import (
     ParameterSpaceV3,
     find_cheapest_stratum,
     kdf_early_rejection_profile,
+    mitigation_profile,
+    parameter_correlation_profile,
     parameter_distribution,
     pow_nonce_grinding_profile,
 )
+from experiments.r13_pilots import run_r13_design_pilots, validate_r13_design_records
 from experiments.r13_registry import ATTACK_REGISTRY_V3, get_attack_spec_v3
 from experiments.reduced_oracle import ReducedOracle
 from experiments.tmto_v3 import TMTOConfigV3, measure_tmto_v3
+from experiments.trajectory_attacks_v3 import (
+    collision_scaling_v3,
+    find_window_collision_v3,
+    find_window_preimage_v3,
+    find_window_second_preimage_v3,
+    multi_target_window_attack_v3,
+)
 
 
 def _oracle(label: bytes = b"r13-attacker-tests") -> ReducedOracle:
@@ -135,6 +145,38 @@ def test_parameter_distribution_and_cheapest_stratum_are_bounded() -> None:
     assert result.parameter_queries >= result.attempts
 
 
+def test_parameter_correlation_and_fixed_cost_mitigation_are_explicit() -> None:
+    oracle = _oracle(b"r13-param-correlation")
+    space = ParameterSpaceV3(2, 8, 2, 4)
+    correlation = parameter_correlation_profile(
+        oracle,
+        256,
+        persistent_bits=10,
+        space=space,
+    )
+    assert correlation.samples == 256
+    assert all(
+        -1.0 <= value <= 1.0
+        for value in (
+            correlation.candidate_t,
+            correlation.candidate_k,
+            correlation.persistent_t,
+            correlation.persistent_k,
+        )
+    )
+    mitigation = mitigation_profile(
+        oracle,
+        256,
+        fixed_t=5,
+        fixed_k=3,
+        persistent_bits=10,
+        space=space,
+    )
+    assert mitigation.fixed_variance == 0.0
+    assert mitigation.derived_variance >= 0.0
+    assert mitigation.derived_min_cost <= mitigation.derived_max_cost
+
+
 def test_kdf_early_rejection_accounts_every_guess_and_saved_rounds() -> None:
     profile = kdf_early_rejection_profile(
         _oracle(b"r13-kdf"),
@@ -158,6 +200,80 @@ def test_pow_nonce_grinding_reports_selected_cost_without_security_claim() -> No
     assert 0 <= profile.best_nonce < 256
     assert profile.best_cost <= profile.mean_cost
     assert profile.parameter_queries >= 256
+
+
+def test_reduced_collision_preimage_second_preimage_and_multi_target_interfaces() -> None:
+    config = ReducedHistoryConfig(
+        state_bits=4,
+        history_bits=5,
+        persistent_bits=3,
+        target_round=1,
+        state_count=2,
+    )
+    oracle = _oracle(b"r13-reduced-family")
+    collision = find_window_collision_v3(
+        oracle,
+        config,
+        construction="r125",
+        candidates=4096,
+        persistent_policy="any",
+    )
+    assert collision is not None
+    assert collision.evaluated_candidates <= 4096
+
+    target_window = tuple(
+        oracle.query(
+            "test-external-window",
+            config.state_bits,
+            index.to_bytes(2, "big"),
+        )
+        for index in range(config.state_count)
+    )
+    preimage = find_window_preimage_v3(
+        oracle,
+        config,
+        construction="r125",
+        target_window=target_window,
+        candidates=4096,
+    )
+    if preimage is not None:
+        assert preimage["success"] is True
+        assert int(preimage["evaluated_candidates"]) <= 4096
+
+    second = find_window_second_preimage_v3(
+        oracle,
+        config,
+        construction="r125",
+        target_candidate=0,
+        candidates=4096,
+        persistent_policy="same",
+    )
+    if second is not None:
+        assert second.target_candidate == 0
+        assert second.persistent_equal
+
+    multi = multi_target_window_attack_v3(
+        oracle,
+        config,
+        construction="r125",
+        targets=8,
+        search_candidates=1024,
+    )
+    assert multi["targets"] == 8
+    assert int(multi["evaluated"]) <= 1024
+
+    scaling = collision_scaling_v3(
+        b"r13-scaling",
+        (3, 4, 5),
+        construction="r125",
+        history_bits=5,
+        persistent_bits=3,
+        target_round=1,
+        state_count=2,
+        max_candidates=2048,
+    )
+    assert [point.state_bits for point in scaling] == [3, 4, 5]
+    assert all(point.max_candidates == 2048 for point in scaling)
 
 
 @pytest.mark.parametrize("construction", ("r12", "r125"))
@@ -209,6 +325,34 @@ def test_branch_failure_controls_expose_fold_bottleneck_and_vector_width() -> No
         profile_branch_failure_v3(
             oracle, config, "deep-vector", "constant-fold"
         )
+
+
+def test_r13_design_pilot_harness_is_deterministic_schema_complete_and_nonconfirmatory() -> None:
+    first = run_r13_design_pilots(b"r13-design-test")
+    second = run_r13_design_pilots(b"r13-design-test")
+    assert first == second
+    validate_r13_design_records(first)
+    assert all(record["confirmatory"] is False for record in first)
+    observed = {record["attack_id"] for record in first}
+    assert {
+        "HIST-01",
+        "HIST-02",
+        "HIST-03",
+        "HIST-05",
+        "HIST-06",
+        "PARAM-01",
+        "PARAM-02",
+        "PARAM-03",
+        "PARAM-04",
+        "PARAM-05",
+        "PARAM-06",
+        "RED-02",
+        "RED-03",
+        "RED-04",
+        "RED-05",
+        "TMTO-01",
+        "BRANCH-01",
+    } <= observed
 
 
 def test_r13_model_guards_refuse_infeasible_or_invalid_inputs() -> None:

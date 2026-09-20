@@ -177,6 +177,10 @@ class ConfirmatoryRecordV3:
             raise ValueError("record attack is not confirmatory")
         if self.phase != "confirmatory":
             raise ValueError("R15 record must be confirmatory")
+        if self.status not in ("success", "no-success", "censored", "timeout", "error"):
+            raise ValueError("invalid terminal status")
+        if not self.claim_ids:
+            raise ValueError("record must bind at least one claim")
         if self.observed.W > self.declared.W:
             raise ValueError("observed work exceeds budget")
         for field in RESOURCE_FIELDS:
@@ -191,14 +195,17 @@ class ConfirmatoryRecordV3:
             raise ValueError("censored result requires reason")
         if self.status == "error" and not self.error_class:
             raise ValueError("error result requires error_class")
+        if len(self.code_commit) not in (40, 64) or any(
+            ch not in "0123456789abcdef" for ch in self.code_commit
+        ):
+            raise ValueError("code_commit must be a lowercase Git object id")
         for value in (
-            self.code_commit,
             self.artifact_sha256,
             self.config_sha256,
             self.preregistration_sha256,
         ):
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-                raise ValueError("integrity identifiers must be lowercase SHA-256 hex")
+                raise ValueError("artifact/config/preregistration ids must be SHA-256 hex")
 
 
 __all__ = [

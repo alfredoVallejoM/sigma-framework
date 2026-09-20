@@ -1,6 +1,7 @@
 import csv
 import gzip
 import json
+import os
 import subprocess
 import sys
 import time
@@ -88,6 +89,8 @@ def test_exp01_runner_writes_raw_summary_and_manifest(tmp_path: Path) -> None:
 
 
 def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("frozen v2.2 EXP-01 includes a POSIX-oriented file snapshot adapter")
     config = tmp_path / "config.json"
     config.write_text(
         json.dumps(

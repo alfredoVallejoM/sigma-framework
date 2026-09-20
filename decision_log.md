@@ -202,3 +202,23 @@ Pilotos R13/R14 no son evidencia del paper. R15 sólo aceptará configs incluido
 en el freeze manifest R14 y ligados al mismo preregistration hash y artifact
 hash. Un cambio semántico vuelve a abrir la construcción; un cambio de
 protocolo posterior al freeze exige una nueva campaña.
+
+
+## 2026-09-20 — R14 queda técnicamente congelado; TAG-01 bloquea el cierre formal
+
+Decision:
+Se acepta como candidato técnico R14 el commit
+`b6ebc780cc0b201fd27562c85c64c90df37c1075`, validado por el GitHub Actions
+run `35529570894` y documentado en `docs/adversarial-reviews/R14.md`.
+
+Reason:
+El candidato pasa baseline lock, 1006 tests, matriz Linux/macOS/Windows,
+R13/R14 gates, 21 configs confirmatorios, protocol freeze de 44 archivos,
+prerregistro congelado, análisis sintético, build/wheel/sdist/SBOM y runtime
+artifact manifest. No existe evidencia confirmatoria R15 en el freeze.
+
+Impact:
+R14 no se declara formalmente cerrado hasta crear el tag inmutable
+`sigma-v3-r14-freeze-v1` exactamente sobre el candidato. R15 permanece
+bloqueado. Los commits documentales posteriores no son el objeto del freeze y
+no deben recibir ese tag.

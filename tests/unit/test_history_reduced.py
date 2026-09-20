@@ -24,7 +24,7 @@ def test_reduced_history_config_validates_ranges() -> None:
     with pytest.raises(ValueError):
         ReducedHistoryConfig(0, 8, 8)
     with pytest.raises(TypeError):
-        ReducedHistoryConfig(True, 8, 8)  # type: ignore[arg-type]
+        ReducedHistoryConfig(True, 8, 8)
     with pytest.raises(ValueError):
         ReducedHistoryConfig(8, 8, 8, state_count=0)
 

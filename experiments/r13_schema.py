@@ -91,9 +91,11 @@ class AttackRunRecord:
             raise ValueError("censored runs require censor_reason")
         if self.status is AttackRunStatus.ERROR and not self.error_class:
             raise ValueError("error runs require error_class")
-        if self.status not in (AttackRunStatus.CENSORED, AttackRunStatus.ERROR):
-            if self.censor_reason is not None or self.error_class is not None:
-                raise ValueError("terminal annotations do not match run status")
+        if (
+            self.status not in (AttackRunStatus.CENSORED, AttackRunStatus.ERROR)
+            and (self.censor_reason is not None or self.error_class is not None)
+        ):
+            raise ValueError("terminal annotations do not match run status")
 
     @classmethod
     def create(

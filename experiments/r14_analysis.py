@@ -76,28 +76,30 @@ def synthetic_fixture_records() -> list[ConfirmatoryRecordV3]:
             "synthetic": True,
         }
         records.append(
-            ConfirmatoryRecordV3(
-                schema="sigma-v3-r15-record-v1",
+            ConfirmatoryRecordV3.create(
                 campaign_id="synthetic-r14",
-                freeze_id=FREEZE_ID,
                 attack_id=attack_id,
                 claim_ids=claims_by_attack[attack_id] or ("C12",),
                 construction="synthetic",
                 cell_id=cell.cell_id,
                 replicate_id=0,
-                seed_hex=derive_confirmatory_seed(attack_id, cell.cell_id, 0).hex(),
-                phase="confirmatory",
                 declared=cell.budget,
                 observed=ResourceBudget(0, 0, 0, 0, 0, 0, 1, 0, 1),
                 status="no-success",
                 metrics=metrics,
                 censor_reason=None,
                 error_class=None,
-                code_commit="0" * 64,
+                code_commit="0" * 40,
                 artifact_sha256="0" * 64,
                 config_sha256="0" * 64,
                 preregistration_sha256="0" * 64,
+                dependency_lock_sha256="0" * 64,
                 host_id="synthetic",
+                platform_name="synthetic",
+                architecture="synthetic",
+                python_version="synthetic",
+                started_utc="2026-09-20T00:00:00+00:00",
+                completed_utc="2026-09-20T00:00:00+00:00",
             )
         )
     return records

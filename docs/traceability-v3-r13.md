@@ -16,7 +16,7 @@ necesario en la función vuelve a abrir la construcción con nuevos IDs/candidat
 |---|---|---|
 | FORM-01..13 | `specification/security-analysis-v3-r13.md` | implementado; G-TRAJ-2PRE descompuesto |
 | claim registry humano | `docs/claims-evidence-v3-r13.md` | implementado |
-| attacker registry ejecutable | `experiments/r13_registry.py` | implementado |
+| attacker registry ejecutable | `experiments/r13_attack_registry.py` | implementado |
 | history reduced model | `experiments/history_reduced.py` | implementado |
 | HIST attackers | `experiments/history_attackers_v3.py` | implementado |
 | reduced collision/preimage family | `experiments/trajectory_attacks_v3.py` | implementado |

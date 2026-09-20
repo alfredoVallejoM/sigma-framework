@@ -103,9 +103,8 @@ def stable_open(path: Union[str, os.PathLike[str]]) -> Iterator[tuple[BinaryIO, 
         finally:
             after_descriptor = FileIdentity.from_stat(os.fstat(source.fileno()))
             after_path = _path_identity(path_string)
-            metadata_changed = (
-                not _same_identity(after_descriptor, before)
-                or not _same_identity(after_path, before)
+            metadata_changed = not _same_identity(after_descriptor, before) or not _same_identity(
+                after_path, before
             )
             content_changed = (
                 os.name == "nt"

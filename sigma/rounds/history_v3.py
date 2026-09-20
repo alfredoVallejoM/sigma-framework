@@ -106,9 +106,7 @@ class HistoryDeepVectorEvaluationV3:
 
 
 HistoryEvaluationV3 = (
-    HistoryWideOnceEvaluationV3
-    | HistoryDeepEvaluationV3
-    | HistoryDeepVectorEvaluationV3
+    HistoryWideOnceEvaluationV3 | HistoryDeepEvaluationV3 | HistoryDeepVectorEvaluationV3
 )
 HistoryDeepEvaluationLikeV3 = HistoryDeepEvaluationV3 | HistoryDeepVectorEvaluationV3
 
@@ -232,9 +230,7 @@ def evaluate_history_wide_once_v3(
     cancellation: CancellationTokenV3 | None = None,
 ) -> HistoryWideOnceEvaluationV3:
     _require_history_context(context, RoundProfileIdV3.WIDE_ONCE)
-    prepared, parameters, init_layout, state, history = _base_setup(
-        context, source, cancellation
-    )
+    prepared, parameters, init_layout, state, history = _base_setup(context, source, cancellation)
     states = [state]
     histories = [history]
     layouts: list[HistoryLayoutPlan] = []
@@ -269,9 +265,7 @@ def evaluate_history_wide_once_bytes_v3(
     *,
     cancellation: CancellationTokenV3 | None = None,
 ) -> HistoryWideOnceEvaluationV3:
-    return evaluate_history_wide_once_v3(
-        context, BytesSource(message), cancellation=cancellation
-    )
+    return evaluate_history_wide_once_v3(context, BytesSource(message), cancellation=cancellation)
 
 
 def _history_deep_tasks(
@@ -286,9 +280,7 @@ def _history_deep_tasks(
             context, round_binding, layout, round_index, state
         )
     elif context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
-        state_frame = HistoryVectorRoundFrame(
-            context, round_binding, layout, round_index, state
-        )
+        state_frame = HistoryVectorRoundFrame(context, round_binding, layout, round_index, state)
     else:
         raise ValueError("context is not a history Deep suite")
     return tuple(
@@ -344,15 +336,12 @@ def _evaluate_history_deep(
     context: SigmaContextV3,
     source: CanonicalSource,
     backend: DeepBranchBackendV3,
-    evaluation_type: type[HistoryDeepEvaluationV3]
-    | type[HistoryDeepVectorEvaluationV3],
+    evaluation_type: type[HistoryDeepEvaluationV3] | type[HistoryDeepVectorEvaluationV3],
     cancellation: CancellationTokenV3 | None,
 ) -> HistoryDeepEvaluationLikeV3:
     if not isinstance(backend, DeepBranchBackendV3):
         raise TypeError("backend must be DeepBranchBackendV3")
-    prepared, parameters, init_layout, state, history = _base_setup(
-        context, source, cancellation
-    )
+    prepared, parameters, init_layout, state, history = _base_setup(context, source, cancellation)
     states = [state]
     histories = [history]
     layouts: list[HistoryLayoutPlan] = []
@@ -392,9 +381,7 @@ def evaluate_history_deep_v3(
     cancellation: CancellationTokenV3 | None = None,
 ) -> HistoryDeepEvaluationV3:
     _require_history_context(context, RoundProfileIdV3.DEEP)
-    value = _evaluate_history_deep(
-        context, source, backend, HistoryDeepEvaluationV3, cancellation
-    )
+    value = _evaluate_history_deep(context, source, backend, HistoryDeepEvaluationV3, cancellation)
     assert isinstance(value, HistoryDeepEvaluationV3)
     return value
 
@@ -509,15 +496,11 @@ def _validate_wide(evaluation: HistoryWideOnceEvaluationV3) -> None:
         expected_successor = hash_bytes(
             evaluation.context.state_algorithm,
             DomainIdV3.HISTORY_ROUND_FRAME,
-            HistoryRoundFrame(
-                evaluation.context, round_binding, layout, index, state
-            ).to_bytes(),
+            HistoryRoundFrame(evaluation.context, round_binding, layout, index, state).to_bytes(),
         )
         if successor != expected_successor:
             raise ValueError("state transition does not match history frame")
-        if next_history != history_step_v3(
-            evaluation.context, binding, history, index, state
-        ):
+        if next_history != history_step_v3(evaluation.context, binding, history, index, state):
             raise ValueError("history transition does not match causal step")
 
 
@@ -552,9 +535,7 @@ def _validate_deep(
             raise ValueError("history layout does not match trajectory")
         expected_branches = execute_deep_tasks_v3(
             SERIAL_DEEP_BRANCH_BACKEND_V3,
-            _history_deep_tasks(
-                evaluation.context, round_binding, index, state, layout
-            ),
+            _history_deep_tasks(evaluation.context, round_binding, index, state, layout),
         )
         if branches != expected_branches:
             raise ValueError("branch outputs do not match history tasks")
@@ -562,17 +543,13 @@ def _validate_deep(
             expected_successor = hash_bytes(
                 evaluation.context.state_algorithm,
                 DomainIdV3.HISTORY_DEEP_FOLD,
-                HistoryDeepFoldFrame(
-                    evaluation.context, index, branches
-                ).to_bytes(),
+                HistoryDeepFoldFrame(evaluation.context, index, branches).to_bytes(),
             )
         else:
             expected_successor = b"".join(branches)
         if successor != expected_successor:
             raise ValueError("state transition does not match history Deep profile")
-        if next_history != history_step_v3(
-            evaluation.context, binding, history, index, state
-        ):
+        if next_history != history_step_v3(evaluation.context, binding, history, index, state):
             raise ValueError("history transition does not match causal step")
 
 

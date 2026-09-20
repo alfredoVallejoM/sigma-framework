@@ -1,4 +1,4 @@
-"""Public facade for the incompatible Sigma v3 line through R11."""
+"""Public facade for Sigma v3, including the R12.5 history-feedback candidate."""
 
 from sigma.applications.kdf_argon2id_v3 import (
     Argon2idParametersV3,

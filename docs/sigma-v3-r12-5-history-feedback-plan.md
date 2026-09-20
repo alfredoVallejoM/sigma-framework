@@ -1,6 +1,6 @@
 # Sigma v3 R12.5 — restauración del feedback histórico
 
-Estado: **implementación candidata; gate/adversarial PASS pendiente antes de R13**  
+Estado: **R12.5 cerrado — PASS de ingeniería/conformidad registrado; R13 desbloqueado**  
 Fecha: 2026-09-20  
 Baseline preservado: R12 candidato `f2fd75b1b99ef67b254dc1ba493e0600babeb214`, PASS adversarial registrado en `963ffe6f7fcd1b4f878ec1a210363c1989ab6023`.
 
@@ -245,7 +245,9 @@ No se materializa toda la historia. `H_i` debe permitir coste y memoria
 
 ## 7. Gate R12.5
 
-R12.5 sólo se cierra cuando:
+R12.5 quedó cerrado para el candidato
+`5ac306bb23acae0e0a4ef03eb56b3062343c2127`, con revisión
+`docs/adversarial-reviews/R12-5.md`. Los criterios aplicados fueron:
 
 1. HIST-001..010 están resueltas;
 2. la especificación es byte-exacta;

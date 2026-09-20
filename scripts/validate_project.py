@@ -314,6 +314,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r13-design-gate",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r13_design",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

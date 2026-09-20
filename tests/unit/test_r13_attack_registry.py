@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from experiments.r13_attack_registry import (
-    ATTACKS,
     ATTACK_REGISTRY,
+    ATTACKS,
     RESOURCE_FIELDS,
     AttackSpec,
     get_attack,

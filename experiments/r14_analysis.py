@@ -114,9 +114,7 @@ def figure_payloads(records: list[ConfirmatoryRecordV3]) -> dict[str, dict[str, 
     payloads: dict[str, dict[str, object]] = {}
     for figure in FIGURES_V3:
         selected = [
-            record
-            for attack_id in figure.attack_ids
-            for record in by_attack.get(attack_id, ())
+            record for attack_id in figure.attack_ids for record in by_attack.get(attack_id, ())
         ]
         payloads[figure.figure_id] = {
             "title": figure.title,
@@ -137,7 +135,8 @@ def validate_synthetic_analysis() -> dict[str, object]:
     missing = [
         figure.figure_id
         for figure in FIGURES_V3
-        if not figure.attack_ids or any(attack not in confirmatory_attack_ids() for attack in figure.attack_ids)
+        if not figure.attack_ids
+        or any(attack not in confirmatory_attack_ids() for attack in figure.attack_ids)
     ]
     if missing:
         raise RuntimeError(f"figure schemas reference non-confirmatory attacks: {missing}")

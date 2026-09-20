@@ -17,6 +17,7 @@ from experiments.r14_protocol import (
     confirmatory_attack_ids,
 )
 from scripts.check_r14_baselines import check_baselines
+from scripts.create_r14_protocol_freeze import create_manifest
 from scripts.prepare_v3_confirmatory import DEFAULT_OUTPUT, prepare
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +89,7 @@ def _reject_premature_results() -> None:
 def validate_r14_freeze(manifest: Path = DEFAULT_MANIFEST) -> dict[str, object]:
     baselines = check_baselines()
     prepare(DEFAULT_OUTPUT, check=True)
+    create_manifest(manifest, check=True)
     text = PREREGISTRATION.read_text(encoding="utf-8")
     if not preregistration_is_frozen(text):
         raise RuntimeError("v3 preregistration is not frozen")

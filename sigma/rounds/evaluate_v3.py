@@ -47,22 +47,14 @@ def evaluate_v3(
         if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
             if backend is not None:
                 raise ValueError("WideOnce does not accept a Deep branch backend")
-            return evaluate_history_wide_once_v3(
-                context, source, cancellation=cancellation
-            )
+            return evaluate_history_wide_once_v3(context, source, cancellation=cancellation)
         if backend is None:
             if context.round_profile is RoundProfileIdV3.DEEP:
-                return evaluate_history_deep_v3(
-                    context, source, cancellation=cancellation
-                )
+                return evaluate_history_deep_v3(context, source, cancellation=cancellation)
             if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
-                return evaluate_history_deep_vector_v3(
-                    context, source, cancellation=cancellation
-                )
+                return evaluate_history_deep_vector_v3(context, source, cancellation=cancellation)
         elif context.round_profile is RoundProfileIdV3.DEEP:
-            return evaluate_history_deep_v3(
-                context, source, backend, cancellation=cancellation
-            )
+            return evaluate_history_deep_v3(context, source, backend, cancellation=cancellation)
         elif context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
             return evaluate_history_deep_vector_v3(
                 context, source, backend, cancellation=cancellation

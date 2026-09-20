@@ -127,8 +127,7 @@ def profile_branch_failure_v3(
     outputs: list[int] | list[tuple[int, ...]]
     if mode == "deep":
         outputs = [
-            _deep_output(oracle, config, candidate, fault)
-            for candidate in range(config.candidates)
+            _deep_output(oracle, config, candidate, fault) for candidate in range(config.candidates)
         ]
         conservative_bits = 0 if fault == "constant-fold" else config.bits
         if fault == "truncated-fold":

@@ -115,14 +115,101 @@ def _binomial_log_likelihood(successes: int, trials: int, probability: float) ->
     return successes * math.log(probability) + failures * math.log1p(-probability)
 
 
-def _clopper_pearson(successes: int, trials: int) -> tuple[float, float] | None:
-    try:
-        from scipy.stats import beta
-    except ImportError:
-        return None
-    lower = 0.0 if successes == 0 else float(beta.ppf(0.025, successes, trials - successes + 1))
+def _beta_continued_fraction(a: float, b: float, x: float) -> float:
+    """Evaluate the continued fraction used by the regularized beta function."""
+
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+    c = 1.0
+    d = 1.0 - qab * x / qap
+    floor = 1e-300
+    if abs(d) < floor:
+        d = floor
+    d = 1.0 / d
+    value = d
+    for iteration in range(1, 201):
+        doubled = 2 * iteration
+        coefficient = (
+            iteration
+            * (b - iteration)
+            * x
+            / ((qam + doubled) * (a + doubled))
+        )
+        d = 1.0 + coefficient * d
+        if abs(d) < floor:
+            d = floor
+        c = 1.0 + coefficient / c
+        if abs(c) < floor:
+            c = floor
+        d = 1.0 / d
+        value *= d * c
+
+        coefficient = (
+            -(a + iteration)
+            * (qab + iteration)
+            * x
+            / ((a + doubled) * (qap + doubled))
+        )
+        d = 1.0 + coefficient * d
+        if abs(d) < floor:
+            d = floor
+        c = 1.0 + coefficient / c
+        if abs(c) < floor:
+            c = floor
+        d = 1.0 / d
+        delta = d * c
+        value *= delta
+        if abs(delta - 1.0) <= 3e-14:
+            return value
+    raise RuntimeError("regularized beta continued fraction did not converge")
+
+
+def _regularized_beta(x: float, a: float, b: float) -> float:
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    scale = math.exp(
+        math.lgamma(a + b)
+        - math.lgamma(a)
+        - math.lgamma(b)
+        + a * math.log(x)
+        + b * math.log1p(-x)
+    )
+    if x < (a + 1.0) / (a + b + 2.0):
+        return scale * _beta_continued_fraction(a, b, x) / a
+    return 1.0 - scale * _beta_continued_fraction(b, a, 1.0 - x) / b
+
+
+def _beta_quantile(probability: float, a: float, b: float) -> float:
+    if not 0.0 < probability < 1.0:
+        raise ValueError("beta quantile probability must be strictly between zero and one")
+    low = 0.0
+    high = 1.0
+    for _ in range(100):
+        midpoint = (low + high) / 2.0
+        if _regularized_beta(midpoint, a, b) < probability:
+            low = midpoint
+        else:
+            high = midpoint
+    return (low + high) / 2.0
+
+
+def _clopper_pearson(successes: int, trials: int) -> tuple[float, float]:
+    """Return the exact equal-tailed 95% binomial confidence interval."""
+
+    if not 0 <= successes <= trials or trials <= 0:
+        raise ValueError("invalid binomial counts")
+    lower = (
+        0.0
+        if successes == 0
+        else _beta_quantile(0.025, float(successes), float(trials - successes + 1))
+    )
     upper = (
-        1.0 if successes == trials else float(beta.ppf(0.975, successes + 1, trials - successes))
+        1.0
+        if successes == trials
+        else _beta_quantile(0.975, float(successes + 1), float(trials - successes))
     )
     return lower, upper
 
@@ -185,9 +272,9 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "trials": trials,
                 "wilson_high": upper,
                 "wilson_low": lower,
-                "exact_95_high": exact_interval[1] if exact_interval else None,
-                "exact_95_low": exact_interval[0] if exact_interval else None,
-                "quality_control_passed": exact_interval is not None,
+                "exact_95_high": exact_interval[1],
+                "exact_95_low": exact_interval[0],
+                "quality_control_passed": True,
             }
         )
     tested = [item for item in summaries if 0.0 < float(item["expected_probability"]) < 1.0]

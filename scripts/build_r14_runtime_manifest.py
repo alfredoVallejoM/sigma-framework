@@ -61,11 +61,7 @@ def build_runtime_manifest(
     if source_tree != build_tree:
         raise ValueError("build checkout tree differs from frozen source candidate")
     tags = _git("tag", "--points-at", selected_source)
-    tag = (
-        _git("describe", "--tags", "--exact-match", selected_source)
-        if tags
-        else None
-    )
+    tag = _git("describe", "--tags", "--exact-match", selected_source) if tags else None
     if require_tag and tag is None:
         raise ValueError("R14 final runtime manifest requires an exact tag")
     for path in (protocol_freeze, preregistration, dependency_lock):

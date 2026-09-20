@@ -12,7 +12,9 @@ from experiments.common import canonical_json
 from experiments.r14_protocol import FREEZE_ID, R12_5_BASELINE, R13_BASELINE
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "experiments" / "configs" / "v3-confirmatory-frozen" / "protocol-freeze.json"
+DEFAULT_OUTPUT = (
+    ROOT / "experiments" / "configs" / "v3-confirmatory-frozen" / "protocol-freeze.json"
+)
 
 CONFIG_NAMES = (
     "hist-01.json",

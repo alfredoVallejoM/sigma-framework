@@ -116,6 +116,42 @@ class NonceGrindingProfileV3:
     parameter_queries: int
 
 
+@dataclass(frozen=True)
+class ParameterCorrelationProfileV3:
+    samples: int
+    candidate_t: float
+    candidate_k: float
+    persistent_t: float
+    persistent_k: float
+
+
+@dataclass(frozen=True)
+class MitigationProfileV3:
+    samples: int
+    derived_mean_cost: float
+    derived_variance: float
+    derived_min_cost: int
+    derived_max_cost: int
+    fixed_cost: int
+    fixed_variance: float
+
+
+def _pearson(left: list[float], right: list[float]) -> float:
+    if len(left) != len(right) or not left:
+        raise ValueError("correlation inputs must be equal and non-empty")
+    left_mean = statistics.fmean(left)
+    right_mean = statistics.fmean(right)
+    numerator = sum(
+        (x - left_mean) * (y - right_mean)
+        for x, y in zip(left, right, strict=True)
+    )
+    left_norm = sum((x - left_mean) ** 2 for x in left)
+    right_norm = sum((y - right_mean) ** 2 for y in right)
+    if left_norm == 0.0 or right_norm == 0.0:
+        return 0.0
+    return numerator / (left_norm * right_norm) ** 0.5
+
+
 def derive_parameters_reduced(
     oracle: ReducedOracle,
     candidate: int,
@@ -151,6 +187,73 @@ def parameter_distribution(
         )
         counts[(value.t, value.k)] += 1
     return dict(counts)
+
+
+def parameter_correlation_profile(
+    oracle: ReducedOracle,
+    candidates: int,
+    *,
+    persistent_bits: int = 16,
+    space: ParameterSpaceV3 = ParameterSpaceV3(),
+) -> ParameterCorrelationProfileV3:
+    if candidates < 2:
+        raise ValueError("candidates must be at least two")
+    values = [
+        derive_parameters_reduced(
+            oracle,
+            candidate,
+            persistent_bits=persistent_bits,
+            space=space,
+        )
+        for candidate in range(candidates)
+    ]
+    candidate_axis = [float(value.candidate) for value in values]
+    persistent_axis = [float(value.persistent) for value in values]
+    t_axis = [float(value.t) for value in values]
+    k_axis = [float(value.k) for value in values]
+    return ParameterCorrelationProfileV3(
+        samples=candidates,
+        candidate_t=_pearson(candidate_axis, t_axis),
+        candidate_k=_pearson(candidate_axis, k_axis),
+        persistent_t=_pearson(persistent_axis, t_axis),
+        persistent_k=_pearson(persistent_axis, k_axis),
+    )
+
+
+def mitigation_profile(
+    oracle: ReducedOracle,
+    candidates: int,
+    *,
+    fixed_t: int,
+    fixed_k: int,
+    persistent_bits: int = 16,
+    space: ParameterSpaceV3 = ParameterSpaceV3(),
+) -> MitigationProfileV3:
+    if candidates <= 0:
+        raise ValueError("candidates must be positive")
+    if not (space.t_min <= fixed_t <= space.t_max):
+        raise ValueError("fixed_t is outside the registered range")
+    if not (space.k_min <= fixed_k <= space.k_max):
+        raise ValueError("fixed_k is outside the registered range")
+    costs = [
+        derive_parameters_reduced(
+            oracle,
+            candidate,
+            persistent_bits=persistent_bits,
+            space=space,
+        ).transition_cost
+        for candidate in range(candidates)
+    ]
+    fixed_cost = fixed_t + fixed_k - 1
+    return MitigationProfileV3(
+        samples=candidates,
+        derived_mean_cost=statistics.fmean(costs),
+        derived_variance=statistics.pvariance(costs),
+        derived_min_cost=min(costs),
+        derived_max_cost=max(costs),
+        fixed_cost=fixed_cost,
+        fixed_variance=0.0,
+    )
 
 
 def find_cheapest_stratum(
@@ -261,11 +364,15 @@ __all__ = [
     "DerivedParametersV3",
     "EarlyRejectionProfileV3",
     "GrindingProfileV3",
+    "MitigationProfileV3",
     "NonceGrindingProfileV3",
+    "ParameterCorrelationProfileV3",
     "ParameterSpaceV3",
     "derive_parameters_reduced",
     "find_cheapest_stratum",
     "kdf_early_rejection_profile",
+    "mitigation_profile",
+    "parameter_correlation_profile",
     "parameter_distribution",
     "pow_nonce_grinding_profile",
 ]

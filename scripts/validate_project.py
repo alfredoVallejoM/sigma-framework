@@ -322,6 +322,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r14-freeze-gate",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r14_freeze",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

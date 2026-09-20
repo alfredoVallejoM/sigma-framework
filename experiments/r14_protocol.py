@@ -314,13 +314,13 @@ def confirmatory_cells(attack_id: str) -> tuple[CellSpec, ...]:
             cells.append(_cell(attack_id, index, {"mode": mode, "samples": 4096}, _budget(4096 * 64, qa=4096, qj=4096, qr=4096 * 32), 64, 7200, analysis, stopping="fixed-sample"))
     elif attack_id == "BRANCH-05":
         analysis = _analysis("collision_pairs", estimator="image/collision profile", interval="bootstrap 95%", family="deep-fold")
-        faults = ("normal", "constant-first", "copied-first-two", "truncated-first", "omitted-last", "permuted", "constant-fold", "truncated-fold")
-        for index, fault in enumerate(faults):
+        deep_faults: tuple[str, ...] = ("normal", "constant-first", "copied-first-two", "truncated-first", "omitted-last", "permuted", "constant-fold", "truncated-fold")
+        for index, fault in enumerate(deep_faults):
             cells.append(_cell(attack_id, index, {"mode": "deep", "fault": fault, "state_bits": 8, "branch_count": 4, "candidates": 65536}, _budget(65536, qr=65536, mu=65536), 64, 3600, analysis, stopping="fixed-candidate-budget"))
     elif attack_id == "BRANCH-06":
         analysis = _analysis("affected_branches", estimator="dependency coverage", interval="simultaneous 95%", family="deep-vector")
-        faults = ("normal", "constant-first", "copied-first-two", "truncated-first", "omitted-last", "permuted")
-        for index, fault in enumerate(faults):
+        vector_faults: tuple[str, ...] = ("normal", "constant-first", "copied-first-two", "truncated-first", "omitted-last", "permuted")
+        for index, fault in enumerate(vector_faults):
             cells.append(_cell(attack_id, index, {"mode": "deep-vector", "fault": fault, "state_bits": 8, "branch_count": 4, "candidates": 65536}, _budget(65536, qr=65536, mu=65536), 64, 3600, analysis, stopping="fixed-candidate-budget"))
     elif attack_id == "STAT-01":
         analysis = _analysis("adjusted_anomaly_rate", estimator="external battery family summary", interval="descriptive calibrated intervals", family="statistical-controls", correction="Holm primary / BH exploratory", secondary=("p_value_distribution", "stream_bytes"))

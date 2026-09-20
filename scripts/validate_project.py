@@ -265,6 +265,10 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "v22-baseline-check",
+                    [sys.executable, "-m", "scripts.check_v22_baseline"],
+                ),
+                _run(
                     "r12-corpus-check",
                     [sys.executable, "-m", "scripts.generate_v3_r12_corpus", "--check"],
                 ),

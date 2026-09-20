@@ -144,10 +144,7 @@ def _pearson(left: list[float], right: list[float]) -> float:
         raise ValueError("correlation inputs must be equal and non-empty")
     left_mean = statistics.fmean(left)
     right_mean = statistics.fmean(right)
-    numerator = sum(
-        (x - left_mean) * (y - right_mean)
-        for x, y in zip(left, right, strict=True)
-    )
+    numerator = sum((x - left_mean) * (y - right_mean) for x, y in zip(left, right, strict=True))
     left_norm = sum((x - left_mean) ** 2 for x in left)
     right_norm = sum((y - right_mean) ** 2 for y in right)
     if left_norm == 0.0 or right_norm == 0.0:

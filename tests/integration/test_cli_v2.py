@@ -1,7 +1,10 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 from sigma.outputs import SigmaDigestV2
 
@@ -46,6 +49,11 @@ def test_cli_hash_inspect_and_verify_round_trip() -> None:
 
 
 def test_cli_file_hash_and_verification(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip(
+            "frozen v2.2 file snapshot identity is not a portable Windows contract; "
+            "v3 canonical-source file paths are tested separately"
+        )
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"\x00binary\xff" * 200)
     hashed = run_cli(

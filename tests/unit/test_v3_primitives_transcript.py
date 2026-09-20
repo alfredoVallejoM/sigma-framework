@@ -22,6 +22,21 @@ class BufferSink:
         self.data.extend(data)
 
 
+def test_transcript_constructor_and_byte_helpers_reject_wrong_types() -> None:
+    with pytest.raises(TypeError, match="DomainIdV3"):
+        TranscriptWriter(BufferSink(), 1)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="provide update"):
+        TranscriptWriter(object(), DomainIdV3.ROUND_FRAME)  # type: ignore[arg-type]
+
+    writer = TranscriptWriter(BufferSink(), DomainIdV3.ROUND_FRAME)
+    with pytest.raises(TypeError, match="length must be int"):
+        writer.write_field(1, True, ())
+
+    writer = TranscriptWriter(BufferSink(), DomainIdV3.ROUND_FRAME)
+    with pytest.raises(TypeError, match="value must be bytes"):
+        writer.write_bytes(1, "bad")  # type: ignore[arg-type]
+
+
 def test_all_v3_domain_tags_and_outputs_are_distinct() -> None:
     tags = {domain_tag_v3(domain) for domain in DomainIdV3}
     outputs = {hash_bytes(AlgorithmId.SHA512, domain, b"same input") for domain in DomainIdV3}

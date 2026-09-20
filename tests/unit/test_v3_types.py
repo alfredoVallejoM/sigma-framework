@@ -16,7 +16,13 @@ from sigma.binding import (
     TrajectoryWindow,
 )
 from sigma.layout import LayoutPlacement, LayoutPlan
-from sigma.spec.codec_v3 import decode_bytes_sequence, encode_record
+from sigma.spec.codec_v3 import (
+    decode_bytes_sequence,
+    decode_record,
+    encode_bytes_sequence,
+    encode_record,
+    validate_record_prefix,
+)
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_tlv_field, encode_uint
 from sigma.spec.ids import AlgorithmId
@@ -268,6 +274,45 @@ def test_envelope_suite_cannot_be_used_for_context_or_binding() -> None:
 def test_byte_sequences_reject_truncation_and_trailing_data(encoded: bytes) -> None:
     with pytest.raises(DecodeError):
         decode_bytes_sequence(encoded)
+
+
+def test_small_record_codec_rejects_invalid_types_and_bounds() -> None:
+    magic = b"SIGMA3ZZ"
+    encoded = encode_record(magic, ((1, b"x"),))
+    validate_record_prefix(encoded, magic=magic, expected_fields=((1, b"x"),))
+
+    with pytest.raises(DecodeError, match="must be bytes"):
+        validate_record_prefix("bad", magic=magic, expected_fields=())  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="exactly 8"):
+        validate_record_prefix(encoded, magic=b"short", expected_fields=())
+    with pytest.raises(DecodeError, match="magic or truncated"):
+        validate_record_prefix(b"short", magic=magic, expected_fields=())
+
+    wrong_version = encoded[:8] + b"\x00\x02" + encoded[10:]
+    with pytest.raises(DecodeError, match="version"):
+        validate_record_prefix(wrong_version, magic=magic, expected_fields=())
+    oversized = encoded[:10] + encode_uint((1 << 20) + 1, 4)
+    with pytest.raises(DecodeError, match="too large"):
+        validate_record_prefix(oversized, magic=magic, expected_fields=())
+    empty_record = encode_record(magic, ())
+    with pytest.raises(DecodeError, match="discriminator"):
+        validate_record_prefix(empty_record, magic=magic, expected_fields=((1, b"x"),))
+
+    with pytest.raises(TypeError, match="must be bytes"):
+        decode_record("bad", magic=magic, allowed_tags=frozenset())  # type: ignore[arg-type]
+    with pytest.raises(DecodeError, match="body is too large"):
+        decode_record(oversized, magic=magic, allowed_tags=frozenset())
+
+
+def test_byte_sequence_encoder_rejects_invalid_items_and_bounds() -> None:
+    with pytest.raises(ValueError, match="item count"):
+        encode_bytes_sequence(())
+    with pytest.raises(ValueError, match="item count"):
+        encode_bytes_sequence((b"x",) * 65)
+    with pytest.raises(TypeError, match="must be bytes"):
+        encode_bytes_sequence(("x",))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="item length"):
+        encode_bytes_sequence((b"",))
 
 
 def test_record_size_is_rejected_before_tlv_parsing() -> None:

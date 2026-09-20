@@ -77,35 +77,37 @@ def test_confirmatory_seed_is_deterministic_and_domain_separated() -> None:
 def test_confirmatory_record_rejects_seed_and_resource_tampering() -> None:
     cell = confirmatory_cells("HIST-01")[0]
     zero = ResourceBudget(0, 0, 0, 0, 0, 0, 1, 0, 1)
-    common = dict(
-        schema="sigma-v3-r15-record-v1",
+    valid = ConfirmatoryRecordV3.create(
         campaign_id="test",
-        freeze_id=FREEZE_ID,
         attack_id="HIST-01",
         claim_ids=("C04",),
         construction="r125",
         cell_id=cell.cell_id,
         replicate_id=0,
-        phase="confirmatory",
         declared=cell.budget,
         observed=zero,
         status="no-success",
         metrics={},
         censor_reason=None,
         error_class=None,
-        code_commit="0" * 64,
+        code_commit="0" * 40,
         artifact_sha256="0" * 64,
         config_sha256="0" * 64,
         preregistration_sha256="0" * 64,
+        dependency_lock_sha256="0" * 64,
         host_id="test",
-    )
-    with pytest.raises(ValueError, match="seed"):
-        ConfirmatoryRecordV3(seed_hex="00" * 32, **common)
-    valid = ConfirmatoryRecordV3(
-        seed_hex=derive_confirmatory_seed("HIST-01", cell.cell_id, 0).hex(),
-        **common,
+        platform_name="test-os",
+        architecture="test-arch",
+        python_version="3.13",
+        started_utc="2026-09-20T00:00:00+00:00",
+        completed_utc="2026-09-20T00:00:01+00:00",
     )
     assert valid.phase == "confirmatory"
+
+    with pytest.raises(ValueError, match="seed"):
+        ConfirmatoryRecordV3(
+            **{**valid.__dict__, "seed_hex": "00" * 32}
+        )
 
     excessive = ResourceBudget(
         cell.budget.W + 1,
@@ -120,8 +122,12 @@ def test_confirmatory_record_rejects_seed_and_resource_tampering() -> None:
     )
     with pytest.raises(ValueError, match="exceed"):
         ConfirmatoryRecordV3(
-            seed_hex=derive_confirmatory_seed("HIST-01", cell.cell_id, 0).hex(),
-            **{**common, "observed": excessive},
+            **{**valid.__dict__, "observed": excessive}
+        )
+
+    with pytest.raises(ValueError, match="integrity"):
+        ConfirmatoryRecordV3(
+            **{**valid.__dict__, "metrics": {"tampered": True}}
         )
 
 

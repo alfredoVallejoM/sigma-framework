@@ -8,6 +8,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO, cast
+
 from sigma.outputs.digest_v3 import SigmaDigestV3, digest_from_evaluation_v3
 from sigma.rounds.backends_v3 import DeepBranchBackendV3
 from sigma.rounds.control_v3 import CancellationTokenV3, check_cancellation_v3

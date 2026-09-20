@@ -257,35 +257,54 @@ coalescencia futura. Igualdad de \`S_i\` sola no lo es.
 
 ## 9. FORM-06/07 — ventana multiestado
 
-Condicionado al evento de que las histories permanezcan distintas durante una
-ventana de \`k\` estados y a consultas fresh/separadas de un RO ideal de \`n\`
-bits, cada igualdad observable requiere una nueva igualdad entre outputs de
-queries distintas.
-
-Bajo independencia ideal explícita:
+La ventana pública
 
 \[
-\Pr[W_{t,k}=W'_{t,k}\mid
-H_{t+r}\neq H'_{t+r}\ \forall r]
+W_{t,k}=(S_t,\ldots,S_{t+k-1})
+\]
+
+es generada por las transiciones con índices \`t-1,...,t+k-2\`. Definimos el
+evento de separación relevante
+
+\[
+\mathrm{Sep}_W
+=
+\bigwedge_{r=0}^{k-1}
+\left[Q_{t-1+r}\neq Q'_{t-1+r}\right].
+\]
+
+Este evento es deliberadamente más preciso que exigir sólo
+\`H_t\neq H'_t\`: incluye la pareja de queries que genera el primer estado
+publicado \`S_t\`.
+
+Si las \`2k\` consultas implicadas son fresh, las parejas están separadas por
+\`\mathrm{Sep}_W\` y la transición se modela como un RO ideal de \`n\` bits,
+entonces
+
+\[
+\Pr[W_{t,k}=W'_{t,k}\mid \mathrm{Sep}_W,\mathrm{Fresh}_W]
 =2^{-kn}.
 \]
 
-El bound completo debe incluir al menos:
+El bound de alto nivel debe mantener separado el evento en el que deja de
+cumplirse la separación:
 
 \[
 \Pr[\text{window match}]
 \le
-\Pr[\text{history merge}]
+\Pr[\neg\mathrm{Sep}_W]
 +
 2^{-kn}
 +
-\Pr[\mathrm{Bad}_{Q}]
+\Pr[\mathrm{BadFresh}_W]
 +
 \epsilon_{\mathrm{inst}}.
 \]
 
-No se sustituye \`\Pr[\text{history merge}]\` por \`2^{-h}\` en un teorema de
-instanciación concreta sin reducción separada.
+\`\neg\mathrm{Sep}_W\` no se identifica automáticamente con una colisión del
+history: puede incluir igualdad previa del estado dinámico completo, un ataque
+contra el persistent binding o un fallo de canonicalidad. Cada contribución
+debe descomponerse en la reducción correspondiente.
 
 **Estatus:** \`ideal-model / reduction obligation\`.
 

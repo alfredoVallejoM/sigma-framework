@@ -90,7 +90,9 @@ def main() -> int:
     except RuntimeError as exc:
         parser.error(str(exc))
     if args.report:
-        args.report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        args.report.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     print(json.dumps(report, sort_keys=True))
     return 0
 

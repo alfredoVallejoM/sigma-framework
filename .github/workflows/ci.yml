@@ -69,6 +69,7 @@ jobs:
       - run: python -m scripts.prepare_v3_confirmatory --check
       - run: python -m scripts.create_r14_protocol_freeze --check
       - run: python -m scripts.check_r14_freeze
+      - run: python -m scripts.check_r15_plan
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl

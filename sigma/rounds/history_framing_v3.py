@@ -91,9 +91,7 @@ class HistoryRoundFrame:
         )
 
     def to_bytes(self) -> bytes:
-        placed = b"".join(
-            iter_placed_round_binding_v3((self.state,), self.binding, self.layout)
-        )
+        placed = b"".join(iter_placed_round_binding_v3((self.state,), self.binding, self.layout))
         return encode_transcript(
             DomainIdV3.HISTORY_ROUND_FRAME,
             (
@@ -134,9 +132,7 @@ class HistoryVectorRoundFrame:
         )
 
     def to_bytes(self) -> bytes:
-        placed = b"".join(
-            iter_placed_round_binding_v3((self.vector,), self.binding, self.layout)
-        )
+        placed = b"".join(iter_placed_round_binding_v3((self.vector,), self.binding, self.layout))
         return encode_transcript(
             DomainIdV3.HISTORY_VECTOR_ROUND_FRAME,
             (

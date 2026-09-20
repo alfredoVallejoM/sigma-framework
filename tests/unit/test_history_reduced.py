@@ -37,9 +37,7 @@ def test_r12_and_r125_queries_expose_the_ablation_exactly() -> None:
 
     assert left != right
     assert r12 != left
-    assert history_step_query(config, 7, 3, 11, 2) != history_step_query(
-        config, 7, 4, 11, 2
-    )
+    assert history_step_query(config, 7, 3, 11, 2) != history_step_query(config, 7, 4, 11, 2)
 
 
 def test_reduced_trace_is_deterministic_and_has_correct_window() -> None:

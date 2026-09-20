@@ -57,6 +57,17 @@ from sigma.rounds.deep_v3 import (
     next_deep_vector_state_v3,
 )
 from sigma.rounds.evaluate_v3 import EvaluationV3, evaluate_v3
+from sigma.rounds.history_v3 import (
+    HistoryDeepEvaluationV3,
+    HistoryDeepVectorEvaluationV3,
+    HistoryWideOnceEvaluationV3,
+    evaluate_history_deep_bytes_v3,
+    evaluate_history_deep_v3,
+    evaluate_history_deep_vector_bytes_v3,
+    evaluate_history_deep_vector_v3,
+    evaluate_history_wide_once_bytes_v3,
+    evaluate_history_wide_once_v3,
+)
 from sigma.rounds.wide_once_v3 import (
     WideOnceEvaluationV3,
     evaluate_wide_once_bytes_v3,
@@ -75,6 +86,9 @@ __all__ = [
     "EvaluationCancelledV3",
     "EvaluationV3",
     "ExplicitAuditEvidenceV3",
+    "HistoryDeepEvaluationV3",
+    "HistoryDeepVectorEvaluationV3",
+    "HistoryWideOnceEvaluationV3",
     "IncrementalSigmaV3",
     "PowParametersV3",
     "PowPredicateV3",
@@ -97,6 +111,12 @@ __all__ = [
     "digest_file_v3",
     "digest_from_evaluation_v3",
     "evaluate_deep_bytes_v3",
+    "evaluate_history_deep_bytes_v3",
+    "evaluate_history_deep_v3",
+    "evaluate_history_deep_vector_bytes_v3",
+    "evaluate_history_deep_vector_v3",
+    "evaluate_history_wide_once_bytes_v3",
+    "evaluate_history_wide_once_v3",
     "evaluate_deep_v3",
     "evaluate_deep_vector_bytes_v3",
     "evaluate_deep_vector_v3",

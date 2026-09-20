@@ -84,7 +84,9 @@ def prepare(output: Path, *, check: bool = False) -> list[Path]:
     if check:
         if not output.is_dir():
             raise ValueError("frozen v3 config directory is missing")
-        actual = {path.name for path in output.glob("*.json") if path.name != "protocol-freeze.json"}
+        actual = {
+            path.name for path in output.glob("*.json") if path.name != "protocol-freeze.json"
+        }
         if actual != set(rendered):
             raise ValueError("frozen v3 config file set differs from R14 protocol")
         for name, expected in rendered.items():

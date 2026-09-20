@@ -158,11 +158,81 @@ DEEP_VECTOR_V3 = SuiteDescriptorV3(
     k_max=4,
 )
 
+
+REFERENCE_IAP_HISTORY_V3 = SuiteDescriptorV3(
+    suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    input_profile=InputProfileIdV3.CANONICAL_BYTES,
+    anchor_profile=AnchorProfileIdV3.STREAM_WIDE,
+    round_profile=RoundProfileIdV3.WIDE_ONCE,
+    output_profile=OutputProfileIdV3.IMPLICIT_J,
+    cardinality_profile=CardinalityProfileIdV3.BYTE_LENGTH,
+    joint_profile=JointProfileIdV3.VECTOR,
+    layout_profile=LayoutProfileIdV3.SHAKE256_HISTORY_REJECTION,
+    trajectory_profile=TrajectoryProfileIdV3.HISTORY_FEEDBACK,
+    anchor_algorithms=REFERENCE_ALGORITHMS_V3,
+    joint_algorithms=REFERENCE_ALGORITHMS_V3,
+    length_algorithm=AlgorithmId.SHA3_512,
+    state_algorithm=AlgorithmId.SHA512,
+    chunk_size=1 << 20,
+    state_size=64,
+    t_min=2,
+    t_max=32,
+    k_min=2,
+    k_max=4,
+)
+
+DEEP_HISTORY_V3 = SuiteDescriptorV3(
+    suite_id=SuiteIdV3.DEEP_HISTORY_V3,
+    input_profile=InputProfileIdV3.CANONICAL_BYTES,
+    anchor_profile=AnchorProfileIdV3.STREAM_WIDE,
+    round_profile=RoundProfileIdV3.DEEP,
+    output_profile=OutputProfileIdV3.IMPLICIT_J,
+    cardinality_profile=CardinalityProfileIdV3.BYTE_LENGTH,
+    joint_profile=JointProfileIdV3.VECTOR,
+    layout_profile=LayoutProfileIdV3.SHAKE256_HISTORY_REJECTION,
+    trajectory_profile=TrajectoryProfileIdV3.HISTORY_FEEDBACK,
+    anchor_algorithms=REFERENCE_ALGORITHMS_V3,
+    joint_algorithms=REFERENCE_ALGORITHMS_V3,
+    length_algorithm=AlgorithmId.SHA3_512,
+    state_algorithm=AlgorithmId.SHA512,
+    chunk_size=1 << 20,
+    state_size=64,
+    t_min=2,
+    t_max=32,
+    k_min=2,
+    k_max=4,
+)
+
+DEEP_VECTOR_HISTORY_V3 = SuiteDescriptorV3(
+    suite_id=SuiteIdV3.DEEP_VECTOR_HISTORY_V3,
+    input_profile=InputProfileIdV3.CANONICAL_BYTES,
+    anchor_profile=AnchorProfileIdV3.STREAM_WIDE,
+    round_profile=RoundProfileIdV3.DEEP_VECTOR,
+    output_profile=OutputProfileIdV3.IMPLICIT_J,
+    cardinality_profile=CardinalityProfileIdV3.BYTE_LENGTH,
+    joint_profile=JointProfileIdV3.VECTOR,
+    layout_profile=LayoutProfileIdV3.SHAKE256_HISTORY_REJECTION,
+    trajectory_profile=TrajectoryProfileIdV3.HISTORY_FEEDBACK,
+    anchor_algorithms=REFERENCE_ALGORITHMS_V3,
+    joint_algorithms=REFERENCE_ALGORITHMS_V3,
+    length_algorithm=AlgorithmId.SHA3_512,
+    state_algorithm=AlgorithmId.SHA512,
+    chunk_size=1 << 20,
+    state_size=len(REFERENCE_ALGORITHMS_V3) * 64,
+    t_min=2,
+    t_max=32,
+    k_min=2,
+    k_max=4,
+)
+
 _SUITES_V3 = MappingProxyType(
     {
         REFERENCE_IAP_V3.suite_id: REFERENCE_IAP_V3,
         DEEP_V3.suite_id: DEEP_V3,
         DEEP_VECTOR_V3.suite_id: DEEP_VECTOR_V3,
+        REFERENCE_IAP_HISTORY_V3.suite_id: REFERENCE_IAP_HISTORY_V3,
+        DEEP_HISTORY_V3.suite_id: DEEP_HISTORY_V3,
+        DEEP_VECTOR_HISTORY_V3.suite_id: DEEP_VECTOR_HISTORY_V3,
     }
 )
 

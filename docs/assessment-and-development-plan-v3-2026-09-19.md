@@ -304,7 +304,7 @@ La matriz completa está en docs/paper-cryptographic-validation-plan-v3.md.
 Gate R13: cada claim tiene juego, hipótesis, teorema/modelo, atacante,
 experimento refutador, baseline y nivel de evidencia.
 
-### R14 — Freeze experimental y de publicación científica — **ACTIVO**
+### R14 — Freeze experimental y de publicación científica — **TECHNICAL PASS / TAG-01 PENDING**
 
 El plan rector está en `docs/r14-experimental-freeze-plan.md` y la
 trazabilidad en `docs/traceability-v3-r14.md`.
@@ -315,9 +315,13 @@ stopping/censoring, analysis scripts, figure schemas, artifact identity y
 prerregistro. El mismo commit/tag debe pasar gate local y CI remoto con wheel
 instalado fuera del checkout.
 
-R14 no recopila evidencia confirmatoria ni modifica la construcción. Cualquier
-cambio semántico reabre R12.5/R13; cualquier observación confirmatoria antes del
-freeze invalida el protocolo.
+R14 no recopila evidencia confirmatoria ni modifica la construcción. El
+candidato técnico `b6ebc780cc0b201fd27562c85c64c90df37c1075` pasó el gate
+autoritativo `35529570894`, congeló 21 configs, 44 archivos de protocolo y el
+runtime bundle. El único bloqueo de cierre formal es TAG-01: crear
+`sigma-v3-r14-freeze-v1` exactamente sobre ese candidato. Cualquier cambio
+semántico reabre R12.5/R13; cualquier observación confirmatoria antes del freeze
+invalida el protocolo.
 
 Gate R14: no queda decisión experimental abierta y ningún parámetro puede
 modificarse después de observar R15.

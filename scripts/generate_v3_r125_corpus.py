@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -11,7 +13,9 @@ from typing import Any, cast
 from reference.independent_v3 import evaluate_suite
 
 ROOT = Path(__file__).parents[1]
-DEFAULT_OUTPUT = ROOT / "specification" / "test-vectors" / "conformance-v3-r12-5.json"
+DEFAULT_OUTPUT = (
+    ROOT / "specification" / "test-vectors" / "conformance-v3-r12-5.json.gz.b64"
+)
 MESSAGE = b"Sigma v3 R12.5 history feedback corpus"
 CHALLENGE = b"R12.5-history-conformance-challenge"
 APPLICATION_CONTEXT = b"specification/test-vectors/conformance-v3-r12-5"
@@ -112,10 +116,19 @@ def main() -> int:
     arguments = parser.parse_args()
     rendered = render_corpus()
     if arguments.check:
-        if not arguments.output.is_file() or arguments.output.read_text() != rendered:
+        if not arguments.output.is_file():
+            raise SystemExit("Sigma v3 R12.5 corpus is missing")
+        try:
+            frozen = gzip.decompress(
+                base64.b64decode(arguments.output.read_text(encoding="ascii"))
+            ).decode("utf-8")
+        except (OSError, ValueError, UnicodeDecodeError) as exc:
+            raise SystemExit("Sigma v3 R12.5 corpus cannot be decoded") from exc
+        if frozen != rendered:
             raise SystemExit("Sigma v3 R12.5 corpus is stale")
         return 0
-    arguments.output.write_text(rendered, encoding="utf-8")
+    compressed = gzip.compress(rendered.encode("utf-8"), compresslevel=9, mtime=0)
+    arguments.output.write_text(base64.b64encode(compressed).decode("ascii"), encoding="ascii")
     return 0
 
 

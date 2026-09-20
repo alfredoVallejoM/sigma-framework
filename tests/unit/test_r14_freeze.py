@@ -106,9 +106,7 @@ def test_confirmatory_record_rejects_seed_and_resource_tampering() -> None:
     assert valid.phase == "confirmatory"
 
     with pytest.raises(ValueError, match="seed"):
-        ConfirmatoryRecordV3(
-            **{**valid.__dict__, "seed_hex": "00" * 32}
-        )
+        ConfirmatoryRecordV3(**{**valid.__dict__, "seed_hex": "00" * 32})
 
     excessive = ResourceBudget(
         cell.budget.W + 1,
@@ -122,14 +120,10 @@ def test_confirmatory_record_rejects_seed_and_resource_tampering() -> None:
         cell.budget.u,
     )
     with pytest.raises(ValueError, match="exceed"):
-        ConfirmatoryRecordV3(
-            **{**valid.__dict__, "observed": excessive}
-        )
+        ConfirmatoryRecordV3(**{**valid.__dict__, "observed": excessive})
 
     with pytest.raises(ValueError, match="integrity"):
-        ConfirmatoryRecordV3(
-            **{**valid.__dict__, "metrics": {"tampered": True}}
-        )
+        ConfirmatoryRecordV3(**{**valid.__dict__, "metrics": {"tampered": True}})
 
 
 def test_config_schema_rejects_wrong_namespace() -> None:

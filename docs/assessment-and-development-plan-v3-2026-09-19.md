@@ -269,47 +269,67 @@ Publicar una especificación byte-exacta y un corpus que contenga `M`, `kappa`, 
 
 Gate R12: `reference/independent_v3.py` reproduce todo sin importar `sigma`; cero divergencias en todas las suites candidatas.
 
-### R13 — Seguridad estructural y modelos reducidos
+### R12.5 — Restauración del feedback histórico
 
-Formalizar y probar:
+R12 permanece como baseline histórico auditado. Antes de R13 se introduce un
+binding histórico evolutivo H_i y un binding efectivo de ronda E_i=(P_X,H_i),
+de manera que una coincidencia puntual de S_i no produzca coalescencia de dos
+historias distintas.
 
-- separación exacta por cardinalidad;
-- no coalescencia con binding distinto;
-- coalescencia con binding y estado iguales;
-- inicialización reforzada con mensajes distintos;
-- ramas same-`J` y different-`J`;
-- separación entre evidencia implícita y explícita.
+El diseño, decisiones HIST-001..010, obligaciones y tests están en
+docs/sigma-v3-r12-5-history-feedback-plan.md.
 
-Rehacer EXP-03, EXP-17, EXP-20 y EXP-21 para la semántica v3. Los datos v2.2 no se reinterpretan.
+Gate R12.5: nueva especificación byte-exacta, corpus, referencia independiente,
+diferencial completo, baseline R12 reproducible y revisión adversarial
+versionada.
 
-Gate R13: hipótesis, juegos, endpoints, oráculos y límites de claim revisados antes de recopilar resultados de producto.
+### R13 — Seguridad formal y diseño de criptoanálisis
 
-### R14 — Validación integral y freeze candidato
+Cerrar los juegos, reducciones y límites de claim de la dinámica completa
 
-El gate local debe cubrir formato, lint, tipado, compilación, tests, properties, diferencial, vectores, fuzzing, build aislado, ambos CLI, import real desde wheel y cobertura por subsistema.
+\[
+Z_i=(H_i,S_i).
+\]
 
-Gate R14: wire y vectores sólo pueden marcarse congelados tras pasar el consumidor independiente y el gate desde un checkout limpio. La suite seguirá siendo experimental.
+Incluye canonicalidad, historia causal, separación/no-coalescencia,
+collision/preimage/second-preimage, ventana multiestado, Deep/DeepVector,
+parámetros derivados, layout, aplicaciones y recursos.
 
-### R15 — Pilotos, prerregistro y confirmatorio v3
+Además se congelan las familias de atacantes reducidos, TMTO, grinding,
+history-collision, branch/fold attacks y fault models antes de obtener datos
+confirmatorios.
 
-Ejecutar primero pilotos desechables para dimensionar:
+La matriz completa está en docs/paper-cryptographic-validation-plan-v3.md.
 
-- distribución conjunta de `(t,k)` y correlaciones;
-- layouts, ties y difusión;
-- same-`J`/different-`J`;
-- segunda preimagen estructurada reducida;
-- precomputación entre estratos;
-- rendimiento, memoria y variabilidad por aplicación.
+Gate R13: cada claim tiene juego, hipótesis, teorema/modelo, atacante,
+experimento refutador, baseline y nivel de evidencia.
 
-Después se congela un nuevo prerregistro, configuraciones, artefacto y hash. Sólo entonces comienza un confirmatorio v3 multihost/multiplataforma.
+### R14 — Freeze experimental y de publicación científica
 
-Gate R15: dataset único verificable; resultados positivos, negativos, errores, timeouts y censura conservados; artículo generado desde el dataset y no desde pilotos.
+Cerrar implementation/IDs/wire/corpus post-R12.5, attackers, schemas,
+instrumentación, pilotos y prerregistro. El mismo commit/tag debe pasar gate
+local y CI remoto con wheel instalado fuera del checkout.
 
-### R16 — Auditoría y publicación
+Gate R14: no queda decisión semántica abierta y ningún parámetro experimental se
+modifica después de observar el confirmatorio.
 
-Reproducir el gate y una muestra de campañas en otra máquina/persona, auditar wire, KDF, firma, PoW y claims, archivar artefactos con identificador persistente y solicitar revisión criptográfica externa.
+### R15 — Campaña científica confirmatoria v3
 
-Gate R16: ninguna afirmación estable o de producción antes de resolver hallazgos graves y mantener explícitos los límites no demostrados.
+Ejecutar según prerregistro las campañas HIST, REDUCED, TMTO, PARAM, LAYOUT,
+DIFF, ALG, STAT, BRANCH, FAULT, APP-SIG, APP-KDF, APP-POW, PARSE, DOS, CONC y
+PERF. Conservar resultados positivos, negativos, censurados, timeouts y errores.
+
+Gate R15: dataset único verificable y paper generado exclusivamente desde
+artefactos versionados.
+
+### R16 — Reproducción externa, auditoría y publicación
+
+Reproducir gate y una muestra material de campañas en otro host/persona,
+archivar artefactos y dataset con identificador persistente, auditar wire,
+history, KDF, firma, PoW y claims y solicitar revisión criptográfica externa.
+
+Gate R16: ninguna afirmación estable o de producción antes de resolver
+hallazgos graves; los límites no demostrados permanecen explícitos.
 
 ## 9. Obligaciones trazables
 
@@ -322,8 +342,9 @@ Gate R16: ninguna afirmación estable o de producción antes de resolver hallazg
 | WIRE-01–06 | contexto, header, digest, evidencia explícita, parsers y versionado |
 | IO-01–05 | bytes, snapshot, spool, incremental y multiproceso |
 | APP-01–03 | firma, KDF y PoW |
-| FORM-01–10 | teoremas estructurales, reducciones, TSP y límites de claims |
-| EXP-01–08 | reduced models, layout, estratos, same/different `J`, TSP, dependencias y precomputación |
+| HIST-01–10 | history seed/step, round binding, causalidad, no-coalescencia y versionado |
+| FORM-01–13 | canonicalidad, historia, reducciones, juegos, parámetros, layout, aplicaciones y recursos |
+| EXP-SCI | HIST, REDUCED, TMTO, PARAM, LAYOUT, DIFF, ALG, STAT, BRANCH, FAULT, APP-*, PARSE, DOS, CONC y PERF |
 | CONF-01–05 | vectores, independiente, diferenciales, fuzzing y freeze |
 
 Cada obligación se cierra mediante su invariante y evidencia asociada, no sólo porque el código compile.
@@ -412,4 +433,11 @@ La revisión externa, no el éxito de tests o campañas, será el requisito para
 
 ## 14. Próximo paso autorizado por este plan
 
-El siguiente bloque de desarrollo es **R0–R1**, precedido por el cierre de SPEC-V3-003, SPEC-V3-004 y SPEC-V3-005. No se deben tocar aún WideOnce, Deep, DeepVector, aplicaciones ni campañas. Primero se preserva v2.2 y se hace ejecutable la nueva taxonomía de tipos; después se congelan los bytes de primitivas, parámetros y layout.
+R0–R12 quedan preservados como evidencia histórica del candidato ya auditado.
+El siguiente bloque autorizado es **R12.5 — History Feedback Restoration**.
+
+No se inicia R13 ni se recopila evidencia confirmatoria hasta cerrar
+HIST-001..010, regenerar specification/corpus/reference y obtener un PASS
+adversarial versionado. Tras R12.5, el orden obligatorio es R13 (seguridad y
+attackers) -> R14 (freeze/prerregistro) -> R15 (confirmatorio) -> R16
+(reproducción y publicación).

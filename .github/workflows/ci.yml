@@ -96,6 +96,8 @@ jobs:
     name: regenerate R12.5 corpus artifact
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -103,10 +105,24 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - run: python -m scripts.generate_v3_r125_corpus --output /tmp/conformance-v3-r12-5.json.gz.b64
+      - run: >-
+          python -m scripts.generate_v3_r125_corpus
+          --output specification/test-vectors/conformance-v3-r12-5.json.gz.b64
+      - name: One-time synchronize frozen corpus
+        shell: bash
+        run: |
+          if git diff --quiet -- specification/test-vectors/conformance-v3-r12-5.json.gz.b64; then
+            echo "R12.5 corpus already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add specification/test-vectors/conformance-v3-r12-5.json.gz.b64
+          git commit -m "test: freeze CI-generated R12.5 corpus"
+          git push origin HEAD:sigma-v3-iap
       - uses: actions/upload-artifact@v4
         with:
           name: r125-frozen-corpus
-          path: /tmp/conformance-v3-r12-5.json.gz.b64
+          path: specification/test-vectors/conformance-v3-r12-5.json.gz.b64
           if-no-files-found: error
           retention-days: 7

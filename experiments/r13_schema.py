@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from .r13_attack_registry import RESOURCE_FIELDS, get_attack
 
 
-class AttackRunStatus(StrEnum):
+class AttackRunStatus(str, Enum):
     SUCCESS = "success"
     NO_SUCCESS = "no-success"
     CENSORED = "censored"

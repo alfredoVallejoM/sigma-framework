@@ -19,6 +19,7 @@ from sigma.rounds.history_framing_v3 import (
 from sigma.rounds.history_v3 import (
     HistoryDeepEvaluationV3,
     HistoryDeepVectorEvaluationV3,
+    HistoryWideOnceEvaluationV3,
 )
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
@@ -46,6 +47,10 @@ def _assert_equal(
         application_context=application_context,
     )
     actual = evaluate_v3(context, BytesSource(message))
+    assert isinstance(
+        actual,
+        (HistoryWideOnceEvaluationV3, HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3),
+    )
     expected = evaluate_suite(
         message,
         suite_id=int(suite_id),

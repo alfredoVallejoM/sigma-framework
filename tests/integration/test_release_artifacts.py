@@ -34,9 +34,9 @@ def test_release_artifacts_contain_auditable_hashes(tmp_path: Path) -> None:
     assert properties["sigma:kdf-record-wire-version"] == "2"
     assert properties["sigma:pow-wire-version"] == "3"
     assert properties["sigma:signed-commitment-wire-version"] == "2"
-    assert properties["sigma:active-suite-families"] == "v2-2"
-    assert properties["sigma:suite-families"] == "v2-2"
-    assert properties["sigma:transitional-suite-families"] == ""
+    assert properties["sigma:active-suite-families"] == "v3-r12.5"
+    assert properties["sigma:suite-families"] == "v3-r12.5,v2-2,v3-r12"
+    assert properties["sigma:transitional-suite-families"] == "v2-2,v3-r12"
     assert len(properties["sigma:git-commit"]) == 40
 
 

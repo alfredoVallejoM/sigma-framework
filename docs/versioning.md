@@ -1,9 +1,11 @@
 # Política de versiones de Sigma
 
-Estado actual: `2.2.0a2` es la única línea experimental activa. Las suites v1 y
-v2.1 fueron retiradas del árbol en F5; sus IDs permanecen reservados. Consulte
-[`project-status-2026-09-03.md`](project-status-2026-09-03.md) para los gates de
-promoción vigentes.
+Estado actual: `2.2.0a2` sigue siendo el número de paquete del baseline
+histórico mientras Sigma v3 permanece pre-freeze. v2.2 se conserva como oráculo
+de regresión; la línea de investigación activa es Sigma v3 / Sigma-IAP. R12
+permanece byte-frozen y R12.5 usa IDs distintos para feedback histórico.
+Ninguna suite v3 es todavía estable ni ha recibido revisión criptográfica
+externa.
 
 Sigma mantiene dimensiones independientes. Una coincidencia numérica entre
 ellas no implica compatibilidad ni estabilidad.
@@ -18,7 +20,8 @@ ellas no implica compatibilidad ni estabilidad.
 | verificador KDF wire | `2` | registro público `SIGMAKVR2` sin clave |
 | PoW wire | `3` | aplicación `SIGMAPOW3` ligada a suite v2.2 |
 | compromiso firmado wire | `2` | contenedor autenticado `SIGMASIG` |
-| familia activa | `v2-2` | construcción matemática y semántica vigente |
+| baseline estable de regresión | `v2-2` | semántica histórica congelada |
+| familia de investigación | `v3-r12`, `v3-r12.5` | candidatos incompatibles, sin security freeze |
 
 Las constantes se publican en `sigma.version`. `pyproject.toml` y
 `PACKAGE_VERSION` deben coincidir. El manifiesto CycloneDX conserva todos los
@@ -43,3 +46,17 @@ ejes wire, familias activas/transitorias, commit, tag y estado del árbol.
 El número de paquete puede avanzar sin alterar el wire y un wire puede alojar
 múltiples familias. Por tanto, ninguna aplicación debe derivar una dimensión a
 partir de otra.
+
+
+## Sigma v3 pre-freeze
+
+- R12: suites `0x0301`, `0x0303`, `0x0304`; baseline de ablación con
+  binding persistente fijo.
+- R12.5: suites `0x0321`, `0x0323`, `0x0324`; binding efectivo
+  `(P_X,H_i)` y layout ROUND history-adaptive.
+- Los IDs R12 no se reciclan ni se reinterpretan.
+- R12.5 puede evolucionar sólo mediante nuevos IDs si cambia cualquier byte
+  normativo después de su eventual PASS/freeze.
+- El número de paquete migrará a 3.x únicamente en el gate de release definido
+  por R14; contener código v3 experimental no convierte `2.2.0a2` en una
+  garantía de estabilidad v3.

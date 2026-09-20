@@ -92,21 +92,42 @@ def check_r15_plan() -> dict[str, object]:
         extra = sorted(set(campaigns) - required)
         raise ValueError(f"R15 campaign scale coverage mismatch: missing={missing}, extra={extra}")
 
-    if _positive_int(campaigns["HIST-01B"]["batches_per_cell"], "HIST-01B batches") < 256:
+    if (
+        _positive_int(campaigns["HIST-01B"]["batches_per_cell"], "HIST-01B batches")
+        < 256
+    ):
         raise ValueError("HIST-01B requires publication-scale conditional batches")
-    if _positive_int(campaigns["HIST-01B"]["trials_per_batch"], "HIST-01B trials") < 1024:
+    if (
+        _positive_int(campaigns["HIST-01B"]["trials_per_batch"], "HIST-01B trials")
+        < 1024
+    ):
         raise ValueError("HIST-01B requires >=1024 trials per batch")
-    if _positive_int(campaigns["RED-02"]["replicates_per_cell"], "RED-02 replicates") < 512:
+    if (
+        _positive_int(campaigns["RED-02"]["replicates_per_cell"], "RED-02 replicates")
+        < 512
+    ):
         raise ValueError("RED-02 requires >=512 replicates per cell")
-    if _positive_int(campaigns["PARAM-01"]["samples_per_replicate"], "PARAM-01 samples") < 186_000:
+    if (
+        _positive_int(campaigns["PARAM-01"]["samples_per_replicate"], "PARAM-01 samples")
+        < 186_000
+    ):
         raise ValueError("PARAM-01 sample volume is below publication scale")
-    if _positive_int(campaigns["PARAM-02"]["permutations"], "PARAM-02 permutations") < 5000:
+    if (
+        _positive_int(campaigns["PARAM-02"]["permutations"], "PARAM-02 permutations")
+        < 5000
+    ):
         raise ValueError("PARAM-02 requires >=5000 permutations")
-    if _positive_int(campaigns["PARAM-04"]["physical_hosts"], "PARAM-04 hosts") < 3:
+    if (
+        _positive_int(campaigns["PARAM-04"]["physical_hosts"], "PARAM-04 hosts") < 3
+    ):
         raise ValueError("PARAM-04 requires three physical hosts")
-    if _positive_int(campaigns["PARAM-05"]["physical_hosts"], "PARAM-05 hosts") < 3:
+    if (
+        _positive_int(campaigns["PARAM-05"]["physical_hosts"], "PARAM-05 hosts") < 3
+    ):
         raise ValueError("PARAM-05 requires three physical hosts")
-    if _positive_int(campaigns["STAT-01"]["streams_per_cell"], "STAT-01 streams") < 64:
+    if (
+        _positive_int(campaigns["STAT-01"]["streams_per_cell"], "STAT-01 streams") < 64
+    ):
         raise ValueError("STAT-01 requires >=64 stream identities per cell")
 
     if data.get("processed_volume_is_not_retained_volume") is not True:

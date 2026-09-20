@@ -86,3 +86,23 @@ jobs:
           pytest hypothesis "coverage[toml]" argon2-cffi cryptography scipy
           mypy ruff build
       - run: python -m scripts.validate_project --fuzz-iterations 200 --report /tmp/sigma-r125-gate.json
+
+
+  r125-corpus-artifact:
+    name: regenerate R12.5 corpus artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m scripts.generate_v3_r125_corpus --output /tmp/conformance-v3-r12-5.json.gz.b64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r125-frozen-corpus
+          path: /tmp/conformance-v3-r12-5.json.gz.b64
+          if-no-files-found: error
+          retention-days: 7

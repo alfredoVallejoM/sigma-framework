@@ -31,7 +31,7 @@ validan interfaces y presupuestos, pero **no** elevan un claim a E2/E3.
 
 ## Registro ejecutable
 
-La fuente autoritativa de attackers es `experiments/r13_registry.py`. Cada
+La fuente autoritativa de attackers es `experiments/r13_attack_registry.py`. Cada
 entrada fija:
 
 - claims afectados;

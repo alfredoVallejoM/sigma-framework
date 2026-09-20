@@ -25,9 +25,18 @@ DOMAIN_EVIDENCE = 0x030C
 DOMAIN_DEEP_BRANCH = 0x030D
 DOMAIN_VECTOR_ROUND = 0x030E
 DOMAIN_DEEP_FOLD = 0x0310
+DOMAIN_HISTORY_SEED = 0x0317
+DOMAIN_HISTORY_STEP = 0x0318
+DOMAIN_HISTORY_LAYOUT_ROUND = 0x0319
+DOMAIN_HISTORY_ROUND = 0x031A
+DOMAIN_HISTORY_VECTOR_ROUND = 0x031B
+DOMAIN_HISTORY_DEEP_BRANCH = 0x031C
+DOMAIN_HISTORY_DEEP_FOLD = 0x031D
+DOMAIN_HISTORY_BINDING_FIELD = 0x031F
 KIND_INIT = 0x0301
 KIND_ROUND = 0x0302
 BINDING_FIELDS = (0x0301, 0x0302, 0x0303, 0x0304)
+ROUND_BINDING_FIELDS = (0x0301, 0x0302, 0x0303, 0x0304, 0x0305)
 
 
 def _u(value: int, width: int) -> bytes:
@@ -80,6 +89,8 @@ class Context:
     suite_id: int = SUITE
     round_profile: int = 0x0301
     state_size: int = 64
+    layout_profile: int = 0x0301
+    trajectory_profile: int = 0x0301
 
     def encode(self) -> bytes:
         return _record(
@@ -92,8 +103,8 @@ class Context:
                 (5, _u(0x0301, 2)),
                 (6, _u(0x0301, 2)),
                 (7, _u(0x0301, 2)),
-                (8, _u(0x0301, 2)),
-                (9, _u(0x0301, 2)),
+                (8, _u(self.layout_profile, 2)),
+                (9, _u(self.trajectory_profile, 2)),
                 (10, _u16_sequence(ALGORITHMS)),
                 (11, _u16_sequence(ALGORITHMS)),
                 (12, _u(ALG_SHA512, 2)),
@@ -278,6 +289,130 @@ def _placed(
     return b"SIGMA3PS" + _u(VERSION, 2) + _u(len(plan), 4) + plan + _u(len(body), 8) + bytes(body)
 
 
+def _history_commitment(round_index: int, digest: bytes) -> bytes:
+    return _record(
+        b"SIG3HIST",
+        ((1, _u(round_index, 8)), (2, digest)),
+    )
+
+
+def _history_seed(context: bytes, binding: bytes) -> bytes:
+    transcript = _transcript(
+        DOMAIN_HISTORY_SEED,
+        ((1, context), (2, binding)),
+    )
+    return _history_commitment(
+        0,
+        _hash(ALG_SHA3_512, DOMAIN_HISTORY_SEED, transcript),
+    )
+
+
+def _history_step(
+    context: bytes,
+    binding: bytes,
+    history: bytes,
+    index: int,
+    state: bytes,
+) -> bytes:
+    transcript = _transcript(
+        DOMAIN_HISTORY_STEP,
+        (
+            (1, context),
+            (2, binding),
+            (3, _u(index, 8)),
+            (4, history),
+            (5, state),
+        ),
+    )
+    return _history_commitment(
+        index + 1,
+        _hash(ALG_SHA3_512, DOMAIN_HISTORY_STEP, transcript),
+    )
+
+
+def _round_binding(binding: bytes, history: bytes) -> bytes:
+    return _record(b"SIG3RDBD", ((1, binding), (2, history)))
+
+
+def _history_placement(field: int, slot: int) -> bytes:
+    return _record(b"SIG3HPLC", ((1, _u(field, 2)), (2, _u(slot, 8))))
+
+
+def _history_layout(
+    context: bytes,
+    length_signature: bytes,
+    history: bytes,
+    index: int,
+    base_length: int,
+) -> tuple[bytes, tuple[tuple[int, int], ...]]:
+    seed = _transcript(
+        DOMAIN_HISTORY_LAYOUT_ROUND,
+        (
+            (1, context),
+            (2, length_signature),
+            (3, history),
+            (4, _u(KIND_ROUND, 2)),
+            (5, _u(index, 8)),
+            (6, _u(base_length, 8)),
+        ),
+    )
+    reader = _Reader(DOMAIN_HISTORY_LAYOUT_ROUND, seed)
+    placements = tuple(
+        sorted(
+            ((field, _uniform(reader, 0, base_length)) for field in ROUND_BINDING_FIELDS),
+            key=lambda item: (item[1], item[0]),
+        )
+    )
+    encoded_placements = _tlv(
+        tuple(
+            (position + 1, _history_placement(field, slot))
+            for position, (field, slot) in enumerate(placements)
+        )
+    )
+    encoded = _record(
+        b"SIG3HPLN",
+        (
+            (1, _u(index, 8)),
+            (2, _u(base_length, 8)),
+            (3, encoded_placements),
+            (4, _u(KIND_ROUND, 2)),
+        ),
+    )
+    return encoded, placements
+
+
+def _history_placed(
+    base: bytes,
+    plan: bytes,
+    placements: tuple[tuple[int, int], ...],
+    values: dict[int, bytes],
+) -> bytes:
+    records = {
+        field: b"SIG3HFLD"
+        + _domain(DOMAIN_HISTORY_BINDING_FIELD)
+        + _u(field, 2)
+        + _u(len(value), 8)
+        + value
+        for field, value in values.items()
+    }
+    body = bytearray()
+    previous = 0
+    for field, slot in placements:
+        if slot > previous:
+            body.extend(base[previous:slot])
+            previous = slot
+        body.extend(records[field])
+    body.extend(base[previous:])
+    return (
+        b"SIG3HPS0"
+        + _u(VERSION, 2)
+        + _u(len(plan), 4)
+        + plan
+        + _u(len(body), 8)
+        + bytes(body)
+    )
+
+
 def _header(cardinality: bytes, anchor: bytes, length_signature: bytes, parameters: bytes) -> bytes:
     return _record(
         b"SIGMA3PH",
@@ -349,13 +484,16 @@ def evaluate(
     }
 
 
-def _suite_parameters(suite_id: int) -> tuple[int, int]:
-    """Return ``(round_profile, state_size)`` for executable v3 suites."""
+def _suite_parameters(suite_id: int) -> tuple[int, int, int, int, bool]:
+    """Return round/state/layout/trajectory profiles and history flag."""
     try:
         return {
-            0x0301: (0x0301, 64),
-            0x0303: (0x0302, 64),
-            0x0304: (0x0303, 256),
+            0x0301: (0x0301, 64, 0x0301, 0x0301, False),
+            0x0303: (0x0302, 64, 0x0301, 0x0301, False),
+            0x0304: (0x0303, 256, 0x0301, 0x0301, False),
+            0x0321: (0x0301, 64, 0x0321, 0x0321, True),
+            0x0323: (0x0302, 64, 0x0321, 0x0321, True),
+            0x0324: (0x0303, 256, 0x0321, 0x0321, True),
         }[suite_id]
     except KeyError as exc:
         raise ValueError("unknown executable Sigma v3 suite") from exc
@@ -382,12 +520,15 @@ def evaluate_suite(
     challenge: bytes,
     application_context: bytes,
 ) -> dict[str, object]:
-    """Evaluate any executable v3 suite without importing :mod:`sigma`.
+    """Evaluate any R12 or R12.5 executable suite without importing sigma."""
 
-    The result intentionally exposes every R12 corpus intermediate. Placements
-    are ``(binding_field_id, original_base_slot)`` pairs.
-    """
-    round_profile, state_size = _suite_parameters(suite_id)
+    (
+        round_profile,
+        state_size,
+        layout_profile,
+        trajectory_profile,
+        history_enabled,
+    ) = _suite_parameters(suite_id)
     context = Context(
         salt,
         challenge,
@@ -395,6 +536,8 @@ def evaluate_suite(
         suite_id,
         round_profile,
         state_size,
+        layout_profile,
+        trajectory_profile,
     ).encode()
     cardinality = _cardinality(len(message))
     anchor, anchor_components = _anchor(context, cardinality, message, suite_id)
@@ -408,7 +551,7 @@ def evaluate_suite(
     )
     binding = _binding(anchor, cardinality, length_signature, joint)
     target, count, parameters = _parameters(context, binding)
-    values = {
+    persistent_values = {
         0x0301: anchor,
         0x0302: cardinality,
         0x0303: length_signature,
@@ -422,17 +565,22 @@ def evaluate_suite(
         0,
         len(message),
     )
-    init_placed = _placed(message, init_layout, init_placements, values)
+    init_placed = _placed(message, init_layout, init_placements, persistent_values)
     init_frame = _transcript(
         DOMAIN_INIT,
         ((1, context), (2, init_layout), (3, init_placed)),
     )
     if round_profile == 0x0303:
-        state = b"".join(_hash(algorithm, DOMAIN_INIT, init_frame) for algorithm in ALGORITHMS)
+        state = b"".join(
+            _hash(algorithm, DOMAIN_INIT, init_frame) for algorithm in ALGORITHMS
+        )
     else:
         state = _hash(ALG_SHA512, DOMAIN_INIT, init_frame)
 
     states = [state]
+    history = _history_seed(context, binding) if history_enabled else b""
+    histories: list[bytes] = [history] if history_enabled else []
+    round_bindings: list[bytes] = []
     round_layouts: list[bytes] = []
     round_placements: list[tuple[tuple[int, int], ...]] = []
     round_frames: list[bytes] = []
@@ -441,15 +589,35 @@ def evaluate_suite(
     fold_frames: list[bytes] = []
 
     for index in range(target + count - 1):
-        layout, placements = _layout(
-            context,
-            length_signature,
-            KIND_ROUND,
-            index,
-            len(state),
-        )
-        placed = _placed(state, layout, placements, values)
-        state_frame_domain = DOMAIN_VECTOR_ROUND if round_profile == 0x0303 else DOMAIN_ROUND
+        prior_state = state
+        if history_enabled:
+            round_binding = _round_binding(binding, history)
+            layout, placements = _history_layout(
+                context,
+                length_signature,
+                history,
+                index,
+                len(prior_state),
+            )
+            values = {**persistent_values, 0x0305: history}
+            placed = _history_placed(prior_state, layout, placements, values)
+            state_frame_domain = (
+                DOMAIN_HISTORY_VECTOR_ROUND
+                if round_profile == 0x0303
+                else DOMAIN_HISTORY_ROUND
+            )
+        else:
+            round_binding = b""
+            layout, placements = _layout(
+                context,
+                length_signature,
+                KIND_ROUND,
+                index,
+                len(prior_state),
+            )
+            placed = _placed(prior_state, layout, placements, persistent_values)
+            state_frame_domain = DOMAIN_VECTOR_ROUND if round_profile == 0x0303 else DOMAIN_ROUND
+
         state_frame = _transcript(
             state_frame_domain,
             (
@@ -459,14 +627,22 @@ def evaluate_suite(
                 (4, placed),
             ),
         )
+
         if round_profile == 0x0301:
-            state = _hash(ALG_SHA512, DOMAIN_ROUND, state_frame)
+            state = _hash(
+                ALG_SHA512,
+                DOMAIN_HISTORY_ROUND if history_enabled else DOMAIN_ROUND,
+                state_frame,
+            )
             current_branch_frames: tuple[bytes, ...] = ()
             branches: tuple[bytes, ...] = ()
         else:
+            branch_domain = (
+                DOMAIN_HISTORY_DEEP_BRANCH if history_enabled else DOMAIN_DEEP_BRANCH
+            )
             current_branch_frames = tuple(
                 _transcript(
-                    DOMAIN_DEEP_BRANCH,
+                    branch_domain,
                     (
                         (1, context),
                         (2, _u(index, 8)),
@@ -478,18 +654,38 @@ def evaluate_suite(
                 for position, algorithm in enumerate(ALGORITHMS)
             )
             branches = tuple(
-                _hash(algorithm, DOMAIN_DEEP_BRANCH, frame)
-                for algorithm, frame in zip(ALGORITHMS, current_branch_frames, strict=True)
+                _hash(algorithm, branch_domain, frame)
+                for algorithm, frame in zip(
+                    ALGORITHMS, current_branch_frames, strict=True
+                )
             )
             if round_profile == 0x0302:
+                fold_domain = (
+                    DOMAIN_HISTORY_DEEP_FOLD if history_enabled else DOMAIN_DEEP_FOLD
+                )
                 fold_frame = _transcript(
-                    DOMAIN_DEEP_FOLD,
-                    ((1, context), (2, _u(index, 8)), (3, _bytes_sequence(branches))),
+                    fold_domain,
+                    (
+                        (1, context),
+                        (2, _u(index, 8)),
+                        (3, _bytes_sequence(branches)),
+                    ),
                 )
                 fold_frames.append(fold_frame)
-                state = _hash(ALG_SHA512, DOMAIN_DEEP_FOLD, fold_frame)
+                state = _hash(ALG_SHA512, fold_domain, fold_frame)
             else:
                 state = b"".join(branches)
+
+        if history_enabled:
+            history = _history_step(
+                context,
+                binding,
+                history,
+                index,
+                prior_state,
+            )
+            histories.append(history)
+            round_bindings.append(round_binding)
 
         round_layouts.append(layout)
         round_placements.append(placements)
@@ -504,6 +700,7 @@ def evaluate_suite(
     digest = _digest(context, header, window)
     return {
         "suite_id": suite_id,
+        "history_enabled": history_enabled,
         "message": message,
         "context": context,
         "cardinality": cardinality,
@@ -520,6 +717,8 @@ def evaluate_suite(
         "init_placements": init_placements,
         "round_layouts": tuple(round_layouts),
         "round_placements": tuple(round_placements),
+        "histories": tuple(histories),
+        "round_bindings": tuple(round_bindings),
         "init_frame": init_frame,
         "round_frames": tuple(round_frames),
         "branch_frames": tuple(branch_frames),

@@ -1,0 +1,9 @@
+# Canonical text artifacts are LF on every checkout, including Windows.
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.b64 text eol=lf

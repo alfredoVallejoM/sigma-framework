@@ -1,0 +1,17 @@
+# Sigma v3 R14/R15 reproducibility lock for Python 3.13.
+# Install with:
+# python -m pip install -c constraints/r14-v3-py313.txt '.[test,quality,analysis,kdf,signatures]'
+argon2-cffi==25.1.0
+argon2-cffi-bindings==26.1.0
+build==1.6.1
+cffi==2.1.1
+coverage==7.16.1
+cryptography==50.0.1
+hypothesis==6.168.0
+matplotlib==3.10.9
+mypy==2.3.1
+numpy==2.4.4
+pytest==9.1.1
+pycparser==3.0
+ruff==0.16.8
+scipy==1.17.1

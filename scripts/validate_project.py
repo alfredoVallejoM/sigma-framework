@@ -330,6 +330,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r15-plan-gate",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_plan",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

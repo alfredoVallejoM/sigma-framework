@@ -8,6 +8,11 @@ from pathlib import Path
 
 from scripts.generate_v3_r125_corpus import render_corpus
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3
+from sigma.rounds.history_v3 import (
+    HistoryDeepEvaluationV3,
+    HistoryDeepVectorEvaluationV3,
+    HistoryWideOnceEvaluationV3,
+)
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3
@@ -65,6 +70,10 @@ def test_r125_corpus_matches_productive_digest_and_history() -> None:
             application_context=bytes.fromhex(case["application_context_hex"]),
         )
         evaluation = evaluate_v3(context, BytesSource(message))
+        assert isinstance(
+            evaluation,
+            (HistoryWideOnceEvaluationV3, HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3),
+        )
         assert [item.to_bytes().hex() for item in evaluation.histories] == case["histories_hex"]
         digest = digest_from_evaluation_v3(evaluation).to_bytes()
         assert digest.hex() == case["digest_hex"]

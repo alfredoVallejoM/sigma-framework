@@ -78,8 +78,25 @@ class BytesSource(CanonicalSource):
             yield self._data[offset : offset + chunk_size]
 
 
-def _stat_fingerprint(value: os.stat_result) -> tuple[int, int, int, int, int]:
-    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+def _stat_fingerprint(value: os.stat_result) -> tuple[int, ...]:
+    """Metadata fields that are stable across path/fd views on this platform.
+
+    POSIX can reliably bind pathname and descriptor identity with device/inode
+    plus mutation timestamps. Windows denies pathname replacement while an open
+    descriptor is held, while device/inode/ctime representations can differ
+    between path and handle views. There we retain size+mtime as the metadata
+    guard and rely on the existing full SHA-256 replay check for byte identity.
+    """
+
+    if os.name == "nt":
+        return (int(value.st_size), int(value.st_mtime_ns))
+    return (
+        int(value.st_dev),
+        int(value.st_ino),
+        int(value.st_size),
+        int(value.st_mtime_ns),
+        int(value.st_ctime_ns),
+    )
 
 
 class StableFileSource(CanonicalSource):

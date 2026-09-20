@@ -1,5 +1,6 @@
 """Stable file identity and private snapshots for file hashing."""
 
+import hashlib
 import os
 import stat
 import tempfile
@@ -40,6 +41,50 @@ def _path_identity(path: str) -> FileIdentity:
         raise RuntimeError("input file disappeared or became inaccessible") from exc
 
 
+def _identity_fingerprint(identity: FileIdentity) -> tuple[int, ...]:
+    """Comparable path/fd metadata for the current platform."""
+
+    if os.name == "nt":
+        # Windows may expose device/file-id/ctime differently through a path and
+        # an already-open handle. Size+mtime remain useful as a cheap guard;
+        # exact byte identity is checked separately with SHA-256 below.
+        return (identity.size, identity.mtime_ns)
+    return (
+        identity.device,
+        identity.file_id,
+        identity.size,
+        identity.mtime_ns,
+        identity.ctime_ns,
+    )
+
+
+def _same_identity(left: FileIdentity, right: FileIdentity) -> bool:
+    return _identity_fingerprint(left) == _identity_fingerprint(right)
+
+
+def _descriptor_digest(source: BinaryIO) -> bytes:
+    """Hash an open regular file without changing the caller-visible offset."""
+
+    position = source.tell()
+    source.seek(0)
+    digest = hashlib.sha256()
+    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+        digest.update(chunk)
+    source.seek(position)
+    return digest.digest()
+
+
+def _path_digest(path: str) -> bytes:
+    try:
+        with open(path, "rb") as source:
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+            return digest.digest()
+    except OSError as exc:
+        raise RuntimeError("input file disappeared or became inaccessible") from exc
+
+
 @contextmanager
 def stable_open(path: Union[str, os.PathLike[str]]) -> Iterator[tuple[BinaryIO, FileIdentity]]:
     """Hold one descriptor and reject metadata or pathname identity changes."""
@@ -48,14 +93,29 @@ def stable_open(path: Union[str, os.PathLike[str]]) -> Iterator[tuple[BinaryIO, 
     initial = _path_identity(path_string)
     with open(path_string, "rb") as source:
         before = FileIdentity.from_stat(os.fstat(source.fileno()))
-        if initial != before or _path_identity(path_string) != before:
+        if not _same_identity(initial, before) or not _same_identity(
+            _path_identity(path_string), before
+        ):
             raise RuntimeError("input path changed while it was being opened")
+        initial_digest = _descriptor_digest(source) if os.name == "nt" else None
         try:
             yield source, before
         finally:
             after_descriptor = FileIdentity.from_stat(os.fstat(source.fileno()))
             after_path = _path_identity(path_string)
-            if after_descriptor != before or after_path != before:
+            metadata_changed = (
+                not _same_identity(after_descriptor, before)
+                or not _same_identity(after_path, before)
+            )
+            content_changed = (
+                os.name == "nt"
+                and initial_digest is not None
+                and (
+                    _descriptor_digest(source) != initial_digest
+                    or _path_digest(path_string) != initial_digest
+                )
+            )
+            if metadata_changed or content_changed:
                 raise RuntimeError("input file changed while it was being hashed")
 
 

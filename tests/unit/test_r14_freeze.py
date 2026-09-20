@@ -150,11 +150,7 @@ def test_synthetic_analysis_covers_all_predeclared_surfaces() -> None:
 
 
 def test_campaign_index_declares_no_confirmatory_execution() -> None:
-    index = json.loads(
-        (DEFAULT_OUTPUT / "campaign-index.json").read_text(encoding="utf-8")
-    )
+    index = json.loads((DEFAULT_OUTPUT / "campaign-index.json").read_text(encoding="utf-8"))
     assert index["freeze_id"] == FREEZE_ID
     assert index["confirmatory_executed"] is False
-    assert {item["attack_id"] for item in index["attacks"]} == set(
-        confirmatory_attack_ids()
-    )
+    assert {item["attack_id"] for item in index["attacks"]} == set(confirmatory_attack_ids())

@@ -15,8 +15,9 @@ Current security/publication gates:
 
 - R12.5: **PASS** — history-feedback semantics, corpus/reference and adversarial review;
 - R13: **PASS** — formal games, reductions, claim matrix and cryptanalytic attack design;
-- R14: **next active gate** — semantic/experimental freeze and preregistration;
-- R15: confirmatory scientific campaign;
+- R14: **technical PASS** — protocol/config/preregistration/artifact freeze complete on
+  `b6ebc780…`; formal closure awaits exact tag `sigma-v3-r14-freeze-v1`;
+- R15: **blocked until TAG-01** — confirmatory scientific campaign;
 - R16: external reproduction, archival and cryptographic review.
 
 See:
@@ -25,6 +26,8 @@ See:
 - [R12.5 adversarial review](docs/adversarial-reviews/R12-5.md)
 - [R13 security analysis](specification/security-analysis-v3-r13.md)
 - [R13 adversarial review](docs/adversarial-reviews/R13.md)
+- [R14 adversarial review](docs/adversarial-reviews/R14.md)
+- [R14 freeze plan](docs/r14-experimental-freeze-plan.md)
 - [paper cryptographic validation plan](docs/paper-cryptographic-validation-plan-v3.md)
 
 Please report suspected security issues privately to the maintainer rather than

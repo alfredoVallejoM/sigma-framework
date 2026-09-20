@@ -329,7 +329,6 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                         sys.executable,
                         "-m",
                         "build",
-                        "--no-isolation",
                         "--outdir",
                         str(distribution),
                     ],

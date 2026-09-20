@@ -59,16 +59,18 @@ def _assert_equal(
     assert context.to_bytes() == expected["context"]
     assert binding.to_bytes() == expected["binding"]
     assert tuple(item.to_bytes() for item in actual.histories) == expected["histories"]
-    assert tuple(
-        RoundBindingV3(binding, item).to_bytes() for item in actual.histories[:-1]
-    ) == expected["round_bindings"]
-    assert tuple(layout.to_bytes() for layout in actual.round_layouts) == expected[
-        "round_layouts"
-    ]
-    assert tuple(
-        tuple((int(item.field), item.slot) for item in layout.placements)
-        for layout in actual.round_layouts
-    ) == expected["round_placements"]
+    assert (
+        tuple(RoundBindingV3(binding, item).to_bytes() for item in actual.histories[:-1])
+        == expected["round_bindings"]
+    )
+    assert tuple(layout.to_bytes() for layout in actual.round_layouts) == expected["round_layouts"]
+    assert (
+        tuple(
+            tuple((int(item.field), item.slot) for item in layout.placements)
+            for layout in actual.round_layouts
+        )
+        == expected["round_placements"]
+    )
 
     frames: list[bytes] = []
     branch_frames: list[tuple[bytes, ...]] = []
@@ -78,13 +80,11 @@ def _assert_equal(
     ):
         round_binding = RoundBindingV3(binding, history)
         if isinstance(actual, HistoryDeepVectorEvaluationV3):
-            state_frame: HistoryRoundFrame | HistoryVectorRoundFrame = (
-                HistoryVectorRoundFrame(context, round_binding, layout, index, state)
-            )
-        else:
-            state_frame = HistoryRoundFrame(
+            state_frame: HistoryRoundFrame | HistoryVectorRoundFrame = HistoryVectorRoundFrame(
                 context, round_binding, layout, index, state
             )
+        else:
+            state_frame = HistoryRoundFrame(context, round_binding, layout, index, state)
         frames.append(state_frame.to_bytes())
         if isinstance(actual, (HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3)):
             current = tuple(
@@ -100,9 +100,7 @@ def _assert_equal(
             branch_frames.append(current)
             if isinstance(actual, HistoryDeepEvaluationV3):
                 fold_frames.append(
-                    HistoryDeepFoldFrame(
-                        context, index, actual.branch_outputs[index]
-                    ).to_bytes()
+                    HistoryDeepFoldFrame(context, index, actual.branch_outputs[index]).to_bytes()
                 )
         else:
             branch_frames.append(())

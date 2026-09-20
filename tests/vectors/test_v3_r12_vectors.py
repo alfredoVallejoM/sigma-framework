@@ -8,6 +8,7 @@ from typing import Any
 from scripts.generate_v3_r12_corpus import render_corpus
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3
 from sigma.rounds.deep_v3 import DeepEvaluationV3, DeepVectorEvaluationV3
+from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.rounds.framing_v3 import (
     DeepBranchFrame,
     DeepFoldFrame,
@@ -64,6 +65,7 @@ def _assert_case(case: dict[str, Any]) -> None:
         application_context=_bytes(case["application_context_hex"]),
     )
     evaluation = evaluate_v3(context, BytesSource(message))
+    assert isinstance(evaluation, (WideOnceEvaluationV3, DeepEvaluationV3, DeepVectorEvaluationV3))
     binding = evaluation.prepared.binding
 
     assert context.to_bytes().hex() == case["context_hex"]

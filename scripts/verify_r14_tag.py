@@ -33,9 +33,7 @@ def verify_r14_tag() -> dict[str, object]:
         raise RuntimeError("failed to resolve R14 tag target")
     target = peeled.stdout.strip()
     if target != R14_CANDIDATE:
-        raise RuntimeError(
-            f"R14 tag points to {target}, expected {R14_CANDIDATE}"
-        )
+        raise RuntimeError(f"R14 tag points to {target}, expected {R14_CANDIDATE}")
 
     candidate = _git("cat-file", "-e", f"{R14_CANDIDATE}^{{commit}}")
     if candidate.returncode != 0:

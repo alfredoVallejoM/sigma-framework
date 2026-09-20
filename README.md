@@ -169,6 +169,8 @@ R12.5 is specified as a post-R12 correction in
 [`docs/sigma-v3-r12-5-history-feedback-plan.md`](docs/sigma-v3-r12-5-history-feedback-plan.md),
 and the paper evidence program is in
 [`docs/paper-cryptographic-validation-plan-v3.md`](docs/paper-cryptographic-validation-plan-v3.md).
+The preserved v2.2 historical status remains documented in
+[`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
 The preserved v2.2 historical scope remains documented in
 [`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md) and
 [`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md).

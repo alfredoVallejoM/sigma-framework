@@ -47,7 +47,9 @@ def build_runtime_manifest(
         "schema": "sigma-v3-r14-runtime-artifact-v1",
         "freeze_id": FREEZE_ID,
         "commit": _git("rev-parse", "HEAD"),
-        "tag": _git("describe", "--tags", "--exact-match", "HEAD") if _git("tag", "--points-at", "HEAD") else None,
+        "tag": _git("describe", "--tags", "--exact-match", "HEAD")
+        if _git("tag", "--points-at", "HEAD")
+        else None,
         "protocol_freeze": {
             "path": str(protocol_freeze),
             "sha256": sha256_file(protocol_freeze),

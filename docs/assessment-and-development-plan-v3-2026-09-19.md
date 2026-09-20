@@ -304,14 +304,23 @@ La matriz completa está en docs/paper-cryptographic-validation-plan-v3.md.
 Gate R13: cada claim tiene juego, hipótesis, teorema/modelo, atacante,
 experimento refutador, baseline y nivel de evidencia.
 
-### R14 — Freeze experimental y de publicación científica
+### R14 — Freeze experimental y de publicación científica — **ACTIVO**
+
+El plan rector está en `docs/r14-experimental-freeze-plan.md` y la
+trazabilidad en `docs/traceability-v3-r14.md`.
 
 Cerrar implementation/IDs/wire/corpus post-R12.5, attackers, schemas,
-instrumentación, pilotos y prerregistro. El mismo commit/tag debe pasar gate
-local y CI remoto con wheel instalado fuera del checkout.
+instrumentación, pilotos, discovery/holdout, budgets, sample sizes, seeds,
+stopping/censoring, analysis scripts, figure schemas, artifact identity y
+prerregistro. El mismo commit/tag debe pasar gate local y CI remoto con wheel
+instalado fuera del checkout.
 
-Gate R14: no queda decisión semántica abierta y ningún parámetro experimental se
-modifica después de observar el confirmatorio.
+R14 no recopila evidencia confirmatoria ni modifica la construcción. Cualquier
+cambio semántico reabre R12.5/R13; cualquier observación confirmatoria antes del
+freeze invalida el protocolo.
+
+Gate R14: no queda decisión experimental abierta y ningún parámetro puede
+modificarse después de observar R15.
 
 ### R15 — Campaña científica confirmatoria v3
 

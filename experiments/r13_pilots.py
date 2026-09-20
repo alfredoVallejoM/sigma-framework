@@ -220,7 +220,7 @@ def run_history_design_pilots(seed: bytes) -> list[AttackRunRecord]:
     layout = profile_layout_ablation_v3(
         ReducedOracle(seed + b"/layout"), history_bits=6, field_count=5, slots=17
     )
-    layout_metrics = {
+    layout_metrics: dict[str, int | float | str | bool | None] = {
         "slot_distribution": f"{layout.adaptive_unique_layouts}/{layout.histories}",
         "ties": None,
         "plan_collisions": layout.adaptive_collision_pairs,
@@ -548,8 +548,8 @@ def run_tmto_design_pilots(seed: bytes) -> list[AttackRunRecord]:
             result = measure_tmto_v3(
                 ReducedOracle(seed + f"/tmto/{construction}/{strategy}".encode("ascii")),
                 config,
-                strategy,  # type: ignore[arg-type]
-                construction,  # type: ignore[arg-type]
+                strategy,
+                construction,
             )
             attack_id = "TMTO-02" if strategy in ("hellman", "rainbow") else "TMTO-01"
             metrics: dict[str, int | float | str | bool | None]
@@ -596,7 +596,7 @@ def run_branch_design_pilots(seed: bytes) -> list[AttackRunRecord]:
             oracle,
             config,
             "deep",
-            fault,  # type: ignore[arg-type]
+            fault,
         )
         records.append(
             _record(

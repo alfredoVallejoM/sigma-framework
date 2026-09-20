@@ -1,7 +1,10 @@
 # Sigma v3 R14 — traceability
 
 Fecha: 2026-09-20.  
-Estado: **R14 abierto — planificación de freeze creada**.
+Estado: **R14 technical PASS — cierre formal bloqueado sólo por TAG-01**.  
+Candidato técnico auditado: `b6ebc780cc0b201fd27562c85c64c90df37c1075`.  
+Workflow autoritativo: `35529570894`.  
+Informe adversarial: `docs/adversarial-reviews/R14.md`.
 
 Baselines:
 
@@ -13,21 +16,22 @@ congelado y preregistrado que desbloquea R15.
 
 | Bloque | Artefacto esperado | Estado |
 |---|---|---|
-| R14-A baseline lock | baseline guard R12.5/R13 | pendiente |
-| R14-B campaign inventory | claim/attack disposition | pendiente |
-| R14-C pilot budgeting | pilot decision record v3 | pendiente |
-| R14-D protocol lock | statistical protocol | pendiente |
-| config schema | v3 confirmatory config schema | pendiente |
-| result schema | confirmatory raw-record schema | pendiente |
-| discovery configs | frozen discovery set | pendiente |
-| confirmatory configs | frozen R15 config set | pendiente |
-| analysis | scripts + synthetic fixtures | pendiente |
-| figures | predeclared figure/table builders | pendiente |
-| artifact freeze | wheel/sdist/SBOM/checksums | pendiente |
-| preregistration | `experiments/preregistration-v3.md` | pendiente |
-| freeze manifest | canonical hash manifest | pendiente |
-| R14 gate | `scripts/check_r14_freeze.py` | pendiente |
-| adversarial review | `docs/adversarial-reviews/R14.md` | pendiente |
+| R14-A baseline lock | `scripts/check_r14_baselines.py` | PASS |
+| R14-B campaign inventory | C01–C20 + 30 R13 attacks disposed | PASS |
+| R14-C pilot budgeting | `r14-budget-decision-record.json` | PASS |
+| R14-D protocol lock | `experiments/r14_protocol.py` | PASS |
+| config schema | `experiments/r14_schema.py` | PASS |
+| result schema | `ConfirmatoryRecordV3` | PASS |
+| discovery separation | separate namespace + no reuse | PASS |
+| confirmatory configs | 21 frozen R15 configs | PASS |
+| analysis | synthetic-only analysis gate | PASS |
+| figures | 15 figures + 9 tables predeclared | PASS |
+| artifact freeze | wheel/sdist/SBOM/SHA256SUMS | PASS |
+| preregistration | `experiments/preregistration-v3.md` | FROZEN |
+| freeze manifest | 44 Git-blob-bound files | PASS |
+| R14 gate | `scripts/check_r14_freeze.py` | PASS |
+| adversarial review | `docs/adversarial-reviews/R14.md` | VERSIONED |
+| exact Git tag | `sigma-v3-r14-freeze-v1` | **TAG-01 PENDING** |
 
 Documento rector:
 `docs/r14-experimental-freeze-plan.md`.
@@ -52,3 +56,35 @@ y saber de antemano, sin consultar resultados:
 - todos los hashes de configuración/preregistro/artifact.
 
 R15 no puede modificar esos elementos.
+
+
+## Evidencia de cierre técnico
+
+Run autoritativo: `35529570894`.
+
+- 1006 tests passed, 1 skipped;
+- Ruff/mypy/compileall PASS;
+- R12/R12.5 corpora PASS;
+- R13 design gate PASS;
+- R14 freeze gate PASS;
+- 21 confirmatory attacks / 21 configs;
+- 44 protocol-freeze files;
+- 15 synthetic figures / 9 tables;
+- confirmatory_executed = false;
+- Linux 3.10–3.13, macOS 3.13 y Windows 3.13 PASS.
+
+Artifacts:
+
+- `r14-authoritative-gate`: id `10610822307`,
+  sha256 `1aa5f0b21117a32a8d1a5e417284f99dfee98d20b3f19fdbcf5ea67219d7706b`;
+- `r14-freeze-bundle`: id `10609774757`,
+  sha256 `089ed944e70654124d9489f9f50fa51e2128fae4fa3e668ca21b86e770914152`.
+
+## TAG-01
+
+El único requisito de cierre formal no satisfecho es crear el tag exacto:
+
+`sigma-v3-r14-freeze-v1 -> b6ebc780cc0b201fd27562c85c64c90df37c1075`.
+
+R15 permanece bloqueado hasta que ese tag exista. No se debe apuntar el tag a
+los commits documentales posteriores.

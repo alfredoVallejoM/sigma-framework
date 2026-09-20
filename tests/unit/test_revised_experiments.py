@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,8 @@ def test_exp21_has_no_structural_violation() -> None:
 
 
 def test_exp01r_pilot_exercises_independent_consumer_for_all_v22_suites() -> None:
+    if os.name == "nt":
+        pytest.skip("frozen v2.2 EXP-01 includes a POSIX-oriented file snapshot adapter")
     source = json.loads(
         Path("experiments/configs/pilots/exp01r-v2-2.json").read_text(encoding="utf-8")
     )

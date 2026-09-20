@@ -46,6 +46,9 @@ def _context(suite_id: SuiteIdV3) -> SigmaContextV3:
         (SuiteIdV3.REFERENCE_IAP_V3, b"R10-wide"),
         (SuiteIdV3.DEEP_V3, b"24"),
         (SuiteIdV3.DEEP_VECTOR_V3, b"38"),
+        (SuiteIdV3.REFERENCE_IAP_HISTORY_V3, b"R12.5-wide"),
+        (SuiteIdV3.DEEP_HISTORY_V3, b"R12.5-deep"),
+        (SuiteIdV3.DEEP_VECTOR_HISTORY_V3, b"R12.5-vector"),
     ),
 )
 def test_bytes_file_mmap_spool_and_incremental_are_identical(
@@ -84,8 +87,12 @@ def test_bytes_file_mmap_spool_and_incremental_are_identical(
     assert incremental_digest == digest_from_evaluation_v3(expected)
 
 
-def test_incremental_checkpoints_are_real_prefix_digests() -> None:
-    context = _context(SuiteIdV3.REFERENCE_IAP_V3)
+@pytest.mark.parametrize(
+    "suite_id",
+    (SuiteIdV3.REFERENCE_IAP_V3, SuiteIdV3.REFERENCE_IAP_HISTORY_V3),
+)
+def test_incremental_checkpoints_are_real_prefix_digests(suite_id: SuiteIdV3) -> None:
+    context = _context(suite_id)
     incremental = IncrementalSigmaV3(
         context,
         max_memory_bytes=3,
@@ -107,9 +114,18 @@ def test_incremental_checkpoints_are_real_prefix_digests() -> None:
         incremental.update(b"late")
 
 
-def test_multiprocess_reader_matches_canonical_vector_and_cleans_children() -> None:
-    context = _context(SuiteIdV3.DEEP_VECTOR_V3)
-    message = b"38"
+@pytest.mark.parametrize(
+    ("suite_id", "message"),
+    (
+        (SuiteIdV3.DEEP_VECTOR_V3, b"38"),
+        (SuiteIdV3.DEEP_VECTOR_HISTORY_V3, b"R12.5-process"),
+    ),
+)
+def test_multiprocess_reader_matches_canonical_vector_and_cleans_children(
+    suite_id: SuiteIdV3,
+    message: bytes,
+) -> None:
+    context = _context(suite_id)
     expected = evaluate_v3(context, BytesSource(message))
     actual = evaluate_reader_v3(
         context,

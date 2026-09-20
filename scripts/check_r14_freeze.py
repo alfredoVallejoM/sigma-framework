@@ -107,12 +107,16 @@ def validate_r14_freeze(manifest: Path = DEFAULT_MANIFEST) -> dict[str, object]:
     if actual != expected:
         raise RuntimeError("frozen config attack set differs from protocol")
 
+    frozen_files = manifest_data["files"]
+    if not isinstance(frozen_files, dict):
+        raise RuntimeError("R14 manifest files field is not a mapping")
+
     return {
         "schema": "sigma-v3-r14-freeze-gate-v1",
         "freeze_id": FREEZE_ID,
         "passed": True,
         "baselines": baselines,
-        "manifest_files": len(manifest_data["files"]),
+        "manifest_files": len(frozen_files),
         "confirmatory_configs": len(config_files),
         "confirmatory_attacks": len(expected),
         "synthetic_analysis": analysis,

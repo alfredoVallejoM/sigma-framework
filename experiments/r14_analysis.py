@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .r13_schema import ResourceBudget
-from .r14_protocol import CLAIMS, FREEZE_ID, confirmatory_attack_ids, confirmatory_cells
-from .r14_schema import ConfirmatoryRecordV3, derive_confirmatory_seed
+from .r14_protocol import CLAIMS, confirmatory_attack_ids, confirmatory_cells
+from .r14_schema import ConfirmatoryRecordV3
 
 
 @dataclass(frozen=True)

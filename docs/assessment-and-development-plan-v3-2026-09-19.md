@@ -269,7 +269,7 @@ Publicar una especificación byte-exacta y un corpus que contenga `M`, `kappa`, 
 
 Gate R12: `reference/independent_v3.py` reproduce todo sin importar `sigma`; cero divergencias en todas las suites candidatas.
 
-### R12.5 — Restauración del feedback histórico
+### R12.5 — Restauración del feedback histórico — **PASS**
 
 R12 permanece como baseline histórico auditado. Antes de R13 se introduce un
 binding histórico evolutivo H_i y un binding efectivo de ronda E_i=(P_X,H_i),
@@ -283,7 +283,7 @@ Gate R12.5: nueva especificación byte-exacta, corpus, referencia independiente,
 diferencial completo, baseline R12 reproducible y revisión adversarial
 versionada.
 
-### R13 — Seguridad formal y diseño de criptoanálisis
+### R13 — Seguridad formal y diseño de criptoanálisis — **PASS**
 
 Cerrar los juegos, reducciones y límites de claim de la dinámica completa
 
@@ -433,11 +433,10 @@ La revisión externa, no el éxito de tests o campañas, será el requisito para
 
 ## 14. Próximo paso autorizado por este plan
 
-R0–R12 quedan preservados como evidencia histórica del candidato ya auditado.
-El siguiente bloque autorizado es **R12.5 — History Feedback Restoration**.
+R12.5 y R13 están cerrados mediante PASS adversarial versionado. El siguiente
+bloque autorizado es **R14 — Experimental Freeze & Preregistration**.
 
-No se inicia R13 ni se recopila evidencia confirmatoria hasta cerrar
-HIST-001..010, regenerar specification/corpus/reference y obtener un PASS
-adversarial versionado. Tras R12.5, el orden obligatorio es R13 (seguridad y
-attackers) -> R14 (freeze/prerregistro) -> R15 (confirmatorio) -> R16
-(reproducción y publicación).
+R14 no debe recopilar resultados confirmatorios. Debe congelar presupuestos,
+sample sizes, seeds, discovery/holdout, stopping rules, censoring, configs,
+analysis scripts, figure schemas, artifact identity y el prerregistro completo.
+Sólo después de ese freeze queda autorizado R15.

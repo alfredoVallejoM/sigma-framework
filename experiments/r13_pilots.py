@@ -88,6 +88,8 @@ def _record(
     status: AttackRunStatus,
     observed: ResourceBudget,
     metrics: dict[str, int | float | str | bool | None],
+    censor_reason: str | None = None,
+    error_class: str | None = None,
 ) -> AttackRunRecord:
     spec = get_attack(attack_id)
     missing = [metric for metric in spec.metrics if metric not in metrics]
@@ -113,6 +115,8 @@ def _record(
         budget=budget,
         observed=observed,
         metrics=metrics,
+        censor_reason=censor_reason,
+        error_class=error_class,
     )
 
 

@@ -172,12 +172,14 @@ class StableFileSource(CanonicalSource):
             if total != self._byte_length:
                 raise SourceChangedError("file length changed during replay")
             current_digest = digest.digest()
-            if os.name == "nt":
+            if (
+                os.name == "nt"
+                and _path_content_digest(self._path, self._byte_length) != current_digest
+            ):
                 # Windows path/fd metadata can be coarser than the mutations we
                 # need to detect. Re-read the pathname after closing the handle
                 # and require exact byte identity with the replay just emitted.
-                if _path_content_digest(self._path, self._byte_length) != current_digest:
-                    raise SourceChangedError("file content changed during replay")
+                raise SourceChangedError("file content changed during replay")
             if self._content_digest is None:
                 self._content_digest = current_digest
             elif current_digest != self._content_digest:

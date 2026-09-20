@@ -50,6 +50,11 @@ def test_multiprocessing_backend_rejects_non_tree_suite() -> None:
 
 
 def test_file_serial_and_mmap_workers_are_identical(tmp_path) -> None:
+    if os.name == "nt":
+        pytest.skip(
+            "frozen v2.2 file_snapshot path/fd identity is not portable on Windows; "
+            "R12.5 v3 file/process equivalence is tested separately"
+        )
     payload = bytes((index * 11) % 256 for index in range(4 * LEAF_SIZE + 19))
     path = tmp_path / "tree-input.bin"
     path.write_bytes(payload)

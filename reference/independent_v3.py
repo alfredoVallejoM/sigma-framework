@@ -403,14 +403,7 @@ def _history_placed(
             previous = slot
         body.extend(records[field])
     body.extend(base[previous:])
-    return (
-        b"SIG3HPS0"
-        + _u(VERSION, 2)
-        + _u(len(plan), 4)
-        + plan
-        + _u(len(body), 8)
-        + bytes(body)
-    )
+    return b"SIG3HPS0" + _u(VERSION, 2) + _u(len(plan), 4) + plan + _u(len(body), 8) + bytes(body)
 
 
 def _header(cardinality: bytes, anchor: bytes, length_signature: bytes, parameters: bytes) -> bytes:
@@ -571,9 +564,7 @@ def evaluate_suite(
         ((1, context), (2, init_layout), (3, init_placed)),
     )
     if round_profile == 0x0303:
-        state = b"".join(
-            _hash(algorithm, DOMAIN_INIT, init_frame) for algorithm in ALGORITHMS
-        )
+        state = b"".join(_hash(algorithm, DOMAIN_INIT, init_frame) for algorithm in ALGORITHMS)
     else:
         state = _hash(ALG_SHA512, DOMAIN_INIT, init_frame)
 
@@ -602,9 +593,7 @@ def evaluate_suite(
             values = {**persistent_values, 0x0305: history}
             placed = _history_placed(prior_state, layout, placements, values)
             state_frame_domain = (
-                DOMAIN_HISTORY_VECTOR_ROUND
-                if round_profile == 0x0303
-                else DOMAIN_HISTORY_ROUND
+                DOMAIN_HISTORY_VECTOR_ROUND if round_profile == 0x0303 else DOMAIN_HISTORY_ROUND
             )
         else:
             round_binding = b""
@@ -637,9 +626,7 @@ def evaluate_suite(
             current_branch_frames: tuple[bytes, ...] = ()
             branches: tuple[bytes, ...] = ()
         else:
-            branch_domain = (
-                DOMAIN_HISTORY_DEEP_BRANCH if history_enabled else DOMAIN_DEEP_BRANCH
-            )
+            branch_domain = DOMAIN_HISTORY_DEEP_BRANCH if history_enabled else DOMAIN_DEEP_BRANCH
             current_branch_frames = tuple(
                 _transcript(
                     branch_domain,
@@ -655,14 +642,10 @@ def evaluate_suite(
             )
             branches = tuple(
                 _hash(algorithm, branch_domain, frame)
-                for algorithm, frame in zip(
-                    ALGORITHMS, current_branch_frames, strict=True
-                )
+                for algorithm, frame in zip(ALGORITHMS, current_branch_frames, strict=True)
             )
             if round_profile == 0x0302:
-                fold_domain = (
-                    DOMAIN_HISTORY_DEEP_FOLD if history_enabled else DOMAIN_DEEP_FOLD
-                )
+                fold_domain = DOMAIN_HISTORY_DEEP_FOLD if history_enabled else DOMAIN_DEEP_FOLD
                 fold_frame = _transcript(
                     fold_domain,
                     (

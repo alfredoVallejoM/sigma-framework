@@ -18,6 +18,7 @@ from sigma.layout import HistoryLayoutPlan
 from sigma.outputs import SigmaDigestV2
 from sigma.outputs.digest_v3 import SigmaDigestV3, digest_from_evaluation_v3
 from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2
+from sigma.rounds.history_v3 import HistoryWideOnceEvaluationV3
 from sigma.sources import BytesSource
 from sigma.spec import SigmaContextV2
 from sigma.spec.context_v3 import SigmaContextV3
@@ -25,7 +26,6 @@ from sigma.spec.encoding import DecodeError
 from sigma.spec.ids import SignatureAlgorithmId
 from sigma.spec.ids_v3 import SuiteIdV3
 from sigma.v2 import hash_bytes
-from sigma.rounds.history_v3 import HistoryWideOnceEvaluationV3
 from sigma.v3 import evaluate_v3
 
 

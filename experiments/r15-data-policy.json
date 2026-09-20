@@ -1,0 +1,51 @@
+{
+  "schema": "sigma-v3-r15-data-policy-v1",
+  "status": "pre-freeze-design",
+  "confirmatory_evidence": false,
+  "processed_volume_is_not_retained_volume": true,
+  "scratch_limits": {
+    "default_gib": 10,
+    "preferred_stat_gib": 2,
+    "stream_buffer_mib": [
+      1,
+      16
+    ]
+  },
+  "stream_policy": {
+    "canonical_large_stream_artifact": false,
+    "deterministic_regeneration": true,
+    "full_sha256": true,
+    "chunk_hashes": true,
+    "optional_merkle_root": true,
+    "prefer_pipe_or_callback": true,
+    "file_fallback": "one temporary stream/file at a time; hash, consume, delete"
+  },
+  "retain": [
+    "canonical numeric raw records",
+    "stream manifest",
+    "stream full/chunk hashes",
+    "external tool/version manifest",
+    "exact commands",
+    "stdout/stderr",
+    "parsed battery results",
+    "not-applicable/failure status",
+    "analysis tables",
+    "figures",
+    "checksums"
+  ],
+  "do_not_retain_in_git": [
+    "large generated streams",
+    "scratch files",
+    "multi-GiB battery inputs",
+    "temporary spool files"
+  ],
+  "final_archive": {
+    "preferred_formats": [
+      "jsonl.zst",
+      "parquet",
+      "json manifests"
+    ],
+    "target_retained_size_gib": "1-5 or less",
+    "persistent_archive_stage": "R16"
+  }
+}

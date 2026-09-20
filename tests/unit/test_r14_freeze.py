@@ -23,6 +23,7 @@ from experiments.r14_schema import (
     ConfirmatoryRecordV3,
     derive_confirmatory_seed,
 )
+from scripts.check_r14_freeze import validate_r14_freeze
 from scripts.prepare_v3_confirmatory import DEFAULT_OUTPUT, render_configs
 
 
@@ -160,3 +161,11 @@ def test_campaign_index_declares_no_confirmatory_execution() -> None:
     assert index["freeze_id"] == FREEZE_ID
     assert index["confirmatory_executed"] is False
     assert {item["attack_id"] for item in index["attacks"]} == set(confirmatory_attack_ids())
+
+
+def test_authoritative_r14_freeze_gate_is_reproducible() -> None:
+    report = validate_r14_freeze()
+    assert report["passed"] is True
+    assert report["confirmatory_configs"] == 21
+    assert report["confirmatory_attacks"] == 21
+    assert report["confirmatory_executed"] is False

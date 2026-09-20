@@ -6,7 +6,6 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from .history_reduced import (
-    Crossing,
     ReducedHistoryConfig,
     ReducedTrace,
     evaluate_reduced_history,

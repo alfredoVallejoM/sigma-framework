@@ -23,8 +23,12 @@ from experiments.parameter_grinding_v3 import (
     parameter_distribution,
     pow_nonce_grinding_profile,
 )
-from experiments.r13_pilots import run_r13_design_pilots, validate_r13_design_records
-from experiments.r13_registry import ATTACK_REGISTRY_V3, get_attack_spec_v3
+from experiments.r13_attack_registry import ATTACK_REGISTRY, get_attack
+from experiments.r13_pilots import (
+    CORE_EXECUTABLE_ATTACKS,
+    run_r13_design_pilots,
+    validate_r13_design_records,
+)
 from experiments.reduced_oracle import ReducedOracle
 from experiments.tmto_v3 import TMTOConfigV3, measure_tmto_v3
 from experiments.trajectory_attacks_v3 import (
@@ -41,28 +45,16 @@ def _oracle(label: bytes = b"r13-attacker-tests") -> ReducedOracle:
 
 
 def test_r13_registry_is_closed_and_claim_linked() -> None:
-    required = {
-        "HIST-01",
-        "HIST-02",
-        "HIST-03",
-        "HIST-05",
-        "HIST-06",
-        "PARAM-01",
-        "PARAM-03",
-        "PARAM-04",
-        "PARAM-05",
-        "TMTO-01",
-        "BRANCH-01",
-    }
-    assert required <= set(ATTACK_REGISTRY_V3)
-    for attack_id in required:
-        spec = get_attack_spec_v3(attack_id)
+    assert CORE_EXECUTABLE_ATTACKS <= set(ATTACK_REGISTRY)
+    for attack_id in CORE_EXECUTABLE_ATTACKS:
+        spec = get_attack(attack_id)
         assert spec.claims
         assert spec.resources
         assert spec.baselines
-        assert spec.output_fields
+        assert spec.metrics
+        assert spec.success_event
     with pytest.raises(ValueError):
-        get_attack_spec_v3("UNKNOWN")
+        get_attack("UNKNOWN")
 
 
 def test_same_persistent_crossing_is_a_clean_r12_vs_r125_ablation() -> None:
@@ -332,27 +324,9 @@ def test_r13_design_pilot_harness_is_deterministic_schema_complete_and_nonconfir
     second = run_r13_design_pilots(b"r13-design-test")
     assert first == second
     validate_r13_design_records(first)
-    assert all(record["confirmatory"] is False for record in first)
-    observed = {record["attack_id"] for record in first}
-    assert {
-        "HIST-01",
-        "HIST-02",
-        "HIST-03",
-        "HIST-05",
-        "HIST-06",
-        "PARAM-01",
-        "PARAM-02",
-        "PARAM-03",
-        "PARAM-04",
-        "PARAM-05",
-        "PARAM-06",
-        "RED-02",
-        "RED-03",
-        "RED-04",
-        "RED-05",
-        "TMTO-01",
-        "BRANCH-01",
-    } <= observed
+    assert all(record.metrics["confirmatory"] is False for record in first)
+    observed = {record.attack_id for record in first}
+    assert CORE_EXECUTABLE_ATTACKS <= observed
 
 
 def test_r13_model_guards_refuse_infeasible_or_invalid_inputs() -> None:

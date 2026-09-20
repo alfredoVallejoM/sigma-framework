@@ -325,7 +325,7 @@ def test_record_size_is_rejected_before_tlv_parsing() -> None:
 
 def test_suite_registry_is_immutable() -> None:
     with pytest.raises(TypeError):
-        registry_v3._SUITES_V3[SuiteIdV3.REFERENCE_IAP_V3] = registry_v3.REFERENCE_IAP_V3
+        registry_v3._SUITES_V3[SuiteIdV3.REFERENCE_IAP_V3] = registry_v3.REFERENCE_IAP_V3  # type: ignore[index]
 
 
 @pytest.mark.parametrize(

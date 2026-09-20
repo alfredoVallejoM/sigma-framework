@@ -42,6 +42,12 @@ CONFIG_NAMES = (
 )
 
 FROZEN_PATHS = (
+    ".gitattributes",
+    "MANIFEST.in",
+    "pyproject.toml",
+    "sigma/version.py",
+    "scripts/release_artifacts.py",
+    "scripts/check_v22_baseline.py",
     "experiments/preregistration-v3.md",
     "experiments/r14_protocol.py",
     "experiments/r14_schema.py",

@@ -116,18 +116,10 @@ def profile_crossing_outcome_v3(
     s = crossing.state
     baseline_left = r12_successor(oracle, config, p, s, i)
     baseline_right = r12_successor(oracle, config, p, s, i)
-    left_state = r125_successor(
-        oracle, config, p, crossing.left_history, s, i
-    )
-    right_state = r125_successor(
-        oracle, config, p, crossing.right_history, s, i
-    )
-    left_history = history_successor(
-        oracle, config, p, crossing.left_history, s, i
-    )
-    right_history = history_successor(
-        oracle, config, p, crossing.right_history, s, i
-    )
+    left_state = r125_successor(oracle, config, p, crossing.left_history, s, i)
+    right_state = r125_successor(oracle, config, p, crossing.right_history, s, i)
+    left_history = history_successor(oracle, config, p, crossing.left_history, s, i)
+    right_history = history_successor(oracle, config, p, crossing.right_history, s, i)
     return CrossingOutcomeV3(
         crossing=crossing,
         r12_successors_equal=baseline_left == baseline_right,
@@ -270,9 +262,7 @@ def profile_layout_ablation_v3(
         field_count=field_count,
         fixed_unique_layouts=len(set(fixed)),
         adaptive_unique_layouts=len(counts),
-        adaptive_collision_pairs=sum(
-            count * (count - 1) // 2 for count in counts.values()
-        ),
+        adaptive_collision_pairs=sum(count * (count - 1) // 2 for count in counts.values()),
     )
 
 

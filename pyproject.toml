@@ -63,8 +63,9 @@ select = ["E", "F", "I", "B", "SIM", "RUF"]
 ignore = ["E501", "RUF002", "RUF003", "SIM115"]
 
 [[tool.mypy.overrides]]
-module = ["scipy", "scipy.*", "argon2", "argon2.*", "atheris"]
+module = ["numpy", "numpy.*", "scipy", "scipy.*", "argon2", "argon2.*", "atheris"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.mypy]
 python_version = "3.10"

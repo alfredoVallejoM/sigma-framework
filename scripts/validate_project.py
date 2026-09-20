@@ -19,6 +19,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 COVERAGE_TARGETS = {
     "core_formats": (("sigma/spec", "sigma/validation.py", "sigma/presets.py"), 95.0),
     "experimental_scheduler": (("experiments/runner.py", "experiments/task_worker.py"), 90.0),
+    "history_feedback": (
+        (
+            "sigma/binding/history.py",
+            "sigma/layout/history.py",
+            "sigma/rounds/history_framing_v3.py",
+            "sigma/rounds/history_v3.py",
+        ),
+        90.0,
+    ),
     "release_tooling": (
         (
             "scripts/fuzz_codecs.py",

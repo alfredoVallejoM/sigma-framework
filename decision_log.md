@@ -143,3 +143,22 @@ Impact:
 Ninguna cifra de piloto se usa como resultado confirmatorio. R12 se mantiene
 como baseline de ablación para medir exactamente el efecto del feedback
 histórico.
+
+
+## 2026-09-20 — R12.5 cierra feedback histórico y desbloquea R13
+
+Decision:
+Se acepta como candidato de conformidad R12.5 el commit
+`5ac306bb23acae0e0a4ef03eb56b3062343c2127`. La evidencia de cierre queda en
+`docs/adversarial-reviews/R12-5.md` y el GitHub Actions run `35516425867`.
+
+Reason:
+El candidato pasa el gate autoritativo, la matriz Linux 3.10–3.13/macOS/Windows,
+los corpora R12/R12.5, el guard v2.2, fuzzing, build e instalación aislada. La
+cobertura específica de history-feedback alcanza 90.3030303030303%.
+
+Impact:
+R13 puede comenzar sobre la dinámica `Z_i=(H_i,S_i)`. R12 continúa como
+baseline de ablación. Cualquier cambio semántico o byte-level posterior en R12.5
+exige nuevos IDs/candidato y nueva revisión; este cierre no equivale a auditoría
+criptográfica externa.

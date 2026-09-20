@@ -1,6 +1,6 @@
 # Sigma v3 R14 — Experimental Freeze & Preregistration
 
-Estado: **plan rector de R14; no autoriza todavía ejecución confirmatoria**  
+Estado: **implementación/gate R14 PASS; cierre formal pendiente TAG-01**  
 Fecha: 2026-09-20
 
 Baselines inmutables:
@@ -541,3 +541,18 @@ Al cerrar R14, R15 queda autorizado a **ejecutar**, no a rediseñar.
 10. ejecutar adversarial freeze audit.
 11. registrar PASS R14.
 12. sólo entonces abrir R15.
+
+
+## 18. Estado de implementación
+
+El candidato técnico
+`b6ebc780cc0b201fd27562c85c64c90df37c1075` pasó el run
+`35529570894` con todos los subgates R14, matriz multiplataforma, build y
+freeze bundle en verde.
+
+El informe adversarial está versionado en
+`docs/adversarial-reviews/R14.md`.
+
+El único requisito restante del propio plan es TAG-01: crear
+`sigma-v3-r14-freeze-v1` sobre el candidato exacto. Hasta entonces R15 sigue
+bloqueado.

@@ -39,17 +39,42 @@ def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[Path, str]:
     return entries
 
 
+def _git_blob(root: Path, relative: Path) -> bytes | None:
+    """Return canonical Git bytes for one tracked path.
+
+    This deliberately bypasses platform checkout transformations such as CRLF
+    conversion. The v2.2 freeze protects versioned Git objects, not a runner's
+    working-tree newline policy.
+    """
+
+    result = subprocess.run(
+        ["git", "show", f"HEAD:{relative.as_posix()}"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
 def verify_baseline(
     root: Path = PROJECT_ROOT,
     manifest: Path = DEFAULT_MANIFEST,
 ) -> list[str]:
     failures: list[str] = []
+    use_git_blobs = manifest.resolve() == DEFAULT_MANIFEST.resolve() and (root / ".git").exists()
     for relative, expected in load_manifest(manifest).items():
-        target = root / relative
-        if not target.is_file():
-            failures.append(f"missing: {relative}")
-            continue
-        actual = hashlib.sha256(target.read_bytes()).hexdigest()
+        if use_git_blobs:
+            data = _git_blob(root, relative)
+            if data is None:
+                failures.append(f"missing: {relative}")
+                continue
+        else:
+            target = root / relative
+            if not target.is_file():
+                failures.append(f"missing: {relative}")
+                continue
+            data = target.read_bytes()
+        actual = hashlib.sha256(data).hexdigest()
         if actual != expected:
             failures.append(f"changed: {relative} ({actual}, expected {expected})")
     return failures

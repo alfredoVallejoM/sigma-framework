@@ -68,7 +68,7 @@ jobs:
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl
-      - run: python -c "from sigma.presets import lightweight_v2; from sigma.v2 import hash_bytes; assert hash_bytes(b'wheel-smoke', lightweight_v2()).states"
+      - run: python -c "from sigma.presets import lightweight_v2_2; from sigma.v2 import hash_bytes; assert hash_bytes(b'wheel-smoke', lightweight_v2_2()).states"
       - run: python -c "from sigma.sources import BytesSource; from sigma.spec.context_v3 import SigmaContextV3; from sigma.spec.ids_v3 import SuiteIdV3; from sigma.v3 import evaluate_v3; c=SigmaContextV3.for_suite(SuiteIdV3.REFERENCE_IAP_HISTORY_V3,salt=b'ci',challenge=b'ci',application_context=b'ci'); e=evaluate_v3(c,BytesSource(b'ci-history')); assert len(e.histories)==len(e.states)"
 
 

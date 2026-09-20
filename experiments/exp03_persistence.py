@@ -140,9 +140,7 @@ def _beta_continued_fraction(a: float, b: float, x: float) -> float:
         d = 1.0 / d
         value *= d * c
 
-        coefficient = -(a + iteration) * (qab + iteration) * x / (
-            (a + doubled) * (qap + doubled)
-        )
+        coefficient = -(a + iteration) * (qab + iteration) * x / ((a + doubled) * (qap + doubled))
         d = 1.0 + coefficient * d
         if abs(d) < floor:
             d = floor

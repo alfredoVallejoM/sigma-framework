@@ -32,7 +32,7 @@ def test_resource_budget_requires_nonnegative_resources_and_positive_p_u() -> No
     with pytest.raises(ValueError):
         _budget(p=0)
     with pytest.raises(TypeError):
-        ResourceBudget(True, 0, 0, 0, 0, 0, 1, 0, 1)  # type: ignore[arg-type]
+        ResourceBudget(True, 0, 0, 0, 0, 0, 1, 0, 1)
 
 
 def test_attack_record_serialization_is_canonical_and_keeps_null_result_separate() -> None:

@@ -143,9 +143,7 @@ def find_window_second_preimage_v3(
 ) -> WindowSecondPreimageV3 | None:
     if candidates <= 0:
         raise ValueError("candidates must be positive")
-    target = evaluate_reduced_history(
-        oracle, config, target_candidate, construction
-    )
+    target = evaluate_reduced_history(oracle, config, target_candidate, construction)
     evaluated = 0
     for candidate in range(candidates):
         if candidate == target_candidate:

@@ -10,7 +10,6 @@ from hypothesis import strategies as st
 from reference.independent_v3 import evaluate_suite
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3
 from sigma.rounds.deep_v3 import DeepEvaluationV3, DeepVectorEvaluationV3
-from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.rounds.framing_v3 import (
     DeepBranchFrame,
     DeepFoldFrame,
@@ -18,6 +17,7 @@ from sigma.rounds.framing_v3 import (
     RoundFrame,
     VectorRoundFrame,
 )
+from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3

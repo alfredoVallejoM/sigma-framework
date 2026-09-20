@@ -35,6 +35,7 @@ from sigma.rounds.history_v3 import (
 )
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.encoding import DecodeError
 from sigma.spec.ids_v3 import (
     LayoutProfileIdV3,
     RoundBindingFieldIdV3,
@@ -216,7 +217,7 @@ def test_history_parser_rejects_every_truncated_prefix() -> None:
     assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
     encoded = evaluation.histories[0].to_bytes()
     for length in range(len(encoded)):
-        with pytest.raises(Exception):
+        with pytest.raises(DecodeError):
             HistoryCommitmentV3.from_bytes(encoded[:length])
 
 

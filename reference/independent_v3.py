@@ -21,6 +21,10 @@ DOMAIN_LAYOUT_ROUND = 0x0307
 DOMAIN_INIT = 0x0308
 DOMAIN_ROUND = 0x0309
 DOMAIN_BINDING_FIELD = 0x030A
+DOMAIN_EVIDENCE = 0x030C
+DOMAIN_DEEP_BRANCH = 0x030D
+DOMAIN_VECTOR_ROUND = 0x030E
+DOMAIN_DEEP_FOLD = 0x0310
 KIND_INIT = 0x0301
 KIND_ROUND = 0x0302
 BINDING_FIELDS = (0x0301, 0x0302, 0x0303, 0x0304)
@@ -73,15 +77,18 @@ class Context:
     salt: bytes
     challenge: bytes
     application_context: bytes
+    suite_id: int = SUITE
+    round_profile: int = 0x0301
+    state_size: int = 64
 
     def encode(self) -> bytes:
         return _record(
             b"SIGMACT3",
             (
-                (1, _u(SUITE, 2)),
+                (1, _u(self.suite_id, 2)),
                 (2, _u(0x0301, 2)),
                 (3, _u(0x0301, 2)),
-                (4, _u(0x0301, 2)),
+                (4, _u(self.round_profile, 2)),
                 (5, _u(0x0301, 2)),
                 (6, _u(0x0301, 2)),
                 (7, _u(0x0301, 2)),
@@ -92,7 +99,7 @@ class Context:
                 (12, _u(ALG_SHA512, 2)),
                 (13, _u(4, 2)),
                 (14, _u(1 << 20, 4)),
-                (15, _u(64, 2)),
+                (15, _u(self.state_size, 2)),
                 (16, _u(2, 4)),
                 (17, _u(32, 4)),
                 (18, _u(2, 2)),
@@ -109,13 +116,18 @@ def _cardinality(length: int) -> bytes:
     return _record(b"SIGMA3CD", ((1, _u(length, 8)),))
 
 
-def _anchor(context: bytes, cardinality: bytes, message: bytes) -> tuple[bytes, tuple[bytes, ...]]:
+def _anchor(
+    context: bytes,
+    cardinality: bytes,
+    message: bytes,
+    suite_id: int = SUITE,
+) -> tuple[bytes, tuple[bytes, ...]]:
     transcript = _transcript(DOMAIN_ANCHOR, ((1, context), (2, cardinality), (3, message)))
     components = tuple(_hash(algorithm, DOMAIN_ANCHOR, transcript) for algorithm in ALGORITHMS)
     encoded = _record(
         b"SIGMA3AN",
         (
-            (1, _u(SUITE, 2)),
+            (1, _u(suite_id, 2)),
             (2, _u(len(message), 8)),
             (3, _u16_sequence(ALGORITHMS)),
             (4, _bytes_sequence(components)),
@@ -334,4 +346,187 @@ def evaluate(
         "states": tuple(states),
         "header": _header(cardinality, anchor, length_signature, parameters),
         "window": _window(parameters, window_states),
+    }
+
+
+def _suite_parameters(suite_id: int) -> tuple[int, int]:
+    """Return ``(round_profile, state_size)`` for executable v3 suites."""
+    try:
+        return {
+            0x0301: (0x0301, 64),
+            0x0303: (0x0302, 64),
+            0x0304: (0x0303, 256),
+        }[suite_id]
+    except KeyError as exc:
+        raise ValueError("unknown executable Sigma v3 suite") from exc
+
+
+def _digest(context: bytes, header: bytes, window: bytes) -> bytes:
+    return _record(
+        b"SIGMA3DG",
+        (
+            (1, _u(0x0301, 2)),
+            (2, _domain(DOMAIN_EVIDENCE)),
+            (3, context),
+            (4, header),
+            (5, window),
+        ),
+    )
+
+
+def evaluate_suite(
+    message: bytes,
+    *,
+    suite_id: int,
+    salt: bytes,
+    challenge: bytes,
+    application_context: bytes,
+) -> dict[str, object]:
+    """Evaluate any executable v3 suite without importing :mod:`sigma`.
+
+    The result intentionally exposes every R12 corpus intermediate. Placements
+    are ``(binding_field_id, original_base_slot)`` pairs.
+    """
+    round_profile, state_size = _suite_parameters(suite_id)
+    context = Context(
+        salt,
+        challenge,
+        application_context,
+        suite_id,
+        round_profile,
+        state_size,
+    ).encode()
+    cardinality = _cardinality(len(message))
+    anchor, anchor_components = _anchor(context, cardinality, message, suite_id)
+    length_signature = _length_signature(context, cardinality)
+    joint, joint_components = _joint(
+        context,
+        cardinality,
+        message,
+        anchor,
+        length_signature,
+    )
+    binding = _binding(anchor, cardinality, length_signature, joint)
+    target, count, parameters = _parameters(context, binding)
+    values = {
+        0x0301: anchor,
+        0x0302: cardinality,
+        0x0303: length_signature,
+        0x0304: joint,
+    }
+
+    init_layout, init_placements = _layout(
+        context,
+        length_signature,
+        KIND_INIT,
+        0,
+        len(message),
+    )
+    init_placed = _placed(message, init_layout, init_placements, values)
+    init_frame = _transcript(
+        DOMAIN_INIT,
+        ((1, context), (2, init_layout), (3, init_placed)),
+    )
+    if round_profile == 0x0303:
+        state = b"".join(_hash(algorithm, DOMAIN_INIT, init_frame) for algorithm in ALGORITHMS)
+    else:
+        state = _hash(ALG_SHA512, DOMAIN_INIT, init_frame)
+
+    states = [state]
+    round_layouts: list[bytes] = []
+    round_placements: list[tuple[tuple[int, int], ...]] = []
+    round_frames: list[bytes] = []
+    branch_frames: list[tuple[bytes, ...]] = []
+    branch_outputs: list[tuple[bytes, ...]] = []
+    fold_frames: list[bytes] = []
+
+    for index in range(target + count - 1):
+        layout, placements = _layout(
+            context,
+            length_signature,
+            KIND_ROUND,
+            index,
+            len(state),
+        )
+        placed = _placed(state, layout, placements, values)
+        state_frame_domain = DOMAIN_VECTOR_ROUND if round_profile == 0x0303 else DOMAIN_ROUND
+        state_frame = _transcript(
+            state_frame_domain,
+            (
+                (1, context),
+                (2, _u(index, 8)),
+                (3, layout),
+                (4, placed),
+            ),
+        )
+        if round_profile == 0x0301:
+            state = _hash(ALG_SHA512, DOMAIN_ROUND, state_frame)
+            current_branch_frames: tuple[bytes, ...] = ()
+            branches: tuple[bytes, ...] = ()
+        else:
+            current_branch_frames = tuple(
+                _transcript(
+                    DOMAIN_DEEP_BRANCH,
+                    (
+                        (1, context),
+                        (2, _u(index, 8)),
+                        (3, _u(position, 2)),
+                        (4, _u(algorithm, 2)),
+                        (5, state_frame),
+                    ),
+                )
+                for position, algorithm in enumerate(ALGORITHMS)
+            )
+            branches = tuple(
+                _hash(algorithm, DOMAIN_DEEP_BRANCH, frame)
+                for algorithm, frame in zip(ALGORITHMS, current_branch_frames, strict=True)
+            )
+            if round_profile == 0x0302:
+                fold_frame = _transcript(
+                    DOMAIN_DEEP_FOLD,
+                    ((1, context), (2, _u(index, 8)), (3, _bytes_sequence(branches))),
+                )
+                fold_frames.append(fold_frame)
+                state = _hash(ALG_SHA512, DOMAIN_DEEP_FOLD, fold_frame)
+            else:
+                state = b"".join(branches)
+
+        round_layouts.append(layout)
+        round_placements.append(placements)
+        round_frames.append(state_frame)
+        branch_frames.append(current_branch_frames)
+        branch_outputs.append(branches)
+        states.append(state)
+
+    window_states = tuple(states[target : target + count])
+    header = _header(cardinality, anchor, length_signature, parameters)
+    window = _window(parameters, window_states)
+    digest = _digest(context, header, window)
+    return {
+        "suite_id": suite_id,
+        "message": message,
+        "context": context,
+        "cardinality": cardinality,
+        "anchor": anchor,
+        "anchor_components": anchor_components,
+        "length_signature": length_signature,
+        "joint": joint,
+        "joint_components": joint_components,
+        "binding": binding,
+        "target_round": target,
+        "state_count": count,
+        "parameters": parameters,
+        "init_layout": init_layout,
+        "init_placements": init_placements,
+        "round_layouts": tuple(round_layouts),
+        "round_placements": tuple(round_placements),
+        "init_frame": init_frame,
+        "round_frames": tuple(round_frames),
+        "branch_frames": tuple(branch_frames),
+        "branch_outputs": tuple(branch_outputs),
+        "fold_frames": tuple(fold_frames),
+        "states": tuple(states),
+        "header": header,
+        "window": window,
+        "digest": digest,
     }

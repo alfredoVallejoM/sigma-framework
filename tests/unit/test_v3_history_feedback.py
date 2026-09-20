@@ -27,7 +27,7 @@ from sigma.binding import (
 from sigma.layout import HistoryLayoutPlan, derive_history_layout_v3
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3, verify_full_v3
 from sigma.rounds.backends_v3 import ThreadDeepBranchBackendV3
-from sigma.rounds.history_framing_v3 import HistoryRoundFrame
+from sigma.rounds.history_framing_v3 import HistoryRoundFrame, HistoryVectorRoundFrame
 from sigma.rounds.history_v3 import (
     HistoryDeepEvaluationV3,
     HistoryDeepVectorEvaluationV3,
@@ -122,6 +122,128 @@ def test_history_layout_contains_all_five_effective_binding_fields() -> None:
     assert isinstance(plan, HistoryLayoutPlan)
     assert {item.field for item in plan.placements} == set(RoundBindingFieldIdV3)
     assert len(plan.placements) == 5
+
+
+def test_same_full_dynamic_state_reproduces_identical_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"deterministic-full-state"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    state = evaluation.states[0]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(
+        context, round_binding, round_index=0, base_length=len(state)
+    )
+    first = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    second = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    assert first == second
+
+
+def test_same_history_with_different_visible_state_changes_round_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"state-separation"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    state = evaluation.states[0]
+    changed_state = bytes((state[0] ^ 1,)) + state[1:]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(
+        context, round_binding, round_index=0, base_length=len(state)
+    )
+    original = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    changed = HistoryRoundFrame(
+        context, round_binding, layout, 0, changed_state
+    ).to_bytes()
+    assert original != changed
+
+
+def test_mutating_any_prior_state_changes_future_history() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"history-prefix-sensitivity"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    binding = evaluation.prepared.binding
+    h0 = evaluation.histories[0]
+    s0 = evaluation.states[0]
+    altered_s0 = bytes((s0[0] ^ 1,)) + s0[1:]
+    h1 = history_step_v3(context, binding, h0, 0, s0)
+    altered_h1 = history_step_v3(context, binding, h0, 0, altered_s0)
+    assert h1 != altered_h1
+
+    s1 = evaluation.states[1]
+    h2 = history_step_v3(context, binding, h1, 1, s1)
+    altered_h2 = history_step_v3(context, binding, altered_h1, 1, s1)
+    assert h2 != altered_h2
+
+
+def test_persistent_binding_substitution_cannot_preserve_round_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    left = evaluate_v3(context, BytesSource(b"binding-left"))
+    right = evaluate_v3(context, BytesSource(b"binding-right"))
+    assert isinstance(left, HistoryWideOnceEvaluationV3)
+    assert isinstance(right, HistoryWideOnceEvaluationV3)
+
+    state = left.states[0]
+    history = left.histories[0]
+    left_binding = RoundBindingV3(left.prepared.binding, history)
+    substituted = RoundBindingV3(right.prepared.binding, history)
+    left_layout = derive_history_layout_v3(
+        context, left_binding, round_index=0, base_length=len(state)
+    )
+    substituted_layout = derive_history_layout_v3(
+        context, substituted, round_index=0, base_length=len(state)
+    )
+    left_frame = HistoryRoundFrame(
+        context, left_binding, left_layout, 0, state
+    ).to_bytes()
+    substituted_frame = HistoryRoundFrame(
+        context, substituted, substituted_layout, 0, state
+    ).to_bytes()
+    assert left_frame != substituted_frame
+
+
+def test_history_from_another_suite_is_rejected() -> None:
+    wide_context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    deep_context = _context(SuiteIdV3.DEEP_HISTORY_V3)
+    wide = evaluate_v3(wide_context, BytesSource(b"cross-suite"))
+    assert isinstance(wide, HistoryWideOnceEvaluationV3)
+    with pytest.raises(ValueError, match="suites differ"):
+        history_seed_v3(deep_context, wide.prepared.binding)
+
+
+def test_history_parser_rejects_every_truncated_prefix() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"truncated-history"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    encoded = evaluation.histories[0].to_bytes()
+    for length in range(len(encoded)):
+        with pytest.raises(Exception):
+            HistoryCommitmentV3.from_bytes(encoded[:length])
+
+
+def test_deep_vector_history_consumes_the_complete_previous_vector() -> None:
+    context = _context(SuiteIdV3.DEEP_VECTOR_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"vector-history"))
+    assert isinstance(evaluation, HistoryDeepVectorEvaluationV3)
+    vector = evaluation.states[0]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(
+        context, round_binding, round_index=0, base_length=len(vector)
+    )
+    original = HistoryVectorRoundFrame(
+        context, round_binding, layout, 0, vector
+    ).to_bytes()
+    mutated = bytearray(vector)
+    mutated[len(mutated) // 2] ^= 1
+    changed = HistoryVectorRoundFrame(
+        context, round_binding, layout, 0, bytes(mutated)
+    ).to_bytes()
+    assert original != changed
+    assert history_step_v3(
+        context, evaluation.prepared.binding, history, 0, vector
+    ) != history_step_v3(
+        context, evaluation.prepared.binding, history, 0, bytes(mutated)
+    )
 
 
 def test_history_step_rejects_replay_under_wrong_round_index() -> None:

@@ -13,17 +13,19 @@ formal security and confirmatory-paper gates.
 
 Current security/publication gates:
 
-- R12.5: history-feedback semantics, new corpus/reference and adversarial PASS;
-- R13: formal games, reductions and cryptanalytic attack design;
-- R14: semantic/experimental freeze and preregistration;
+- R12.5: **PASS** — history-feedback semantics, corpus/reference and adversarial review;
+- R13: **PASS** — formal games, reductions, claim matrix and cryptanalytic attack design;
+- R14: **next active gate** — semantic/experimental freeze and preregistration;
 - R15: confirmatory scientific campaign;
 - R16: external reproduction, archival and cryptographic review.
 
 See:
 
 - [R12.5 history-feedback plan](docs/sigma-v3-r12-5-history-feedback-plan.md)
+- [R12.5 adversarial review](docs/adversarial-reviews/R12-5.md)
+- [R13 security analysis](specification/security-analysis-v3-r13.md)
+- [R13 adversarial review](docs/adversarial-reviews/R13.md)
 - [paper cryptographic validation plan](docs/paper-cryptographic-validation-plan-v3.md)
-- [R12 adversarial review](docs/adversarial-reviews/R12.md)
 
 Please report suspected security issues privately to the maintainer rather than
 opening a public issue. Include the affected suite/version or commit, a minimal

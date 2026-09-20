@@ -65,6 +65,7 @@ jobs:
       - run: python -m pytest -q tests/unit/test_kdf_argon2id.py
       - run: python -m scripts.generate_v3_r12_corpus --check
       - run: python -m scripts.generate_v3_r125_corpus --check
+      - run: python -m scripts.check_r13_design
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl

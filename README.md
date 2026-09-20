@@ -20,7 +20,7 @@ ablation baseline for measuring the effect of historical feedback.
 | Layer | Status |
 |---|---|
 | R0–R12 engineering/conformance | PASS recorded |
-| R12.5 historical feedback | active planning / implementation gate |
+| R12.5 historical feedback | implemented candidate; CI/adversarial gate pending |
 | R13 formal security & cryptanalysis | blocked by R12.5 |
 | R14 experimental freeze/preregistration | pending |
 | R15 confirmatory scientific campaign | pending |
@@ -30,6 +30,8 @@ ablation baseline for measuring the effect of historical feedback.
 
 Current governing documents:
 
+- [R12.5 byte-exact specification](specification/sigma-v3-r12-5-history.md)
+- [R12.5 implementation traceability](docs/traceability-v3-r12-5.md)
 - [R12.5 history-feedback plan](docs/sigma-v3-r12-5-history-feedback-plan.md)
 - [cryptographic/scientific paper validation plan](docs/paper-cryptographic-validation-plan-v3.md)
 - [v3 assessment and development plan](docs/assessment-and-development-plan-v3-2026-09-19.md)

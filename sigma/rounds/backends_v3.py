@@ -20,6 +20,7 @@ class DeepBranchTaskV3:
     position: int
     algorithm: AlgorithmId
     frame: bytes
+    domain: DomainIdV3 = DomainIdV3.DEEP_BRANCH_FRAME
 
     def __post_init__(self) -> None:
         if isinstance(self.position, bool) or not isinstance(self.position, int):
@@ -30,6 +31,8 @@ class DeepBranchTaskV3:
             raise TypeError("algorithm must be AlgorithmId")
         if not isinstance(self.frame, bytes) or not self.frame:
             raise ValueError("frame must be non-empty bytes")
+        if not isinstance(self.domain, DomainIdV3):
+            raise TypeError("domain must be DomainIdV3")
 
 
 @dataclass(frozen=True)
@@ -66,7 +69,7 @@ class DeepBranchBackendV3(ABC):
 def _evaluate_task_v3(task: DeepBranchTaskV3) -> DeepBranchResultV3:
     return DeepBranchResultV3(
         task.position,
-        hash_bytes(task.algorithm, DomainIdV3.DEEP_BRANCH_FRAME, task.frame),
+        hash_bytes(task.algorithm, task.domain, task.frame),
     )
 
 

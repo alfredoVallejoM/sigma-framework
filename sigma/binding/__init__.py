@@ -27,11 +27,11 @@ from .types import (
 )
 
 __all__ = [
-    "AnchorV3",
     "HISTORY_ALGORITHM_V3",
-    "HistoryCommitmentV3",
+    "AnchorV3",
     "ByteReader",
     "CardinalityDescriptor",
+    "HistoryCommitmentV3",
     "JointSignature",
     "LengthSignature",
     "MessageSink",
@@ -42,9 +42,9 @@ __all__ = [
     "TrajectoryParameters",
     "TrajectoryWindow",
     "derive_length_signature_v3",
+    "derive_trajectory_parameters",
     "history_seed_v3",
     "history_step_v3",
-    "derive_trajectory_parameters",
     "prepare_binding_v3",
     "prepare_input_v3",
     "sample_uniform",

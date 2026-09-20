@@ -99,6 +99,28 @@ def _stat_fingerprint(value: os.stat_result) -> tuple[int, ...]:
     )
 
 
+def _path_content_digest(path: Path, expected_size: int) -> bytes:
+    """Hash the current pathname bytes with an exact-length guard."""
+
+    digest = hashlib.sha256()
+    total = 0
+    try:
+        with path.open("rb", buffering=0) as stream:
+            while True:
+                chunk = stream.read(DEFAULT_CHUNK_SIZE)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > expected_size:
+                    raise SourceChangedError("file grew during verification")
+                digest.update(chunk)
+    except OSError as exc:
+        raise SourceChangedError("file became unavailable during verification") from exc
+    if total != expected_size:
+        raise SourceChangedError("file length changed during verification")
+    return digest.digest()
+
+
 class StableFileSource(CanonicalSource):
     """A file replay guarded by metadata and full-content consistency."""
 
@@ -150,6 +172,12 @@ class StableFileSource(CanonicalSource):
             if total != self._byte_length:
                 raise SourceChangedError("file length changed during replay")
             current_digest = digest.digest()
+            if os.name == "nt":
+                # Windows path/fd metadata can be coarser than the mutations we
+                # need to detect. Re-read the pathname after closing the handle
+                # and require exact byte identity with the replay just emitted.
+                if _path_content_digest(self._path, self._byte_length) != current_digest:
+                    raise SourceChangedError("file content changed during replay")
             if self._content_digest is None:
                 self._content_digest = current_digest
             elif current_digest != self._content_digest:
@@ -177,6 +205,7 @@ class MmapFileSource(CanonicalSource):
         self._view: mmap.mmap | None = None
         self._closed = True
         try:
+            source_digest = hashlib.sha256()
             with self._path.open("rb", buffering=0) as source:
                 self._require_initial_stat(os.fstat(source.fileno()))
                 total = 0
@@ -187,11 +216,16 @@ class MmapFileSource(CanonicalSource):
                     total += len(chunk)
                     if total > self._byte_length:
                         raise SourceChangedError("file grew during mmap snapshot")
+                    source_digest.update(chunk)
                     self._file.write(chunk)
                 self._require_initial_stat(os.fstat(source.fileno()))
             self._require_initial_stat(self._path.stat())
             if total != self._byte_length:
                 raise SourceChangedError("file length changed during mmap snapshot")
+            if os.name == "nt" and _path_content_digest(
+                self._path, self._byte_length
+            ) != source_digest.digest():
+                raise SourceChangedError("file content changed during mmap snapshot")
             self._file.flush()
             self._file.seek(0)
             if self._byte_length:

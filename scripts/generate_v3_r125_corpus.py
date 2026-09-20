@@ -16,9 +16,9 @@ MESSAGE = b"Sigma v3 R12.5 history feedback corpus"
 CHALLENGE = b"R12.5-history-conformance-challenge"
 APPLICATION_CONTEXT = b"specification/test-vectors/conformance-v3-r12-5"
 CASES = (
-    ("wide-once-history-v3", 0x0321, b"R125-0321"),
-    ("deep-history-v3", 0x0323, b"R125-0323"),
-    ("deep-vector-history-v3", 0x0324, b"R125-0324"),
+    ("wide-once-history-v3", 0x0321, b"R125-0321-129"),
+    ("deep-history-v3", 0x0323, b"R125-0323-76"),
+    ("deep-vector-history-v3", 0x0324, b"R125-0324-52"),
 )
 
 

@@ -162,3 +162,23 @@ R13 puede comenzar sobre la dinámica `Z_i=(H_i,S_i)`. R12 continúa como
 baseline de ablación. Cualquier cambio semántico o byte-level posterior en R12.5
 exige nuevos IDs/candidato y nueva revisión; este cierre no equivale a auditoría
 criptográfica externa.
+
+
+## 2026-09-20 — R13 cierra el diseño formal y criptoanalítico
+
+Decision:
+Se acepta R13 sobre el candidato
+`8a71de3d350ea8215c481e16c9eadbeed54066ef`, con informe
+`docs/adversarial-reviews/R13.md` y GitHub Actions run `35521808235`.
+
+Reason:
+La fase dispone de juegos separados, vector completo de recursos,
+descomposición G-TRAJ-2PRE, claim matrix, registry/schema únicos, atacantes
+centrales HIST/REDUCED/PARAM/TMTO/BRANCH, 39 design records no confirmatorios y
+un gate autoritativo reproducible. El candidato pasa 996 tests (1 omitido),
+mypy/Ruff, fuzzing, corpora, build/wheel y la matriz Linux/macOS/Windows.
+
+Impact:
+R14 queda desbloqueada como fase exclusiva de freeze experimental y
+prerregistro. Ningún piloto R13 se reutiliza como resultado del paper y ningún
+claim abierto se promociona por el mero PASS de ingeniería/diseño.

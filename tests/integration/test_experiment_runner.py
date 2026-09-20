@@ -46,6 +46,8 @@ def test_task_planner_rejects_ambiguous_partition_contract(execution, match: str
 
 
 def test_exp01_runner_writes_raw_summary_and_manifest(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("frozen v2.2 EXP-01 includes a POSIX-oriented file snapshot adapter")
     config = tmp_path / "config.json"
     config.write_text(
         json.dumps(

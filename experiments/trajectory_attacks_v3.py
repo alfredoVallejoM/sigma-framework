@@ -109,6 +109,29 @@ def find_window_collision_v3(
     return None
 
 
+def find_window_preimage_v3(
+    oracle: ReducedOracle,
+    config: ReducedHistoryConfig,
+    *,
+    construction: Construction,
+    target_window: tuple[int, ...],
+    candidates: int,
+) -> dict[str, int | bool] | None:
+    if candidates <= 0:
+        raise ValueError("candidates must be positive")
+    if len(target_window) != config.state_count:
+        raise ValueError("target_window must match state_count")
+    for candidate in range(candidates):
+        trace = evaluate_reduced_history(oracle, config, candidate, construction)
+        if trace.window == target_window:
+            return {
+                "candidate": candidate,
+                "evaluated_candidates": candidate + 1,
+                "success": True,
+            }
+    return None
+
+
 def find_window_second_preimage_v3(
     oracle: ReducedOracle,
     config: ReducedHistoryConfig,
@@ -231,6 +254,7 @@ __all__ = [
     "WindowSecondPreimageV3",
     "collision_scaling_v3",
     "find_window_collision_v3",
+    "find_window_preimage_v3",
     "find_window_second_preimage_v3",
     "multi_target_window_attack_v3",
 ]

@@ -10,7 +10,12 @@ from pathlib import Path
 
 from experiments.freeze import preregistration_is_frozen
 from experiments.r14_analysis import validate_synthetic_analysis
-from experiments.r14_protocol import FREEZE_ID, confirmatory_attack_ids
+from experiments.r14_protocol import (
+    FREEZE_ID,
+    R12_5_BASELINE,
+    R13_BASELINE,
+    confirmatory_attack_ids,
+)
 from scripts.check_r14_baselines import check_baselines
 from scripts.prepare_v3_confirmatory import DEFAULT_OUTPUT, prepare
 
@@ -48,6 +53,8 @@ def _verify_manifest(path: Path) -> dict[str, object]:
         raise ValueError("unexpected R14 protocol-freeze schema")
     if data["freeze_id"] != FREEZE_ID:
         raise ValueError("protocol-freeze uses wrong freeze_id")
+    if data["r12_5_baseline"] != R12_5_BASELINE or data["r13_baseline"] != R13_BASELINE:
+        raise ValueError("protocol-freeze baseline ids do not match R14 protocol")
     if data["confirmatory_executed"] is not False:
         raise ValueError("R14 freeze cannot contain executed confirmatory data")
     files = data["files"]

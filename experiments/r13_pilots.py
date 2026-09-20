@@ -7,8 +7,6 @@ They are disposable and never constitute paper evidence.
 from __future__ import annotations
 
 import math
-from typing import Any
-
 from .branch_failures_v3 import BranchFailureConfigV3, profile_branch_failure_v3
 from .history_attackers_v3 import (
     find_same_persistent_crossings_v3,
@@ -20,7 +18,6 @@ from .history_attackers_v3 import (
 from .history_reduced import ReducedHistoryConfig, find_full_state_collisions
 from .parameter_grinding_v3 import (
     ParameterSpaceV3,
-    derive_parameters_reduced,
     find_cheapest_stratum,
     kdf_early_rejection_profile,
     mitigation_profile,

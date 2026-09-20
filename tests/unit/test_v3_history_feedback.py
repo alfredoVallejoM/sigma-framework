@@ -146,9 +146,7 @@ def test_same_history_with_different_visible_state_changes_round_frame() -> None
     changed_state = bytes((state[0] ^ 1,)) + state[1:]
     history = evaluation.histories[0]
     round_binding = RoundBindingV3(evaluation.prepared.binding, history)
-    layout = derive_history_layout_v3(
-        context, round_binding, round_index=0, base_length=len(state)
-    )
+    layout = derive_history_layout_v3(context, round_binding, round_index=0, base_length=len(state))
     original = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
     changed = HistoryRoundFrame(context, round_binding, layout, 0, changed_state).to_bytes()
     assert original != changed
@@ -232,9 +230,7 @@ def test_deep_vector_history_consumes_the_complete_previous_vector() -> None:
     assert original != changed
     assert history_step_v3(
         context, evaluation.prepared.binding, history, 0, vector
-    ) != history_step_v3(
-        context, evaluation.prepared.binding, history, 0, bytes(mutated)
-    )
+    ) != history_step_v3(context, evaluation.prepared.binding, history, 0, bytes(mutated))
 
 
 def test_history_step_rejects_replay_under_wrong_round_index() -> None:

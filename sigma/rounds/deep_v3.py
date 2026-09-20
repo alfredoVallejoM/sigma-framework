@@ -21,6 +21,11 @@ from sigma.rounds.backends_v3 import (
     DeepBranchTaskV3,
     execute_deep_tasks_v3,
 )
+from sigma.rounds.control_v3 import (
+    CancellationTokenV3,
+    check_cancellation_v3,
+    checked_source_v3,
+)
 from sigma.rounds.framing_v3 import (
     DeepBranchFrame,
     DeepFoldFrame,
@@ -274,11 +279,14 @@ def _evaluate(
     source: CanonicalSource,
     backend: DeepBranchBackendV3,
     evaluation_type: type[DeepEvaluationV3] | type[DeepVectorEvaluationV3],
+    cancellation: CancellationTokenV3 | None,
 ) -> DeepEvaluationLikeV3:
     if not isinstance(source, CanonicalSource):
         raise TypeError("source must be CanonicalSource")
     if not isinstance(backend, DeepBranchBackendV3):
         raise TypeError("backend must be DeepBranchBackendV3")
+    source = checked_source_v3(source, cancellation)
+    check_cancellation_v3(cancellation)
     prepared = prepare_input_v3(context, source)
     binding = prepared.binding
     parameters = derive_trajectory_parameters(context, binding)
@@ -295,6 +303,7 @@ def _evaluate(
     branch_outputs: list[tuple[bytes, ...]] = []
     transition_count = parameters.target_round + parameters.state_count - 1
     for round_index in range(transition_count):
+        check_cancellation_v3(cancellation)
         layout, branches, state = _transition(context, binding, round_index, state, backend)
         layouts.append(layout)
         branch_outputs.append(branches)
@@ -325,9 +334,11 @@ def evaluate_deep_v3(
     context: SigmaContextV3,
     source: CanonicalSource,
     backend: DeepBranchBackendV3 = SERIAL_DEEP_BRANCH_BACKEND_V3,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
 ) -> DeepEvaluationV3:
     _require_profile(context, RoundProfileIdV3.DEEP)
-    evaluation = _evaluate(context, source, backend, DeepEvaluationV3)
+    evaluation = _evaluate(context, source, backend, DeepEvaluationV3, cancellation)
     assert isinstance(evaluation, DeepEvaluationV3)
     return evaluation
 
@@ -336,9 +347,11 @@ def evaluate_deep_vector_v3(
     context: SigmaContextV3,
     source: CanonicalSource,
     backend: DeepBranchBackendV3 = SERIAL_DEEP_BRANCH_BACKEND_V3,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
 ) -> DeepVectorEvaluationV3:
     _require_profile(context, RoundProfileIdV3.DEEP_VECTOR)
-    evaluation = _evaluate(context, source, backend, DeepVectorEvaluationV3)
+    evaluation = _evaluate(context, source, backend, DeepVectorEvaluationV3, cancellation)
     assert isinstance(evaluation, DeepVectorEvaluationV3)
     return evaluation
 
@@ -347,16 +360,22 @@ def evaluate_deep_bytes_v3(
     context: SigmaContextV3,
     message: bytes,
     backend: DeepBranchBackendV3 = SERIAL_DEEP_BRANCH_BACKEND_V3,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
 ) -> DeepEvaluationV3:
-    return evaluate_deep_v3(context, BytesSource(message), backend)
+    return evaluate_deep_v3(context, BytesSource(message), backend, cancellation=cancellation)
 
 
 def evaluate_deep_vector_bytes_v3(
     context: SigmaContextV3,
     message: bytes,
     backend: DeepBranchBackendV3 = SERIAL_DEEP_BRANCH_BACKEND_V3,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
 ) -> DeepVectorEvaluationV3:
-    return evaluate_deep_vector_v3(context, BytesSource(message), backend)
+    return evaluate_deep_vector_v3(
+        context, BytesSource(message), backend, cancellation=cancellation
+    )
 
 
 __all__ = [

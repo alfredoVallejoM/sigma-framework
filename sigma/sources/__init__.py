@@ -3,6 +3,8 @@
 from sigma.sources.canonical import (
     BytesSource,
     CanonicalSource,
+    IncrementalSpoolSource,
+    MmapFileSource,
     SourceChangedError,
     SourceClosedError,
     SourceLimitError,
@@ -13,6 +15,8 @@ from sigma.sources.canonical import (
 __all__ = [
     "BytesSource",
     "CanonicalSource",
+    "IncrementalSpoolSource",
+    "MmapFileSource",
     "SourceChangedError",
     "SourceClosedError",
     "SourceLimitError",

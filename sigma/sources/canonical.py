@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import mmap
 import os
 import tempfile
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
-from typing import IO, BinaryIO
+from typing import IO, BinaryIO, cast
 
 MAX_U64 = (1 << 64) - 1
 DEFAULT_CHUNK_SIZE = 1 << 20
@@ -143,6 +144,77 @@ class StableFileSource(CanonicalSource):
         self._closed = True
 
 
+class MmapFileSource(CanonicalSource):
+    """Immutable temporary snapshot replayed through read-only mmap slices."""
+
+    def __init__(self, path: str | os.PathLike[str]) -> None:
+        self._path = Path(path)
+        initial = self._path.stat()
+        if not self._path.is_file():
+            raise ValueError("path must name a regular file")
+        if not 0 <= initial.st_size <= MAX_U64:
+            raise ValueError("file length is out of range")
+        self._initial_fingerprint = _stat_fingerprint(initial)
+        self._byte_length = initial.st_size
+        self._file: IO[bytes] = tempfile.TemporaryFile(mode="w+b")
+        self._view: mmap.mmap | None = None
+        self._closed = True
+        try:
+            with self._path.open("rb", buffering=0) as source:
+                self._require_initial_stat(os.fstat(source.fileno()))
+                total = 0
+                while True:
+                    chunk = source.read(DEFAULT_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > self._byte_length:
+                        raise SourceChangedError("file grew during mmap snapshot")
+                    self._file.write(chunk)
+                self._require_initial_stat(os.fstat(source.fileno()))
+            self._require_initial_stat(self._path.stat())
+            if total != self._byte_length:
+                raise SourceChangedError("file length changed during mmap snapshot")
+            self._file.flush()
+            self._file.seek(0)
+            if self._byte_length:
+                self._view = mmap.mmap(self._file.fileno(), 0, access=mmap.ACCESS_READ)
+            self._closed = False
+        except BaseException:
+            if self._view is not None:
+                self._view.close()
+            self._file.close()
+            raise
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise SourceClosedError("source is closed")
+
+    def _require_initial_stat(self, value: os.stat_result) -> None:
+        if _stat_fingerprint(value) != self._initial_fingerprint:
+            raise SourceChangedError("file metadata changed")
+
+    @property
+    def byte_length(self) -> int:
+        self._ensure_open()
+        return self._byte_length
+
+    def iter_chunks(self, chunk_size: int) -> Iterator[bytes]:
+        self._ensure_open()
+        _validate_chunk_size(chunk_size)
+        if self._view is None:
+            return
+        for offset in range(0, self._byte_length, chunk_size):
+            yield self._view[offset : min(offset + chunk_size, self._byte_length)]
+
+    def close(self) -> None:
+        if not self._closed:
+            if self._view is not None:
+                self._view.close()
+            self._file.close()
+            self._closed = True
+
+
 class SpoolingStreamSource(CanonicalSource):
     """Capture a non-seekable stream once, then replay it safely."""
 
@@ -233,6 +305,121 @@ class SpoolingStreamSource(CanonicalSource):
             yield chunk
         if total != self._byte_length:
             raise SourceChangedError("spool length changed")
+
+    def close(self) -> None:
+        if not self._closed:
+            self._file.close()
+            self._closed = True
+
+
+class IncrementalSpoolSource(CanonicalSource):
+    """Bounded incremental writer that becomes replayable only when finalized."""
+
+    def __init__(
+        self,
+        *,
+        max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
+        max_spool_bytes: int = DEFAULT_MAX_SPOOL_BYTES,
+        temp_dir: str | os.PathLike[str] | None = None,
+    ) -> None:
+        for name, value, minimum in (
+            ("max_memory_bytes", max_memory_bytes, 1),
+            ("max_spool_bytes", max_spool_bytes, 0),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be int")
+            if not minimum <= value <= MAX_U64:
+                raise ValueError(f"{name} is out of range")
+        if max_memory_bytes > max_spool_bytes and max_spool_bytes != 0:
+            raise ValueError("max_memory_bytes exceeds max_spool_bytes")
+        spool_dir = os.fspath(temp_dir) if temp_dir is not None else None
+        self._file: IO[bytes] = tempfile.SpooledTemporaryFile(
+            max_size=max_memory_bytes,
+            mode="w+b",
+            dir=spool_dir,
+        )
+        self._max_memory_bytes = max_memory_bytes
+        self._max_spool_bytes = max_spool_bytes
+        self._byte_length = 0
+        self._finalized = False
+        self._closed = False
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise SourceClosedError("source is closed")
+
+    def _ensure_finalized(self) -> None:
+        self._ensure_open()
+        if not self._finalized:
+            raise RuntimeError("incremental source is not finalized")
+
+    @property
+    def byte_length(self) -> int:
+        self._ensure_finalized()
+        return self._byte_length
+
+    @property
+    def current_length(self) -> int:
+        self._ensure_open()
+        return self._byte_length
+
+    @property
+    def rolled_to_disk(self) -> bool:
+        self._ensure_open()
+        return self._byte_length > self._max_memory_bytes
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def update(self, data: bytes) -> None:
+        self._ensure_open()
+        if self._finalized:
+            raise RuntimeError("incremental source is finalized")
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
+        new_length = self._byte_length + len(data)
+        if new_length > self._max_spool_bytes:
+            raise SourceLimitError("incremental source exceeds max_spool_bytes")
+        self._file.seek(0, os.SEEK_END)
+        self._file.write(data)
+        self._byte_length = new_length
+
+    def snapshot(self) -> SpoolingStreamSource:
+        """Copy the current prefix into an independent replayable source."""
+
+        self._ensure_open()
+        self._file.seek(0)
+        try:
+            return SpoolingStreamSource(
+                cast(BinaryIO, self._file),
+                max_memory_bytes=self._max_memory_bytes,
+                max_spool_bytes=self._max_spool_bytes,
+            )
+        finally:
+            self._file.seek(0, os.SEEK_END)
+
+    def finalize(self) -> IncrementalSpoolSource:
+        self._ensure_open()
+        if self._finalized:
+            raise RuntimeError("incremental source is already finalized")
+        self._finalized = True
+        self._file.seek(0)
+        return self
+
+    def iter_chunks(self, chunk_size: int) -> Iterator[bytes]:
+        self._ensure_finalized()
+        _validate_chunk_size(chunk_size)
+        self._file.seek(0)
+        total = 0
+        while True:
+            chunk = self._file.read(chunk_size)
+            if not chunk:
+                break
+            total += len(chunk)
+            yield chunk
+        if total != self._byte_length:
+            raise SourceChangedError("incremental spool length changed")
 
     def close(self) -> None:
         if not self._closed:

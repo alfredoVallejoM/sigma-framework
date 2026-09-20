@@ -14,6 +14,11 @@ from sigma.binding import (
 )
 from sigma.crypto.primitives import HashAccumulator, hash_bytes
 from sigma.layout import LayoutPlan, derive_layout_v3
+from sigma.rounds.control_v3 import (
+    CancellationTokenV3,
+    check_cancellation_v3,
+    checked_source_v3,
+)
 from sigma.rounds.framing_v3 import InitFrame, RoundFrame
 from sigma.sources import BytesSource, CanonicalSource
 from sigma.spec.context_v3 import SigmaContextV3
@@ -97,7 +102,12 @@ class WideOnceEvaluationV3:
                 raise ValueError("state transition does not match round frame")
 
 
-def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> WideOnceEvaluationV3:
+def evaluate_wide_once_v3(
+    context: SigmaContextV3,
+    source: CanonicalSource,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
+) -> WideOnceEvaluationV3:
     """Evaluate the registered reference suite with a bounded public window."""
 
     if not isinstance(context, SigmaContextV3):
@@ -106,6 +116,8 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
         raise ValueError("context must use WideOnce round profile")
     if not isinstance(source, CanonicalSource):
         raise TypeError("source must be CanonicalSource")
+    source = checked_source_v3(source, cancellation)
+    check_cancellation_v3(cancellation)
 
     prepared = prepare_input_v3(context, source)
     binding = prepared.binding
@@ -124,6 +136,7 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
     round_layouts: list[LayoutPlan] = []
     last_state_index = parameters.target_round + parameters.state_count - 1
     for round_index in range(last_state_index):
+        check_cancellation_v3(cancellation)
         layout = derive_layout_v3(
             context,
             binding,
@@ -161,5 +174,10 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
     return evaluation
 
 
-def evaluate_wide_once_bytes_v3(context: SigmaContextV3, message: bytes) -> WideOnceEvaluationV3:
-    return evaluate_wide_once_v3(context, BytesSource(message))
+def evaluate_wide_once_bytes_v3(
+    context: SigmaContextV3,
+    message: bytes,
+    *,
+    cancellation: CancellationTokenV3 | None = None,
+) -> WideOnceEvaluationV3:
+    return evaluate_wide_once_v3(context, BytesSource(message), cancellation=cancellation)

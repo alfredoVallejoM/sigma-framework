@@ -83,3 +83,23 @@ Impact:
 Los perfiles tienen IDs, contextos, anchos, evaluaciones y verificadores
 despachados distintos. No se describirá Deep como vectorial ni DeepVector como
 cuatro cadenas independientes.
+
+## 2026-09-20 — I/O y scheduling no cambian la función v3
+
+Decision:
+R10 fija una única evaluación canónica para bytes, fichero estable, snapshot
+mmap, reader spooled e incremental. El fichero mmap siempre se deriva de una
+snapshot privada verificada. Cada checkpoint incremental ejecuta una Sigma v3
+completa sobre su prefijo. La cancelación sólo ocurre en fronteras canónicas y
+nunca publica resultados parciales.
+
+Reason:
+La construcción necesita múltiples replays idénticos del mensaje. Reutilizar un
+anchor incremental, mapear directamente un path mutable o permitir que cada
+backend reconstruya frames produciría funciones distintas según el camino de
+I/O o abriría carreras TOCTOU.
+
+Impact:
+Los caminos de entrada deben ser byte-idénticos, los límites de spool son
+explícitos y todos los temporales, mappings y procesos se liberan en éxito,
+error y cancelación.

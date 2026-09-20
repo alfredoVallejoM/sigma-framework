@@ -17,20 +17,14 @@ from sigma.crypto.primitives import domain_tag_v3
 from sigma.rounds.deep_v3 import (
     DeepEvaluationV3,
     DeepVectorEvaluationV3,
-    evaluate_deep_v3,
-    evaluate_deep_vector_v3,
 )
-from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3, evaluate_wide_once_v3
+from sigma.rounds.evaluate_v3 import evaluate_v3
+from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.sources import CanonicalSource
 from sigma.spec.codec_v3 import decode_record, encode_record, validate_record_prefix
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_uint
-from sigma.spec.ids_v3 import (
-    DomainIdV3,
-    OutputProfileIdV3,
-    RoundProfileIdV3,
-    SuiteIdV3,
-)
+from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3, SuiteIdV3
 
 _DIGEST_MAGIC = b"SIGMA3DG"
 _AUDIT_MAGIC = b"SIGMA3EA"
@@ -239,13 +233,7 @@ def verify_prepared_v3(evaluation: EvaluationV3, evidence: SigmaDigestV3) -> boo
 
 
 def _evaluate_for_context_v3(context: SigmaContextV3, source: CanonicalSource) -> EvaluationV3:
-    if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
-        return evaluate_wide_once_v3(context, source)
-    if context.round_profile is RoundProfileIdV3.DEEP:
-        return evaluate_deep_v3(context, source)
-    if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
-        return evaluate_deep_vector_v3(context, source)
-    raise ValueError("unsupported Sigma v3 round profile")  # pragma: no cover
+    return evaluate_v3(context, source)
 
 
 def verify_full_v3(source: CanonicalSource, evidence: SigmaDigestV3) -> bool:

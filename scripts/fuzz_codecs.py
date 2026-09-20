@@ -25,6 +25,7 @@ from sigma.spec.encoding import DecodeError
 from sigma.spec.ids import SignatureAlgorithmId
 from sigma.spec.ids_v3 import SuiteIdV3
 from sigma.v2 import hash_bytes
+from sigma.rounds.history_v3 import HistoryWideOnceEvaluationV3
 from sigma.v3 import evaluate_v3
 
 
@@ -99,6 +100,7 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
         history_context,
         BytesSource(b"fuzz-history-seed"),
     )
+    assert isinstance(history_evaluation, HistoryWideOnceEvaluationV3)
     history = history_evaluation.histories[0]
     round_binding = RoundBindingV3(history_evaluation.prepared.binding, history)
     history_layout = history_evaluation.round_layouts[0]

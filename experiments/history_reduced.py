@@ -275,9 +275,7 @@ def evaluate_reduced_history(
         persistent=persistent,
         states=state_tuple,
         histories=tuple(histories),
-        window=state_tuple[
-            config.target_round : config.target_round + config.state_count
-        ],
+        window=state_tuple[config.target_round : config.target_round + config.state_count],
     )
 
 

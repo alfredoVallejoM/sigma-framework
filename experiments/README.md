@@ -1,5 +1,35 @@
 # Reproducible experiment harness
 
+## Sigma v3 R13 design harness
+
+R13 adds a separate, disposable attack-design layer for Sigma v3/R12.5:
+
+- `history_reduced.py` and `history_attackers_v3.py`: HIST state-cross,
+  full-state, HistoryStep, truncation and layout ablations;
+- `trajectory_attacks_v3.py`: reduced collision, preimage, second-preimage and
+  multi-target window attackers;
+- `parameter_grinding_v3.py`: PARAM-01..06, including KDF early rejection,
+  PoW nonce grinding and fixed-cost mitigation controls;
+- `tmto_v3.py`: direct, distinguished, rho, Hellman and rainbow models;
+- `branch_failures_v3.py`: Deep/DeepVector broken-branch and broken-fold
+  controls;
+- `r13_registry.py`: closed claim/resource/success/censoring/output registry;
+- `r13_pilots.py`: deterministic interface-validation pilots.
+
+Run the R13 design gate with:
+
+```console
+python -m scripts.check_r13_design
+```
+
+Every R13 design record has `confirmatory=false`. These pilots exist only to
+validate attacker interfaces, resource accounting, schemas and feasibility
+before R14 freezes budgets/configs. They **must not** be used as article
+results. R15 will be the first phase allowed to create confirmatory v3 evidence.
+
+The v2.2 campaign below remains a historical, separately frozen experimental
+line and is not reinterpreted as v3 evidence.
+
 This directory contains only the active Sigma v2.2 experimental runners,
 their final development-pilot configurations and the frozen
 preregistration. Pilot raw data are transient and cannot feed the paper. The

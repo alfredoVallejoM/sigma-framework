@@ -36,6 +36,9 @@ class ParameterSpaceV3:
         return (self.t_max - self.t_min + 1) * (self.k_max - self.k_min + 1)
 
 
+DEFAULT_PARAMETER_SPACE_V3 = ParameterSpaceV3()
+
+
 class _ParameterReader:
     def __init__(self, oracle: ReducedOracle, persistent: int, persistent_bits: int) -> None:
         self._oracle = oracle
@@ -157,7 +160,7 @@ def derive_parameters_reduced(
     candidate: int,
     *,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> DerivedParametersV3:
     if isinstance(candidate, bool) or not isinstance(candidate, int) or candidate < 0:
         raise ValueError("candidate must be a non-negative int")
@@ -176,7 +179,7 @@ def parameter_distribution(
     candidates: int,
     *,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> dict[tuple[int, int], int]:
     if candidates <= 0:
         raise ValueError("candidates must be positive")
@@ -194,7 +197,7 @@ def parameter_correlation_profile(
     candidates: int,
     *,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> ParameterCorrelationProfileV3:
     if candidates < 2:
         raise ValueError("candidates must be at least two")
@@ -227,7 +230,7 @@ def mitigation_profile(
     fixed_t: int,
     fixed_k: int,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> MitigationProfileV3:
     if candidates <= 0:
         raise ValueError("candidates must be positive")
@@ -261,7 +264,7 @@ def find_cheapest_stratum(
     candidates: int,
     *,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> GrindingProfileV3:
     if candidates <= 0:
         raise ValueError("candidates must be positive")
@@ -297,7 +300,7 @@ def kdf_early_rejection_profile(
     target_candidate: int,
     guesses: int,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> EarlyRejectionProfileV3:
     if guesses <= 0:
         raise ValueError("guesses must be positive")
@@ -335,7 +338,7 @@ def pow_nonce_grinding_profile(
     nonces: int,
     *,
     persistent_bits: int = 16,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> NonceGrindingProfileV3:
     if nonces <= 0:
         raise ValueError("nonces must be positive")
@@ -361,6 +364,7 @@ def pow_nonce_grinding_profile(
 
 
 __all__ = [
+    "DEFAULT_PARAMETER_SPACE_V3",
     "DerivedParametersV3",
     "EarlyRejectionProfileV3",
     "GrindingProfileV3",

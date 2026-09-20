@@ -1,7 +1,7 @@
 # Sigma v3 R14 — traceability
 
 Fecha: 2026-09-20.  
-Estado: **R14 technical PASS — cierre formal bloqueado sólo por TAG-01**.  
+Estado: **R14 technical candidate PASS; R14.1 REOPENED before data**.  
 Candidato técnico auditado: `b6ebc780cc0b201fd27562c85c64c90df37c1075`.  
 Workflow autoritativo: `35529570894`.  
 Informe adversarial: `docs/adversarial-reviews/R14.md`.
@@ -31,7 +31,10 @@ congelado y preregistrado que desbloquea R15.
 | freeze manifest | 44 Git-blob-bound files | PASS |
 | R14 gate | `scripts/check_r14_freeze.py` | PASS |
 | adversarial review | `docs/adversarial-reviews/R14.md` | VERSIONED |
-| exact Git tag | `sigma-v3-r14-freeze-v1` | **TAG-01 PENDING** |
+| publication-scale refreeze | R15 volume/interval policy | **R14.1 ACTIVE** |
+| data/storage refreeze | streaming/provenance policy | **R14.1 ACTIVE** |
+| execution closure | missing final executors/estimators | **R14.1 ACTIVE** |
+| exact Git tag | `sigma-v3-r14-freeze-v1` | blocked by R14.1 |
 
 Documento rector:
 `docs/r14-experimental-freeze-plan.md`.
@@ -80,11 +83,12 @@ Artifacts:
 - `r14-freeze-bundle`: id `10609774757`,
   sha256 `089ed944e70654124d9489f9f50fa51e2128fae4fa3e668ca21b86e770914152`.
 
-## TAG-01
+## R14.1 antes de TAG-01
 
-El único requisito de cierre formal no satisfecho es crear el tag exacto:
+La revisión detallada de R15, realizada antes de observar datos confirmatorios,
+identificó libertad residual en executors/estimators, escala de publicación y
+streaming/storage. Por ello el candidato `b6ebc780...` no debe recibir el tag
+final.
 
-`sigma-v3-r14-freeze-v1 -> b6ebc780cc0b201fd27562c85c64c90df37c1075`.
-
-R15 permanece bloqueado hasta que ese tag exista. No se debe apuntar el tag a
-los commits documentales posteriores.
+R14.1 regenerará configs/prerregistro/manifest y producirá un nuevo candidato.
+Sólo ese nuevo candidato podrá recibir `sigma-v3-r14-freeze-v1`.

@@ -65,9 +65,7 @@ def test_r125_corpus_matches_productive_digest_and_history() -> None:
             application_context=bytes.fromhex(case["application_context_hex"]),
         )
         evaluation = evaluate_v3(context, BytesSource(message))
-        assert [item.to_bytes().hex() for item in evaluation.histories] == case[
-            "histories_hex"
-        ]
+        assert [item.to_bytes().hex() for item in evaluation.histories] == case["histories_hex"]
         digest = digest_from_evaluation_v3(evaluation).to_bytes()
         assert digest.hex() == case["digest_hex"]
         assert hashlib.sha256(digest).hexdigest() == KATS[case["suite_id"]]

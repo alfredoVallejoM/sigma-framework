@@ -152,6 +152,10 @@ def test_all_history_families_keep_one_history_per_state(
 ) -> None:
     evaluation = evaluate_v3(_context(suite_id), BytesSource(b"all-families"))
     assert isinstance(evaluation, expected_type)
+    assert isinstance(
+        evaluation,
+        (HistoryWideOnceEvaluationV3, HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3),
+    )
     assert len(evaluation.histories) == len(evaluation.states)
     assert len(evaluation.round_layouts) == len(evaluation.states) - 1
 

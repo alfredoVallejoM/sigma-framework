@@ -1,7 +1,10 @@
 # Sigma v3 R13 — trazabilidad de seguridad y criptoanálisis
 
 Fecha: 2026-09-20.  
-Estado: **PASS — formal security & cryptanalysis design**.\nCandidato auditado: `8a71de3d350ea8215c481e16c9eadbeed54066ef`.\nWorkflow autoritativo: `35521808235`.\nInforme: `docs/adversarial-reviews/R13.md`.
+Estado: **PASS — formal security & cryptanalysis design**.  
+Candidato auditado: `8a71de3d350ea8215c481e16c9eadbeed54066ef`.  
+Workflow autoritativo: `35521808235`.  
+Informe: `docs/adversarial-reviews/R13.md`.
 
 Baseline inmutable de construcción:
 `5ac306bb23acae0e0a4ef03eb56b3062343c2127` (R12.5 PASS).
@@ -96,4 +99,8 @@ No se requieren resultados confirmatorios para cerrar R13. R14 congelará
 presupuestos, sample sizes, discovery/holdout, configs y prerregistro. R15
 producirá la evidencia cuantitativa. R16 mantiene la reproducción y revisión
 criptográfica externa.
-\n\n## Cierre adversarial\n\nR13 quedó cerrado sobre `8a71de3d350ea8215c481e16c9eadbeed54066ef` con 996 tests aprobados, 1 omitido, design gate PASS, matriz Linux/macOS/Windows verde y artifact `r13-authoritative-gate`. Los pilotos R13 siguen siendo no confirmatorios. El siguiente gate autorizado es R14.\n
+
+
+## Cierre adversarial
+
+R13 quedó cerrado sobre `8a71de3d350ea8215c481e16c9eadbeed54066ef` con 996 tests aprobados, 1 omitido, design gate PASS, matriz Linux/macOS/Windows verde y artifact `r13-authoritative-gate`. Los pilotos R13 siguen siendo no confirmatorios. El siguiente gate autorizado es R14.

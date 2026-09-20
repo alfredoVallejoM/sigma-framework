@@ -45,7 +45,7 @@ def _oracle(label: bytes = b"r13-attacker-tests") -> ReducedOracle:
 
 
 def test_r13_registry_is_closed_and_claim_linked() -> None:
-    assert CORE_EXECUTABLE_ATTACKS <= set(ATTACK_REGISTRY)
+    assert set(ATTACK_REGISTRY) >= CORE_EXECUTABLE_ATTACKS
     for attack_id in CORE_EXECUTABLE_ATTACKS:
         spec = get_attack(attack_id)
         assert spec.claims
@@ -326,7 +326,7 @@ def test_r13_design_pilot_harness_is_deterministic_schema_complete_and_nonconfir
     validate_r13_design_records(first)
     assert all(record.metrics["confirmatory"] is False for record in first)
     observed = {record.attack_id for record in first}
-    assert CORE_EXECUTABLE_ATTACKS <= observed
+    assert observed >= CORE_EXECUTABLE_ATTACKS
 
 
 def test_r13_model_guards_refuse_infeasible_or_invalid_inputs() -> None:

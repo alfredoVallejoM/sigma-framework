@@ -3,20 +3,45 @@
 Sigma is an experimental Python framework for canonical wide-input hash
 commitments, input-reinjected iteration and multi-state digests.
 
-> **Security status:** Sigma v2.2 is an alpha research implementation. Its wire,
-> vectors and suite definitions passed their local F2 freeze, but the
-> construction has not received independent cryptographic review. Do not treat
-> it as a password KDF, digital signature, authentication scheme, production
-> proof of work, or replacement for a standard hash function.
+> **Security status:** Sigma v3 / Sigma-IAP is an experimental research line.
+> R12 has a traceable engineering/conformance PASS, but this is not a
+> cryptographic audit. A post-R12 semantic correction, R12.5, restores historical
+> feedback so prior trajectory state becomes part of the effective round binding.
+> Until R12.5–R16 are closed, no v3 suite is production-ready or security-stable.
 
-Sigma v2.2 is the only active and publishable line. Legacy v1/v2.1 code,
-vectors, configurations and result artifacts have been removed from the current
-tree; Git retains their history. The frozen scope is recorded in
-[`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md), and all remaining
-work is governed by
-[`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md).
+Sigma v2.2 remains a frozen historical baseline and regression oracle. Sigma v3
+is developed on this branch with byte-exact specifications, an independent
+implementation, conformance corpora and versioned adversarial reviews. The R12
+construction is preserved rather than silently rewritten and is now also an
+ablation baseline for measuring the effect of historical feedback.
 
-## What v2.2 provides
+## Sigma v3 research status
+
+| Layer | Status |
+|---|---|
+| R0–R12 engineering/conformance | PASS recorded |
+| R12.5 historical feedback | active planning / implementation gate |
+| R13 formal security & cryptanalysis | blocked by R12.5 |
+| R14 experimental freeze/preregistration | pending |
+| R15 confirmatory scientific campaign | pending |
+| R16 external reproduction/review | pending |
+| independent cryptographic audit | not performed |
+| production-security claim | not made |
+
+Current governing documents:
+
+- [R12.5 history-feedback plan](docs/sigma-v3-r12-5-history-feedback-plan.md)
+- [cryptographic/scientific paper validation plan](docs/paper-cryptographic-validation-plan-v3.md)
+- [v3 assessment and development plan](docs/assessment-and-development-plan-v3-2026-09-19.md)
+- [R12 traceability](docs/traceability-v3-r12.md)
+- [R12 adversarial review](docs/adversarial-reviews/R12.md)
+- [R12 byte-exact specification](specification/sigma-v3.md)
+
+The core research object after R12.5 is the full trajectory state
+`Z_i = (H_i, S_i)`: the public state `S_i` may collide without implying that
+two distinct historical trajectories have coalesced.
+
+## Frozen v2.2 baseline
 
 Sigma v2 separates five concerns that v1 mixed together:
 
@@ -138,14 +163,15 @@ The coverage-guided and mutation campaigns use the optional `fuzz` and
 `mutation` dependency groups. Version dimensions and release eligibility are
 defined in [`docs/versioning.md`](docs/versioning.md).
 
-The current project snapshot and gate status are summarized in
-[`docs/project-status-2026-09-03.md`](docs/project-status-2026-09-03.md).
-The byte-level construction is specified in
-[`specification/sigma-v2.md`](specification/sigma-v2.md). The only executable
-roadmap is
-[`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md),
-and its frozen scope and cleanup inventory are in
-[`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md).
+The active v3 roadmap is
+[`docs/assessment-and-development-plan-v3-2026-09-19.md`](docs/assessment-and-development-plan-v3-2026-09-19.md).
+R12.5 is specified as a post-R12 correction in
+[`docs/sigma-v3-r12-5-history-feedback-plan.md`](docs/sigma-v3-r12-5-history-feedback-plan.md),
+and the paper evidence program is in
+[`docs/paper-cryptographic-validation-plan-v3.md`](docs/paper-cryptographic-validation-plan-v3.md).
+The preserved v2.2 historical scope remains documented in
+[`docs/current-scope-v2-2.md`](docs/current-scope-v2-2.md) and
+[`docs/final-development-plan-v2-2.md`](docs/final-development-plan-v2-2.md).
 The formal claims and working paper are in
 [`specification/security-analysis.md`](specification/security-analysis.md) and
 [`paper/manuscript.md`](paper/manuscript.md). The reproducible experiment

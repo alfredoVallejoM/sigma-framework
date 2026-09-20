@@ -1,4 +1,4 @@
-"""Validate the closed R13 attack-design registry and disposable pilots."""
+"""Validate the canonical R13 registry, schema and disposable design pilots."""
 
 from __future__ import annotations
 
@@ -7,29 +7,33 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from experiments.r13_pilots import run_r13_design_pilots, validate_r13_design_records
-from experiments.r13_registry import ATTACK_REGISTRY_V3
+from experiments.r13_attack_registry import ATTACK_REGISTRY
+from experiments.r13_pilots import (
+    CORE_EXECUTABLE_ATTACKS,
+    run_r13_design_pilots,
+    validate_r13_design_records,
+)
 
 
 def validate_r13_design() -> dict[str, object]:
     records = run_r13_design_pilots(b"sigma-r13-authoritative-design")
     validate_r13_design_records(records)
-    counts = Counter(str(record["attack_id"]) for record in records)
-    required = {
-        attack_id
-        for attack_id, spec in ATTACK_REGISTRY_V3.items()
-        if spec.confirmatory_eligible
-    }
-    missing = sorted(required - set(counts))
+    counts = Counter(record.attack_id for record in records)
+    missing = sorted(CORE_EXECUTABLE_ATTACKS - set(counts))
     if missing:
-        raise RuntimeError(f"R13 registry has no executable design pilot: {missing}")
+        raise RuntimeError(f"R13 executable attack set is incomplete: {missing}")
+    if any(record.metrics.get("confirmatory") is not False for record in records):
+        raise RuntimeError("R13 design pilots must never be confirmatory")
     return {
         "schema": "sigma-r13-design-gate-v1",
         "passed": True,
         "records": len(records),
         "attacks": dict(sorted(counts.items())),
-        "registry_entries": len(ATTACK_REGISTRY_V3),
-        "confirmatory_records": sum(record.get("confirmatory") is True for record in records),
+        "registry_entries": len(ATTACK_REGISTRY),
+        "executable_attack_ids": sorted(CORE_EXECUTABLE_ATTACKS),
+        "confirmatory_records": sum(
+            record.metrics.get("confirmatory") is True for record in records
+        ),
     }
 
 

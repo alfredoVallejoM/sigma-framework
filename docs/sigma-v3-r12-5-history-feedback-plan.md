@@ -1,6 +1,6 @@
 # Sigma v3 R12.5 — restauración del feedback histórico
 
-Estado: **enmienda post-R12 obligatoria antes de R13**  
+Estado: **implementación candidata; gate/adversarial PASS pendiente antes de R13**  
 Fecha: 2026-09-20  
 Baseline preservado: R12 candidato `f2fd75b1b99ef67b254dc1ba493e0600babeb214`, PASS adversarial registrado en `963ffe6f7fcd1b4f878ec1a210363c1989ab6023`.
 
@@ -169,16 +169,16 @@ regularidad e independencia del oráculo y siempre limitado por ataques contra
 
 | ID | Decisión | Estado |
 |---|---|---|
-| HIST-001 | Domain e encoding exactos de `HistorySeed`. | pendiente |
-| HIST-002 | Domain e encoding exactos de `HistoryStep`. | pendiente |
-| HIST-003 | Anchura y primitiva del history commitment. | pendiente |
-| HIST-004 | Decidir si `LayoutRound` depende también de `H_i` o sólo el placed binding. | pendiente |
-| HIST-005 | Tipos `HistoryCommitmentV3` y `RoundBindingV3`; prohibir `bytes` sin tipo. | pendiente |
-| HIST-006 | Semántica equivalente para WideOnce, Deep y DeepVector. | pendiente |
-| HIST-007 | Tratamiento de history en evidencia explícita y verificación full. | pendiente |
-| HIST-008 | Reglas de versionado/IDs tras superseder la recurrencia R12. | pendiente |
-| HIST-009 | Modelo de error si history, índice o estado no corresponden. | pendiente |
-| HIST-010 | Política de dominio para aplicaciones que reutilizan el digest. | pendiente |
+| HIST-001 | Domain/encoding fijados: `HISTORY_SEED=0x0317`, wire `SIG3HIST`. | resuelta en candidato |
+| HIST-002 | Domain/encoding fijados: `HISTORY_STEP=0x0318`, actualización causal estricta. | resuelta en candidato |
+| HIST-003 | SHA3-512, 64 bytes; no se contabiliza como seguridad aditiva. | resuelta en candidato |
+| HIST-004 | `LayoutRound` depende de `H_i`; cinco campos efectivos. | resuelta en candidato |
+| HIST-005 | `HistoryCommitmentV3` y `RoundBindingV3` implementados como tipos canónicos. | resuelta en candidato |
+| HIST-006 | WideOnce, Deep y DeepVector history implementados con suite IDs propios. | resuelta en candidato |
+| HIST-007 | History no se publica en el digest; `verify_full_v3` lo recompone; corpus/evaluación lo exponen para auditoría. | resuelta en candidato |
+| HIST-008 | R12 permanece en `0x0301/03/04`; R12.5 usa `0x0321/23/24`. | resuelta en candidato |
+| HIST-009 | Índice/history/state/layout incoherentes se rechazan antes de publicar sucesor. | resuelta en candidato |
+| HIST-010 | Firma/KDF/PoW consumen el digest history por el dispatch genérico; sin claims adicionales. | resuelta en candidato |
 
 ## 5. Diseño de implementación
 
@@ -192,13 +192,10 @@ Crear o extender:
 - `sigma/layout/`
   - soporte explícito para `RoundBindingV3`
   - variante history-adaptive si HIST-004 la adopta
-- `sigma/rounds/framing_v3.py`
-  - `RoundFrame` y `VectorRoundFrame` reciben `RoundBindingV3`
-- `sigma/rounds/wide_once_v3.py`
-  - conserva `(H_i,S_i)` durante la evaluación
-- `sigma/rounds/deep_v3.py`
-  - Deep realimenta el estado escalar previo
-  - DeepVector realimenta el vector completo previo
+- `sigma/rounds/history_framing_v3.py`
+  - frames R12.5 separados para no alterar los bytes R12
+- `sigma/rounds/history_v3.py`
+  - conserva `(H_i,S_i)` y ejecuta WideOnce/Deep/DeepVector history
 - `sigma/outputs/digest_v3.py`
   - `verify_full` reconstruye la cadena histórica completa
 - `reference/independent_v3.py`

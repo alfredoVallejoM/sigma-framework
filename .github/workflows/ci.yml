@@ -127,6 +127,7 @@ jobs:
           --distribution /tmp/r14-dist
           --protocol-freeze experiments/configs/v3-confirmatory-frozen/protocol-freeze.json
           --output /tmp/r14-runtime-manifest.json
+          --source-commit "${{ github.event.pull_request.head.sha || github.sha }}"
       - uses: actions/upload-artifact@v4
         with:
           name: r14-freeze-bundle

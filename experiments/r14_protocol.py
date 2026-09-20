@@ -107,6 +107,7 @@ class CellSpec:
             raise ValueError("stopping and censoring rules must be explicit")
 
 
+# fmt: off
 CLAIMS: tuple[ClaimDisposition, ...] = (
     ClaimDisposition("C01", "reduced-only", "secondary", ("G-CONFORM",), "Canonicality is E1+engineering evidence; no new confirmatory hardness claim."),
     ClaimDisposition("C02", "reduced-only", "secondary", ("HIST-04",), "Causal prefix semantics are proved and exercised by R12.5 adversarial tests."),
@@ -357,6 +358,8 @@ def protocol_summary() -> dict[str, object]:
         },
     }
 
+
+# fmt: on
 
 __all__ = [
     "ATTACK_DISPOSITIONS",

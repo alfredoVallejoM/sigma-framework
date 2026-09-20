@@ -419,17 +419,127 @@ Los proofs R13 deben enumerar explícitamente:
 
 No se ocultan dentro de un único \`\epsilon\` si tienen interpretación distinta.
 
-## 17. Obligaciones abiertas antes de R14
+## 17. G-TRAJ-2PRE — descomposición estructurada
 
-1. completar reducción G-TRAJ-2PRE;
-2. ejecutar modelos reducidos HIST-01..06;
-3. cuantificar grinding \`(t,k)\`;
-4. implementar atacantes TMTO;
-5. comparar R12 vs R12.5 bajo coste normalizado;
-6. validar Deep/DeepVector con ramas/folds rotos;
-7. congelar claim matrix y atacantes antes del prerregistro;
-8. revisión criptográfica externa sigue fuera de R13.
+Sea `M` el target y `M' != M` un candidato aceptado. Igualdad del digest
+canónico implica por injectividad igualdad de contexto, header público y ventana.
+Definimos:
 
-R13 sólo cierra cuando la matriz claim→supuesto→teorema→ataque→experimento está
-completa y ningún claim depende de una batería estadística como prueba de
-seguridad.
+- `HdrEq`: igualdad del header público;
+- `SameP`: `P_M = P_M'`;
+- `Join_{<t}`: existe `j<t` con `Z_j=Z'_j`;
+- `Sep_W`: todas las parejas de queries que generan la ventana están
+  separadas, como en la Sección 9.
+
+El evento de éxito se particiona sin identificar casos criptográficamente
+distintos:
+
+[
+Win_{traj2pre}
+=
+Win_{SameP}
+\;\dot\cup\;
+Win_{DiffP}.
+]
+
+### 17.1 Rama `SameP`
+
+Si `P_M=P_{M'}`, entonces `H_0=H'_0`. Como `M\neq M'`, los InitFrames son
+distintos por canonicalidad. Una colisión temprana que produzca el mismo estado
+completo puede crear `Join_{<t}`; después de ese join la trayectoria futura
+coalesce determinísticamente. Por tanto la ventana no recibe automáticamente un
+factor `2^{-kn}` en esta rama.
+
+La obligación correcta es separar:
+
+[
+Pr[Win_{SameP}]
+\le
+Pr[SameP\wedge Join_{<t}]
++
+Pr[SameP\wedge \neg Join_{<t}\wedge \neg Sep_W]
++
+Pr[SameP\wedge Sep_W\wedge Fresh_W\wedge W=W']
++
+Pr[BadFresh_W].
+]
+
+El tercer término recibe el bound ideal `2^{-kn}`; los dos primeros requieren
+ataques/reducciones propios contra init/history/full-state joining.
+
+### 17.2 Rama `DiffP`
+
+Si el header público coincide pero `P_M\neq P_{M'}`, la diferencia sólo puede
+estar en material interno no publicado, principalmente `J`, bajo el wire
+actual. Los genesis histories consumen `P`; salvo `BadHist`, las trayectorias
+nacen históricamente separadas.
+
+La rama se acota por:
+
+[
+Pr[Win_{DiffP}]
+\le
+Pr[DiffP\wedge Join_{<t}]
++
+Pr[DiffP\wedge \neg Join_{<t}\wedge \neg Sep_W]
++
+2^{-kn}
++
+Pr[BadFresh_W]
++
+\epsilon_{inst},
+]
+
+condicionado al modelo RO/freshness de la Sección 9. Un join en esta rama
+requiere igualar el estado dinámico completo y por tanto incluye un evento
+contra history y estado, pero R13 no multiplica probabilidades concretas sin
+una hipótesis explícita de independencia.
+
+### 17.3 Lo que esta descomposición no afirma
+
+- `SameP` no equivale a "misma seguridad": sigue existiendo el ataque contra
+  Init/trajectory.
+- `DiffP` no recibe seguridad aditiva por tener `J` distinto.
+- `2^{-kn}` es condicional a `Sep_W` y `Fresh_W`, no un strength claim de
+  la instanciación.
+- el header público ya obliga a igualar `A,kappa,Lambda,t,k`; cualquier bound
+  de segunda preimagen del header requiere sus propios supuestos.
+
+**Estatus:** `formal decomposition / concrete reduction open`.
+
+## 18. Atacantes ejecutables R13
+
+Los siguientes módulos fijan falsadores y recursos antes del prerregistro:
+
+| Familia | Implementación | Propósito |
+|---|---|---|
+| HIST-01/02/03/05/06 | `experiments/history_attackers_v3.py` + `history_reduced.py` | crossing, full-state, history, truncation y layout ablation |
+| RED-02/03/04/05 | `experiments/trajectory_attacks_v3.py` | collision scaling, preimage, second-preimage y multi-target |
+| PARAM-01..06 | `experiments/parameter_grinding_v3.py` | uniformidad, correlación, grinding, KDF/PoW y mitigación |
+| TMTO-01 | `experiments/tmto_v3.py` | direct/distinguished/rho/Hellman/rainbow |
+| BRANCH-01 | `experiments/branch_failures_v3.py` | ramas/folds rotos y Deep vs DeepVector |
+| registry | `experiments/r13_registry.py` | claim, baseline, recursos, éxito, censura y esquema |
+| design gate | `scripts/check_r13_design.py` | ejecuta pilotos desechables y valida todos los esquemas |
+
+Los design pilots no son evidencia E2/E3 del paper. Sirven para garantizar que
+R14 recibe atacantes ejecutables, presupuestos medibles y outputs cerrados antes
+de elegir tamaños de muestra.
+
+## 19. Estado al cierre de diseño R13
+
+R13 puede cerrarse sin datos confirmatorios cuando:
+
+1. FORM-01..13 están formulados con status explícito;
+2. G-TRAJ-2PRE está particionado sin ocultar join/separation/freshness;
+3. todo claim publicable tiene falsador o boundary explícito;
+4. los attackers confirmatory-eligible del registro tienen implementación
+   ejecutable y schema validado;
+5. R12 y R12.5 aparecen como baselines distintos;
+6. los pilotos R13 están marcados `confirmatory=false`;
+7. el gate autoritativo ejecuta `scripts.check_r13_design`;
+8. cualquier resultado cuantitativo queda pendiente de R14/R15;
+9. revisión criptográfica externa sigue fuera de R13.
+
+Las obligaciones científicas que pasan a R14/R15 son: elegir presupuestos y
+sample sizes, congelar discovery/holdout, prerregistrar endpoints/análisis,
+ejecutar los ataques confirmatorios y conservar resultados negativos/censura.

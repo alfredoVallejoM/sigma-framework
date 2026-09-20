@@ -13,9 +13,7 @@ from typing import Any, cast
 from reference.independent_v3 import evaluate_suite
 
 ROOT = Path(__file__).parents[1]
-DEFAULT_OUTPUT = (
-    ROOT / "specification" / "test-vectors" / "conformance-v3-r12-5.json.gz.b64"
-)
+DEFAULT_OUTPUT = ROOT / "specification" / "test-vectors" / "conformance-v3-r12-5.json.gz.b64"
 MESSAGE = b"Sigma v3 R12.5 history feedback corpus"
 CHALLENGE = b"R12.5-history-conformance-challenge"
 APPLICATION_CONTEXT = b"specification/test-vectors/conformance-v3-r12-5"

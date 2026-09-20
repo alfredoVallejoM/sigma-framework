@@ -79,8 +79,7 @@ class AttackRunRecord:
         if not isinstance(self.observed, ResourceBudget):
             raise TypeError("observed must be ResourceBudget")
         if any(
-            getattr(self.observed, name) > getattr(self.budget, name)
-            for name in RESOURCE_FIELDS
+            getattr(self.observed, name) > getattr(self.budget, name) for name in RESOURCE_FIELDS
         ):
             raise ValueError("observed resources exceed declared budget")
         if not isinstance(self.metrics, dict):
@@ -91,9 +90,8 @@ class AttackRunRecord:
             raise ValueError("censored runs require censor_reason")
         if self.status is AttackRunStatus.ERROR and not self.error_class:
             raise ValueError("error runs require error_class")
-        if (
-            self.status not in (AttackRunStatus.CENSORED, AttackRunStatus.ERROR)
-            and (self.censor_reason is not None or self.error_class is not None)
+        if self.status not in (AttackRunStatus.CENSORED, AttackRunStatus.ERROR) and (
+            self.censor_reason is not None or self.error_class is not None
         ):
             raise ValueError("terminal annotations do not match run status")
 

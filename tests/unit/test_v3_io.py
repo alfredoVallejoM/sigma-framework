@@ -131,7 +131,7 @@ def test_multiprocess_reader_matches_canonical_vector_and_cleans_children(
         context,
         io.BytesIO(message),
         max_memory_bytes=1,
-        max_spool_bytes=2,
+        max_spool_bytes=len(message),
         read_size=1,
         backend=ProcessDeepBranchBackendV3(2),
     )
@@ -158,10 +158,14 @@ def test_stable_file_detects_and_mmap_snapshot_isolates_toctou(tmp_path) -> None
         _ = mapped.byte_length
 
 
-def test_empty_mmap_file_is_a_valid_canonical_source(tmp_path) -> None:
+@pytest.mark.parametrize(
+    "suite_id",
+    (SuiteIdV3.REFERENCE_IAP_V3, SuiteIdV3.REFERENCE_IAP_HISTORY_V3),
+)
+def test_empty_mmap_file_is_a_valid_canonical_source(tmp_path, suite_id: SuiteIdV3) -> None:
     path = tmp_path / "empty.bin"
     path.write_bytes(b"")
-    context = _context(SuiteIdV3.REFERENCE_IAP_V3)
+    context = _context(suite_id)
     with MmapFileSource(path) as source:
         actual = evaluate_v3(context, source)
     assert actual == evaluate_v3(context, BytesSource(b""))
@@ -227,13 +231,23 @@ class _CancelAfterProcessBackend(DeepBranchBackendV3):
         return results
 
 
-def test_process_cancellation_is_controlled_and_cleans_workers() -> None:
+@pytest.mark.parametrize(
+    ("suite_id", "message"),
+    (
+        (SuiteIdV3.DEEP_VECTOR_V3, b"38"),
+        (SuiteIdV3.DEEP_VECTOR_HISTORY_V3, b"R12.5-cancel"),
+    ),
+)
+def test_process_cancellation_is_controlled_and_cleans_workers(
+    suite_id: SuiteIdV3,
+    message: bytes,
+) -> None:
     token = CancellationTokenV3()
-    context = _context(SuiteIdV3.DEEP_VECTOR_V3)
+    context = _context(suite_id)
     with pytest.raises(EvaluationCancelledV3):
         evaluate_v3(
             context,
-            BytesSource(b"38"),
+            BytesSource(message),
             backend=_CancelAfterProcessBackend(token),
             cancellation=token,
         )

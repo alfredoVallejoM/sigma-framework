@@ -23,6 +23,7 @@ class FigureSpecV3:
     uncertainty: str
 
 
+# fmt: off
 FIGURES_V3 = (
     FigureSpecV3("F01", "Sigma-IAP causal architecture", ("HIST-01",), ("state_bits",), "schematic-only", "none"),
     FigureSpecV3("F02", "Visible crossing without historical coalescence", ("HIST-01",), ("next_state_match_rate",), "group by width/round", "exact 95%"),
@@ -40,6 +41,8 @@ FIGURES_V3 = (
     FigureSpecV3("F14", "Statistical controls", ("STAT-01",), ("adjusted_anomaly_rate",), "external battery calibrated summary", "descriptive"),
     FigureSpecV3("F15", "Cross-platform conformance", ("HIST-01",), ("status",), "engineering summary from frozen gates", "none"),
 )
+
+# fmt: on
 
 TABLES_V3 = (
     "suite-domain-registry",

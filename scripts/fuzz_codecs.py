@@ -1,4 +1,4 @@
-"""Deterministic mutation fuzz harness for every public v2 binary parser."""
+"""Deterministic mutation fuzz harness for registered public v2/v3 codecs."""
 
 import argparse
 import random

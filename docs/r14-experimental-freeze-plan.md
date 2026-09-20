@@ -1,556 +1,543 @@
-# Sigma v3 R14 — freeze experimental y prerregistro científico
+# Sigma v3 R14 — Experimental Freeze & Preregistration
 
-Estado: **plan rector R14; ejecución no iniciada**  
-Fecha: 2026-09-20  
-Baseline criptográfico/constructivo inmutable: R12.5 `5ac306bb23acae0e0a4ef03eb56b3062343c2127`  
-Baseline de diseño de seguridad: R13 `8a71de3d350ea8215c481e16c9eadbeed54066ef`
+Estado: **plan rector de R14; no autoriza todavía ejecución confirmatoria**  
+Fecha: 2026-09-20
 
-## 1. Objetivo de R14
+Baselines inmutables:
 
-R14 no añade una nueva construcción criptográfica ni nuevos claims. Su función
-es convertir la línea R12.5+R13 en un **objeto experimental congelado** que
-pueda producir en R15 un dataset confirmatorio científicamente defendible.
+- R12.5 construcción: `5ac306bb23acae0e0a4ef03eb56b3062343c2127`;
+- R13 diseño formal/criptoanalítico: `8a71de3d350ea8215c481e16c9eadbeed54066ef`.
 
-R14 termina cuando quedan fijados, antes de observar datos confirmatorios:
+R14 no modifica suites, domains, frames, KAT, corpus ni semántica R12.5. Si
+durante R14 aparece una razón para cambiar la función, R14 se detiene y la
+construcción se reabre con nuevos IDs/candidato. R14 tampoco produce resultados
+confirmatorios: congela de forma auditable todo lo necesario para que R15 los
+produzca sin decisiones retrospectivas.
 
-- commit y tag candidato;
-- wheel/sdist exactos;
-- corpus y referencia;
-- attacker registry;
-- schemas;
-- configs;
-- seeds y política de derivación de seeds;
-- tamaños muestrales y presupuestos;
-- discovery/holdout;
-- stopping rules;
-- censura/timeouts;
-- endpoints;
-- análisis estadístico;
-- corrección por comparaciones múltiples;
-- figuras/tablas predefinidas;
-- reglas de exclusión;
-- definición de resultados negativos;
-- política de host/multiplataforma;
-- manifiesto de freeze;
-- prerregistro completo.
+## 1. Objetivo
 
-R14 **no** ejecuta la campaña confirmatoria principal. Los pilotos R14 son
-desechables y sólo dimensionan presupuesto, varianza, precisión y factibilidad.
+R14 transforma el diseño de R13 en un protocolo científico congelado.
 
-## 2. Principio de no-retroajuste
+Al terminar R14 deben estar fijados, antes de observar resultados confirmatorios:
 
-Después del freeze R14:
-
-1. no se cambia ningún byte normativo de R12.5;
-2. no se cambia ningún attacker confirmatory-eligible;
-3. no se cambian endpoints primarios/secundarios;
-4. no se cambian sample sizes salvo regla adaptativa prerregistrada;
-5. no se cambian stopping/censoring rules;
-6. no se cambian análisis/plots principales;
-7. no se descartan resultados por dirección del efecto;
-8. cualquier desviación crea un nuevo freeze id y debe declararse.
-
-Una corrección de bug que cambie resultados matemáticos invalida el freeze.
-Una corrección puramente documental puede preservarlo sólo si no altera ninguna
-decisión experimental.
-
-## 3. Etapas R14
-
-### R14.0 — Inventario y freeze boundary
-
-Objetivo: definir exactamente qué entra y qué queda fuera del artefacto.
-
-Entregables:
-
-- `docs/traceability-v3-r14.md`;
-- lista de ficheros normativos;
-- lista de ficheros experimentales congelables;
-- hashes R12.5/R13;
-- mapa claim -> attacker -> experiment family -> endpoint;
-- declaración explícita de elementos fuera de scope.
-
-Gate R14.0:
-
-- R12.5 PASS intacto;
-- R13 PASS intacto;
-- ningún diff en suites/domains/frames/KAT/corpus;
-- atacante confirmatorio sin claim asociado => error;
-- claim publicable sin falsador => error.
-
-### R14.1 — Schemas experimentales v3
-
-Cada familia debe tener schema cerrado, versionado y validado antes de crear
-outputs.
-
-Familias mínimas:
-
-- HIST;
-- REDUCED;
-- PARAM;
-- TMTO;
-- BRANCH;
-- LAYOUT;
-- DIFF;
-- ALG;
-- STAT;
-- FAULT;
-- APP-SIG;
-- APP-KDF;
-- APP-POW;
-- PARSE;
-- DOS;
-- CONC;
-- PERF.
-
-Campos globales obligatorios:
-
-- `schema_version`;
-- `campaign`;
-- `experiment_family`;
-- `attack_id` cuando aplica;
-- `construction`;
-- `baseline`;
-- `master_seed`;
-- `execution.tasks`;
-- `budget`;
-- `endpoints`;
-- `censoring`;
-- `analysis_plan_id`;
-- `artifact_path`;
-- `freeze_manifest`.
-
-Gate R14.1:
-
-- unknown field rejection;
-- invalid ranges rejected before output creation;
-- canonical JSON;
-- schema round-trip;
-- every config validates against exactly one experiment family.
-
-### R14.2 — Pilotos de dimensionamiento
-
-Los pilotos son descartables y no pueden alimentar tablas/figuras finales.
-
-Objetivos:
-
-- estimar tiempo por unidad;
-- memoria pico;
-- varianza;
-- tasa de censura;
-- probabilidad de encontrar eventos raros;
-- estabilidad entre hosts;
-- coste de atacantes;
-- sensibilidad de endpoints;
-- tamaño viable de streams estadísticos.
-
-Para cada familia se genera un `pilot-decision-record-v3-r14.json` que guarda
-sólo decisiones de dimensionamiento, nunca raw results como evidencia del paper.
-
-Gate R14.2:
-
-- ningún piloto marcado `confirmatory=true`;
-- decisión de sample size trazable a una regla;
-- presupuesto total estimado;
-- no reutilización de seeds confirmatorias;
-- pilotos y confirmatorio usan namespaces de seed distintos.
-
-### R14.3 — Sample sizes y power/precision contracts
-
-No se permite escoger N por conveniencia.
-
-#### Bernoulli/eventos raros
-
-Para tasas de éxito/collision/event persistence:
-
-- intervalos exactos o Wilson según preregistro;
-- si se observan 0 eventos, informar upper bound compatible con N;
-- N se fija por precisión objetivo o probabilidad mínima detectable.
-
-#### Scaling
-
-Para modelos `log2 Q = a n + b`:
-
-- anchuras fijadas antes del confirmatorio;
-- número de repeticiones por anchura fijado por varianza piloto;
-- ajuste primario y modelo alternativo definidos antes de datos.
-
-#### Rendimiento
-
-- número de warmups;
-- repeticiones;
-- orden aleatorizado de tratamientos;
-- bloque por host;
-- mediana/quantiles e intervalo;
-- ninguna comparación de timing mezcla hosts sin modelar host.
-
-#### Estadística externa
-
-- tamaño de stream;
-- transformación byte/bit;
-- batería/versión;
-- tests no aplicables;
-- regla para p-values;
-- no se usa "pass all" como claim criptográfico.
-
-Gate R14.3:
-
-- sample-size table congelada por endpoint;
-- precisión/power target documentado;
-- stopping rule explícita;
-- ninguna regla depende del signo observado en piloto.
-
-### R14.4 — Discovery/holdout para atacantes adaptativos
-
-Aplica a:
-
-- SAT/SMT;
-- TMTO heurístico;
-- chosen-prefix search;
-- differential trail search;
-- parameter grinding heuristics;
-- branch/fold adversaries.
-
-Se separan:
-
-- `discovery_seed_namespace`;
-- `holdout_seed_namespace`.
-
-El atacante se diseña y ajusta sólo en discovery. El holdout es inmutable.
-
-Gate R14.4:
-
-- hashes del código atacante congelados;
-- holdout inaccessible por el workflow de tuning;
-- cualquier cambio del attacker después de ver holdout invalida el freeze.
-
-### R14.5 — Prerregistro v3
-
-Crear `experiments/preregistration-v3.md`.
-
-Debe contener:
-
-1. preguntas primarias;
-2. hypotheses directionales/no direccionales;
-3. claims que cada experimento puede y no puede soportar;
-4. variables;
-5. baselines;
-6. budgets;
-7. seeds;
-8. sample sizes;
-9. endpoints primarios/secundarios;
+1. claims primarios y secundarios;
+2. ataques/falsadores que entran en R15;
+3. baselines y ablaciones;
+4. factores y celdas experimentales;
+5. presupuestos de recursos;
+6. widths, tamaños y workloads;
+7. sample sizes y número de réplicas;
+8. seeds y su derivación;
+9. separación discovery/holdout;
 10. stopping rules;
-11. censoring;
-12. exclusions;
-13. multiple-comparison correction;
-14. statistical models;
-15. figures/tables;
-16. negative-result interpretation;
-17. host/platform matrix;
-18. external battery protocol;
-19. artifact retention;
-20. deviation policy.
+11. censura, timeout y tratamiento de errores;
+12. métricas primarias/secundarias;
+13. análisis estadístico;
+14. corrección por comparaciones múltiples;
+15. schemas de raw data;
+16. scripts de análisis;
+17. figuras/tablas y su fuente de datos;
+18. artefacto ejecutable exacto;
+19. hosts/plataformas requeridos;
+20. freeze manifest y preregistration hash.
 
-Gate R14.5:
+R15 sólo podrá consumir configuraciones que pertenezcan al freeze manifest R14.
 
-- preregistration hash estable;
-- revisión humana explícita;
-- ninguna sección "TBD" para un endpoint confirmatorio.
+## 2. Fronteras epistemológicas
 
-### R14.6 — Configs confirmatorias congeladas
+R14 distingue cuatro clases de material:
 
-Crear `experiments/configs/confirmatory-v3-r14/`.
+- **baseline normativo**: R12.5/R13, inmutable;
+- **piloto de diseño**: se usa para estimar coste/varianza/sample size y se
+  descarta como evidencia;
+- **discovery**: permite ajustar atacantes heurísticos sólo antes del freeze;
+- **holdout confirmatorio**: no se inspecciona ni ajusta hasta R15.
 
-Toda config debe:
+Ninguna observación de pilotos R13 puede aparecer como resultado del paper.
+Ningún resultado R15 puede cambiar una configuración, un atacante o un análisis
+sin invalidar el freeze y abrir una nueva campaña.
 
-- seleccionar un attack/experiment registrado;
-- bindear preregistration SHA-256;
-- bindear wheel SHA-256;
-- bindear freeze manifest;
-- declarar host requirements;
-- declarar timeout;
-- declarar tareas;
-- declarar expected schema, no expected result.
+## 3. Decisiones R14
 
-El sistema de runner debe rechazar:
+| ID | Decisión a congelar | Bloquea |
+|---|---|---|
+| R14-001 | conjunto final de claims primarios/secundarios | todo R15 |
+| R14-002 | ataques R13 que pasan a confirmatorio | configs |
+| R14-003 | ataques conditional/out-of-scope y razón | claims |
+| R14-004 | baselines por ataque | análisis |
+| R14-005 | factores/celdas por familia | sample size |
+| R14-006 | resource budgets por celda | configs |
+| R14-007 | seeds y derivación determinista | reproducción |
+| R14-008 | discovery/holdout split | attackers heurísticos |
+| R14-009 | stopping/censoring/timeout | inferencia |
+| R14-010 | sample-size rule y mínimo por celda | freeze |
+| R14-011 | análisis estadístico y multiplicidad | paper |
+| R14-012 | raw-data schema | runner |
+| R14-013 | figure/table schema | manuscript |
+| R14-014 | host/platform matrix | reproducibilidad |
+| R14-015 | artifact identity y dependency lock | ejecución |
+| R14-016 | external battery adapters/formatos | STAT |
+| R14-017 | KDF/PoW cost model exacto | APP/PARAM |
+| R14-018 | performance protocol y warm-up | PERF |
+| R14-019 | dataset/folder naming and integrity | archive |
+| R14-020 | human approval + immutable freeze manifest | desbloquea R15 |
 
-- config fuera del freeze;
-- wheel distinto;
-- commit/tag distinto;
-- dirty tree;
-- preregistration distinta;
-- config alterada;
-- seed namespace incorrecto.
+## 4. Inventario de campañas que debe resolver R14
 
-### R14.7 — Artifact freeze
+### 4.1 HIST
 
-Construir desde checkout limpio:
+**HIST-01 — state crossing.**
+Congelar widths de estado/history, round indices, candidate budgets, número de
+crossings por celda y endpoint primario:
+`P(S_(i+1)=S'_(i+1) | S_i=S'_i,H_i!=H'_i)`.
+Registrar además full-state equality y longitud de racha visible.
 
-- wheel;
-- sdist;
-- checksums;
-- SBOM;
-- corpus R12;
-- corpus R12.5;
-- independent reference;
-- R13 registry/attackers;
-- confirmatory configs;
-- preregistration;
-- analysis scripts;
-- figure specifications;
-- environment constraints.
+**HIST-02 — full-state collision.**
+Congelar widths geométricos, candidate budget, estrategia de first-hit y
+censura. Endpoint: queries/candidates hasta primera colisión de `(H_i,S_i)`.
 
-Crear `freeze-v3-r14.json` con hashes de todo.
+**HIST-03 — HistoryStep.**
+Separar collision, second-preimage, fixed-point y cycle. No combinar sus
+presupuestos ni inferencias.
 
-Requisitos:
+**HIST-04 — replay/skip/reorder.**
+Producto real, no modelo reducido. Endpoint primario:
+`silent_acceptance == 0`. Cada mutación debe identificar la primera capa de
+rechazo.
 
-- exact tag;
-- clean tree;
-- reproducible manifest;
-- artifact path no apuntando al checkout editable;
-- wheel smoke v2.2 + R12.5;
-- baseline guard;
-- independent consumer checks.
+**HIST-05 — truncation ablation.**
+Congelar una rejilla de history widths y comparar visible/full-state collision
+scaling a coste normalizado.
 
-### R14.8 — Adversarial freeze review
+**HIST-06/LAYOUT-04 — layout ablation.**
+Comparar:
+- fixed layout;
+- history en values solamente;
+- history en seed + values.
+El baseline R12.5 real es el tercero.
 
-Crear `docs/adversarial-reviews/R14.md`.
+### 4.2 REDUCED
 
-La revisión debe intentar romper:
+**RED-01.** Exhaustive map sólo en widths para las que el espacio completo sea
+enumerable dentro del budget congelado.
 
-- config tampering;
-- manifest substitution;
-- seed reuse;
-- discovery/holdout leakage;
-- preregistration mismatch;
-- attacker drift;
-- wheel/source mismatch;
-- dirty-tag execution;
-- schema downgrade;
-- silent censoring;
-- overwrite/resume;
-- missing negative outcomes;
-- host metadata omissions.
+**RED-02.** Collision scaling en widths geométricos. Endpoint principal:
+pendiente `log2(Q50)` vs bits; censura mediante supervivencia, no eliminación
+de runs censurados.
 
-Gate final R14:
+**RED-03.** Preimage: target fijado antes de la randomness del atacante.
 
-- authoritative local gate PASS;
-- CI matrix PASS;
-- freeze checker PASS;
-- preregistration checker PASS;
-- all configs frozen;
-- wheel/sdist hashes frozen;
-- artifact manifest frozen;
-- R14 adversarial PASS versionado.
+**RED-04.** Second-preimage: challenge message fijado antes de seed; registrar
+same-P/any-P, same-header y first divergence.
 
-## 4. Matriz de familias experimentales
+**RED-05.** Multi-target: congelar `u` y comparar con single-target.
 
-| Familia | Pregunta primaria | Baseline mínimo | Resultado principal |
-|---|---|---|---|
-| HIST | ¿history impide coalescencia por cruce visible? | R12 vs R12.5 | crossing/full-state rates y scaling |
-| REDUCED | ¿cómo escalan collision/preimage/2pre? | random oracle controls | exponentes y censura |
-| PARAM | ¿t,k generan grinding explotable? | fixed-cost profile | selección/coste ahorrado |
-| TMTO | ¿se reutiliza trabajo entre contextos? | R12 vs R12.5 | frontera W-M-reuse |
-| BRANCH | ¿qué degrada Deep/DeepVector? | normal | image collapse/collision growth |
-| LAYOUT | ¿qué aporta history-adaptive placement? | fixed-layout ablation | reuse/ties/sensitivity |
-| DIFF | ¿difusión y dependencia muestran anomalías? | SHA family | SAC/BIC/MI |
-| ALG | ¿hay invariantes/trails reducidos? | reduced RO | solver complexity/trails |
-| STAT | ¿streams muestran anomalías descriptivas? | SHA family + broken control | battery outputs |
-| FAULT | ¿fallos operativos se detectan? | no-fault | silent acceptance/latency |
-| APP-SIG | ¿auth digest vs binding se separan? | Ed25519 digest auth | substitutions/replay |
-| APP-KDF | ¿hay early rejection/coste real por guess? | Argon2id | guesses/s + saved work |
-| APP-POW | ¿nonce grinding reduce coste? | unfiltered nonce | cost distribution/filter gain |
-| PARSE | ¿wire hostil se rechaza canónicamente? | valid corpus | crashes/noncanonical accepts |
-| DOS | ¿rechazo ocurre antes de coste caro? | valid inputs | time/memory/read-before-reject |
-| CONC | ¿scheduling cambia matemática? | serial | divergence/race incidence |
-| PERF | ¿cuál es el coste de cada etapa? | SHA/R12 | stage timings/RSS/scaling |
+**RED-06/07/08.** Chosen-prefix, multicollision y herding sólo pasan a R15 si
+R14 dispone de un atacante implementado, testado y con design pilot separado.
+Si no, quedan `open/future work`; no se improvisan durante R15.
 
-## 5. Endpoints primarios propuestos
+**RED-09.** Expandable-message/long-message 2PRE permanece conditional salvo
+que R14 demuestre comparabilidad exacta de cardinalidad/semántica.
 
-R14 debe declarar por familia qué es primario. Propuesta:
+### 4.3 PARAM
 
-- HIST: slope/exponent of crossing/full-state search + probability of next-state
-  equality conditioned on visible crossing;
-- REDUCED: median query complexity by width and fitted scaling exponent;
-- PARAM: cheapest-stratum attempts and net saved round work;
-- TMTO: reuse_rate under equal offline/online budgets;
-- BRANCH: image size/collision-pair degradation normalized by work;
-- KDF: full-trajectory fraction after public parameter screening;
-- PoW: effective transition cost distribution after nonce selection;
-- PERF: decomposed wall time + RSS per stage.
+**PARAM-01.**
+Distribución conjunta de los 93 pares `(t,k)`. R14 fija un mínimo de
+observaciones por celda esperada y la prueba GOF. El número final se obtiene de
+pilotos, pero nunca puede quedar por debajo del umbral que haga inválida la
+aproximación elegida; si es necesario se usa Monte Carlo exacto.
 
-El resto debe ser secondary/exploratory para limitar researcher degrees of freedom.
+**PARAM-02.**
+Correlaciones con candidate/persistent/header/history/layout. Mutual
+information se estima con permutation control y holdout.
 
-## 6. Reglas de análisis
+**PARAM-03.**
+Cheapest-stratum grinding. Medir:
+`preparation work + selection work + selected trajectory work`.
+El speedup se define frente a no-selection con el mismo budget total.
 
-### Multiple testing
+**PARAM-04.**
+KDF early rejection. Diseño emparejado:
+mismos passwords/salts/Argon2 params para fixed-cost y derived-cost Sigma.
+Endpoint primario: work/guess y fracción de guesses que evitan full trajectory.
 
-Las familias con múltiples hipótesis deben declarar una sola estrategia:
+**PARAM-05.**
+PoW nonce grinding. Diseño emparejado por challenge/payload. Endpoint:
+throughput y distribución de coste con/sin selección.
 
-- Holm para familias pequeñas de tests;
-- FDR sólo donde el objetivo sea discovery;
-- no corrección cruzada artificialmente entre preguntas científicas distintas.
+**PARAM-06.**
+Mitigaciones: context-fixed, cost-bucketed y derived. R14 debe fijar cuál entra
+como mitigación principal; R15 no puede inventar una cuarta variante.
 
-### Effect sizes
+### 4.4 TMTO
 
-Todo p-value debe acompañarse de tamaño de efecto e intervalo.
+Congelar para direct/distinguished/rho/Hellman/rainbow:
 
-### Censura
+- state/history widths;
+- table entries;
+- chain lengths;
+- distinguished bits;
+- targets `u`;
+- offline/online split;
+- memory accounting;
+- parallel depth.
 
-Timeout/candidate-budget exhaustion es dato censurado, no error.
+La figura primaria será una frontera Pareto
+`(offline work, online work, memory)`; no un ranking único.
 
-### Resultados negativos
+### 4.5 BRANCH
 
-Un ataque que no encuentra éxito informa sólo:
+**BRANCH-05.**
+Deep: normal, constant/truncated fold y branch faults predefinidos.
+Endpoints: image size, collision pairs, effective conservative width.
 
-- presupuesto;
-- upper/lower bound compatible;
-- dominio explorado;
-- limitación.
+**BRANCH-06.**
+DeepVector: perturbación de un componente y dependencia sobre todas las ramas
+siguientes. Registrar first divergence y affected branches.
 
-Nunca "security proven".
+Los faults no pueden añadirse después de ver resultados.
 
-### Comparaciones R12/R12.5
+### 4.6 FAULT / PARSE / DOS / CONC
 
-Deben normalizar:
+R14 debe congelar un corpus de fallos y schedules adversariales:
 
-- número de oracle queries;
-- trabajo;
-- memory;
-- adaptive depth.
+- stale/replayed history;
+- wrong index;
+- branch/round skip;
+- branch reorder/duplicate;
+- truncated frames;
+- malformed parsers;
+- spool/disk/resource limits;
+- process/thread failure;
+- cancellation races;
+- concurrent file mutation.
 
-No comparar sólo wall time.
+El endpoint de seguridad de ingeniería es silent acceptance, resource leak o
+divergencia matemática.
 
-## 7. Freeze de figuras y tablas
+### 4.7 APP-SIG / APP-KDF / APP-POW
 
-Antes de R15 se congelan scripts/specs de:
+Cada aplicación recibe un modelo de amenaza separado, configs separadas y
+claims separados. Un resultado de KDF no se reutiliza como evidencia PoW ni
+viceversa.
 
-- F2 state crossing;
-- F3 collision/full-state scaling;
-- F4 multi-state scaling;
-- F5 structured 2PRE;
-- F6 TMTO frontier;
-- F7 parameter grinding;
-- F8 layout/history ablation;
-- F9 Deep vs DeepVector;
-- F10 stage cost;
-- F11 memory/workers;
-- F12 KDF early rejection;
-- F13 PoW grinding;
-- F14 diffusion controls;
-- F15 multiplatform conformance.
+### 4.8 DIFF / STAT / ALG
 
-Las figuras pueden recibir datos R15, pero no cambiar pregunta/ejes primarios
-después de observarlos.
+- DIFF: SAC/BIC/Hamming/MI son controles descriptivos;
+- STAT: NIST STS/PractRand/TestU01 son secundarios y nunca prueban seguridad;
+- ALG: ANF/SAT/SMT/MILP sólo para reduced instances con instancia, solver,
+  versión y timeout archivados.
 
-## 8. Freeze de claims
+## 5. Política de sample size
 
-R14 copia `docs/claims-evidence-v3-r13.md` a una matriz de publicación
-versionada y bloquea cambios de nivel de evidencia sin nuevo resultado.
+R14 no fija sample sizes por conveniencia. Para cada endpoint se guarda una
+ficha:
 
-Cada claim debe declarar:
+`effect_of_interest, variance_pilot, alpha_family, power_target,
+minimum_cell_size, censoring_model, derived_N, frozen_N`.
 
-- wording permitido;
-- wording prohibido;
-- evidencia mínima;
-- figure/table;
-- known limitations.
+Reglas:
 
-## 9. Infraestructura a reutilizar
+1. los pilotos sólo estiman coste/varianza/effect-size plausible;
+2. `frozen_N` se calcula antes de R15;
+3. si no existe power calculation útil, se usa un budget fijo justificado por
+   resolución del endpoint y se etiqueta como tal;
+4. una vez congelado, no se aumenta N porque el resultado sea no significativo;
+5. una extensión posterior es una campaña distinta.
 
-R14 reutiliza la infraestructura v2.2 que ya existe:
+Para rare events se priorizan intervalos exactos/binomiales y bounds por cero
+éxitos; para collision/preimage censurados se usan métodos de supervivencia y
+first-hit, no medias de sólo runs exitosos.
 
-- `experiments.freeze`;
-- `scripts.prepare_confirmatory`;
-- transactional runner;
-- canonical config hashing;
-- task attempt archival;
-- resume integrity;
-- host manifest;
-- artifact hashing;
-- exact-tag requirement.
+## 6. Seeds
 
-Debe extenderse a v3, no duplicarse.
+No se seleccionan seeds a mano.
 
-## 10. Nuevos artefactos previstos
+Cada seed confirmatoria se deriva determinísticamente:
 
-- `docs/traceability-v3-r14.md`;
-- `docs/r14-experimental-freeze-plan.md`;
+`SHA256("sigma-v3-r15" || freeze_id || attack_id || cell_id || replicate_id)`.
+
+Discovery usa namespace `sigma-v3-r14-discovery`; holdout/confirmatory usa
+`sigma-v3-r15`. Los namespaces no comparten seeds.
+
+El freeze manifest fija:
+- algoritmo de derivación;
+- encoding de labels;
+- lista de cell IDs;
+- replicate count.
+
+## 7. Discovery / holdout
+
+Para atacantes que contienen tuning heurístico:
+
+- discovery: máximo 30% del budget de desarrollo;
+- holdout: mínimo 70% reservado y nunca inspeccionado durante tuning;
+- parámetros del atacante se congelan después de discovery;
+- el holdout sólo se ejecuta en R15.
+
+Para atacantes puramente exhaustivos/deterministas no se fuerza un split
+artificial; se congela el espacio exhaustivo.
+
+## 8. Stopping, censoring y errores
+
+Estados terminales canónicos:
+
+- `success`;
+- `no-success`;
+- `censored`;
+- `timeout`;
+- `error`.
+
+Reglas:
+
+- éxito first-hit puede terminar esa réplica porque el endpoint es el tiempo al
+  primer evento;
+- ausencia de éxito sólo cuenta como no-success al agotar el budget fijado;
+- timeout no se convierte en no-success;
+- error no se excluye silenciosamente;
+- resource-safety stop produce censura con razón;
+- no existe optional stopping basado en p-value o tendencia de efecto.
+
+## 9. Análisis estadístico congelado
+
+### Primary families
+
+Cada familia de claims define de antemano sus hipótesis primarias.
+
+- Binomial/rare-event: intervalos Clopper-Pearson o exactos predeclarados.
+- First-hit/censored: Kaplan-Meier u otro estimator predeclarado + intervalos.
+- Scaling: regresión `log2(work)` frente a width con bootstrap de slope.
+- Uniformidad: chi-square sólo si sus condiciones están satisfechas; en otro
+  caso Monte Carlo exacto.
+- Paired cost: ratios/differences pareados con bootstrap CI.
+- TMTO: Pareto frontier y dominancia, no score agregado.
+- Performance: median/quantiles + bootstrap CI; p-values no son el resultado
+  principal.
+
+### Multiplicity
+
+- Holm family-wise correction para hipótesis primarias de una misma familia;
+- BH/FDR sólo para análisis exploratorios claramente marcados;
+- no se promueven endpoints secundarios después de ver resultados.
+
+## 10. Performance methodology
+
+R14 congela:
+
+- hosts requeridos;
+- CPU governor/power mode;
+- Python version;
+- process start method;
+- worker counts;
+- warm-up;
+- randomized execution order;
+- repetitions;
+- message sizes;
+- cache policy;
+- RSS/allocator/I/O instrumentation;
+- definition exacta de throughput y speedup.
+
+La descomposición mínima es:
+
+[
+T =
+T_{source}+T_A+T_J+T_{param}+T_{layout}+T_H+
+T_{frame}+T_{branch}+T_{fold}+T_{digest}.
+]
+
+R12 y R12.5 se comparan a workloads idénticos.
+
+## 11. Schemas y raw data
+
+Todo record confirmatorio debe contener como mínimo:
+
+- schema/version;
+- campaign_id;
+- freeze_id;
+- attack_id;
+- claim_ids;
+- construction/suite;
+- cell_id;
+- replicate_id;
+- seed label;
+- discovery/holdout/confirmatory flag;
+- declared ResourceBudget;
+- observed ResourceBudget;
+- status;
+- metrics;
+- censor/error reason;
+- code commit;
+- artifact SHA-256;
+- config SHA-256;
+- preregistration SHA-256;
+- host/interpreter/dependencies;
+- timestamps;
+- integrity hash.
+
+Los raw records son append-only. Las correcciones se versionan; nunca se
+reescribe un resultado.
+
+## 12. Figures y tablas congeladas antes de R15
+
+R14 debe crear scripts que puedan producir las figuras usando **synthetic data**
+con el mismo schema. Así se congela la transformación antes de ver resultados.
+
+Figuras previstas:
+
+1. arquitectura `P_X -> (H_i,S_i)`;
+2. state crossing;
+3. visible/full-state collision scaling;
+4. multi-state scaling con `k`;
+5. second-preimage reduced;
+6. TMTO Pareto frontier;
+7. `(t,k)` distribution/grinding;
+8. layout/history ablation;
+9. Deep vs DeepVector;
+10. coste descompuesto;
+11. memoria/workers;
+12. KDF early rejection;
+13. PoW nonce grinding;
+14. diffusion controls;
+15. multiplatform conformance.
+
+Tablas mínimas:
+
+- suites/domains;
+- claims/evidence;
+- theorem/assumption status;
+- attacker budgets;
+- KAT/corpus;
+- negative results;
+- performance;
+- host reproduction;
+- limitations.
+
+## 13. Artefactos R14
+
+R14 debe producir y congelar:
+
 - `experiments/preregistration-v3.md`;
-- `experiments/configs/confirmatory-v3-r14/*.json`;
-- `experiments/pilot-decision-record-v3-r14.json`;
-- `experiments/freeze-v3-r14.json`;
+- `experiments/configs/v3-confirmatory-frozen/*.json`;
+- `experiments/configs/v3-confirmatory-frozen/freeze.json`;
+- `experiments/configs/v3-discovery-frozen/*.json` cuando aplique;
 - `scripts/check_r14_freeze.py`;
-- `tests/unit/test_r14_freeze.py`;
-- `docs/adversarial-reviews/R14.md`.
+- `scripts/prepare_v3_confirmatory.py` o extensión explícita del preparador
+  existente;
+- schema v3 de resultados;
+- analysis scripts;
+- synthetic fixture dataset;
+- figure/table schema tests;
+- wheel/sdist/checksums/SBOM;
+- dependency lock;
+- R12.5 corpus + independent reference;
+- R13 registry/schema;
+- manifest de hashes de todos los anteriores.
 
-## 11. Obligaciones R14
+No debe existir raw confirmatory data dentro del freeze R14.
 
-### FREEZE-01..05
+## 14. Subgates R14
 
-1. exact commit/tag;
-2. wheel/sdist;
-3. corpus/reference;
-4. attacker registry;
-5. environment constraints.
+### R14-A — Baseline lock
 
-### PRE-01..10
+- comprobar hashes R12.5/R13;
+- prohibir cambios semánticos;
+- corpus/KAT/reference verdes.
 
-1. hypotheses;
-2. endpoints;
-3. sample sizes;
-4. seeds;
-5. stopping;
-6. censoring;
-7. exclusions;
-8. corrections;
-9. analyses;
-10. figures/tables.
+### R14-B — Campaign inventory
 
-### CFG-01..06
+- cada claim C01–C20 tiene estado:
+  `confirmatory / reduced-only / conditional / boundary / out-of-scope`;
+- cada ataque del registry entra o queda excluido con razón versionada.
 
-1. schema;
-2. config validation;
-3. config hashing;
-4. artifact binding;
-5. freeze-manifest binding;
-6. dirty-tree/tag rejection.
+### R14-C — Pilot budgeting
 
-### SCI-01..06
+- ejecutar sólo pilotos R14-discovery;
+- estimar coste, varianza, event rate y feasibility;
+- ningún output se incorpora al manuscrito como evidencia.
 
-1. pilot/confirmatory separation;
-2. discovery/holdout separation;
-3. effect sizes;
-4. negative-result semantics;
-5. resource accounting;
-6. host/multiplatform design.
+### R14-D — Protocol lock
 
-### AUDIT-01..05
+Congelar sample sizes, budgets, seeds, factors, stopping/censoring, análisis,
+multiplicity, hosts y figure schemas.
 
-1. tamper tests;
-2. downgrade tests;
-3. resume/overwrite tests;
-4. artifact provenance;
-5. adversarial PASS.
+### R14-E — Config freeze
 
-## 12. Criterio de terminado R14
+Generar todos los configs canónicos y validarlos contra schemas cerrados.
 
-R14 está cerrado sólo cuando:
+### R14-F — Artifact freeze
 
-1. R12.5 y R13 permanecen inmutables;
-2. todos los schemas v3 están congelados;
-3. todos los attackers confirmatorios están congelados;
-4. todos los pilots necesarios han terminado y sólo alimentan decisiones;
-5. sample sizes/budgets están fijados;
-6. preregistration no contiene TBDs;
-7. discovery/holdout está separado;
-8. configs confirmatorias están generadas y hasheadas;
-9. wheel/sdist/reference/corpus están hasheados;
-10. freeze manifest une todos los artefactos;
-11. runner rechaza cualquier drift;
-12. gate local y CI remoto pasan;
-13. existe review R14 versionada;
-14. R15 puede ejecutarse sin tomar una sola decisión científica nueva.
+Construir wheel/sdist desde checkout limpio; checksums/SBOM; instalar fuera del
+árbol; fijar artifact hash en configs.
 
-R14 no se considera PASS porque "el código funciona", sino cuando la libertad de
-cambiar el experimento después de ver los datos confirmatorios queda
-operacionalmente eliminada.
+### R14-G — Preregistration freeze
+
+Prerregistro completo firmado/revisado por el owner, hash incluido en cada
+config y freeze manifest.
+
+### R14-H — Adversarial freeze audit
+
+Intentar:
+- alterar config;
+- alterar prereg;
+- ejecutar config no manifestado;
+- cambiar seed;
+- cambiar N;
+- cambiar attacker;
+- cambiar analysis script;
+- mezclar pilot/confirmatory;
+- ejecutar desde dirty tree/no tag;
+- reutilizar artifact distinto.
+
+Cualquier aceptación silenciosa bloquea R14.
+
+## 15. Gate autoritativo R14
+
+El gate debe verificar:
+
+1. R12.5 PASS baseline intacto;
+2. R13 PASS baseline intacto;
+3. tests/lint/type/fuzz/build verdes;
+4. registry/schema únicos;
+5. 100% de configs validados;
+6. 100% de configs incluidos en freeze manifest;
+7. hashes de prereg/configs/analysis/artifact coinciden;
+8. synthetic analysis reproduce todas las figuras/tablas previstas;
+9. ningún record/config está marcado confirmatory ejecutado;
+10. checkout limpio y tag exacto;
+11. wheel instalado fuera del checkout;
+12. informe adversarial versionado.
+
+## 16. Criterio de cierre
+
+R14 queda PASS sólo si existe un único conjunto congelado capaz de responder,
+sin decisiones posteriores, a:
+
+- qué se va a medir;
+- por qué;
+- contra qué baseline;
+- con qué attacker;
+- con qué recursos;
+- con cuántas réplicas;
+- con qué seeds;
+- cuándo se detiene;
+- cómo se censura;
+- qué análisis se aplica;
+- qué figura/tabla se genera;
+- qué artefacto ejecuta el experimento.
+
+Al cerrar R14, R15 queda autorizado a **ejecutar**, no a rediseñar.
+
+## 17. Orden de implementación recomendado
+
+1. R14-A baseline lock.
+2. R14-B claim/attack disposition table.
+3. R14-C pilot budgeting.
+4. R14-D statistical/protocol lock.
+5. implementar schema v3 + config validators.
+6. crear synthetic dataset + analysis/figure scripts.
+7. generar configs confirmatorios.
+8. freeze artifact.
+9. congelar preregistration.
+10. ejecutar adversarial freeze audit.
+11. registrar PASS R14.
+12. sólo entonces abrir R15.

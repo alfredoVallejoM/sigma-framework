@@ -130,12 +130,7 @@ def _beta_continued_fraction(a: float, b: float, x: float) -> float:
     value = d
     for iteration in range(1, 201):
         doubled = 2 * iteration
-        coefficient = (
-            iteration
-            * (b - iteration)
-            * x
-            / ((qam + doubled) * (a + doubled))
-        )
+        coefficient = iteration * (b - iteration) * x / ((qam + doubled) * (a + doubled))
         d = 1.0 + coefficient * d
         if abs(d) < floor:
             d = floor
@@ -145,11 +140,8 @@ def _beta_continued_fraction(a: float, b: float, x: float) -> float:
         d = 1.0 / d
         value *= d * c
 
-        coefficient = (
-            -(a + iteration)
-            * (qab + iteration)
-            * x
-            / ((a + doubled) * (qap + doubled))
+        coefficient = -(a + iteration) * (qab + iteration) * x / (
+            (a + doubled) * (qap + doubled)
         )
         d = 1.0 + coefficient * d
         if abs(d) < floor:
@@ -171,11 +163,7 @@ def _regularized_beta(x: float, a: float, b: float) -> float:
     if x >= 1.0:
         return 1.0
     scale = math.exp(
-        math.lgamma(a + b)
-        - math.lgamma(a)
-        - math.lgamma(b)
-        + a * math.log(x)
-        + b * math.log1p(-x)
+        math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b) + a * math.log(x) + b * math.log1p(-x)
     )
     if x < (a + 1.0) / (a + b + 2.0):
         return scale * _beta_continued_fraction(a, b, x) / a

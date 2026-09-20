@@ -10,6 +10,14 @@ from sigma.file_snapshot import immutable_snapshot, stable_open
 from sigma.presets import lightweight_v2_2, simultaneous_v2_2
 from sigma.v2 import hash_bytes, hash_file_with_snapshot
 
+pytestmark = pytest.mark.skipif(
+    os.name == "nt",
+    reason=(
+        "frozen v2.2 file_snapshot path/fd metadata contract is not portable on Windows; "
+        "R12.5 validates Windows file/mmap/spool/incremental semantics through v3 canonical sources"
+    ),
+)
+
 
 def test_file_hash_returns_auditable_source_identity(tmp_path: Path) -> None:
     path = tmp_path / "input.bin"

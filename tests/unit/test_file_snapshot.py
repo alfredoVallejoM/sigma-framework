@@ -85,6 +85,11 @@ def test_file_facade_rejects_source_change_during_backend_work(tmp_path: Path) -
 def test_file_facade_passes_one_snapshot_to_multiprocessing_backend(
     tmp_path: Path, monkeypatch
 ) -> None:
+    if os.name == "nt":
+        pytest.skip(
+            "frozen v2.2 path/fd identity is not portable on Windows; "
+            "R12.5 process/file equivalence is covered by v3 canonical sources"
+        )
     path = tmp_path / "input.bin"
     path.write_bytes(b"snapshot once")
     backend = MultiprocessingTreeBackend(1)

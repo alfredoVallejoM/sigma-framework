@@ -30,6 +30,9 @@ ablation baseline for measuring the effect of historical feedback.
 
 Current governing documents:
 
+- [R14 experimental freeze plan](docs/r14-experimental-freeze-plan.md)
+- [R14 traceability](docs/traceability-v3-r14.md)
+- [R13 adversarial review](docs/adversarial-reviews/R13.md)
 - [R12.5 byte-exact specification](specification/sigma-v3-r12-5-history.md)
 - [R12.5 implementation traceability](docs/traceability-v3-r12-5.md)
 - [R12.5 adversarial review](docs/adversarial-reviews/R12-5.md)

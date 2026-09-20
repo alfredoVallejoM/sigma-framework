@@ -70,10 +70,7 @@ def test_same_persistent_crossing_is_a_clean_r12_vs_r125_ablation() -> None:
     )
     assert crossings
     assert all(item.left_history != item.right_history for item in crossings)
-    outcomes = [
-        profile_crossing_outcome_v3(_oracle(), config, crossing)
-        for crossing in crossings
-    ]
+    outcomes = [profile_crossing_outcome_v3(_oracle(), config, crossing) for crossing in crossings]
     assert all(item.r12_successors_equal for item in outcomes)
     assert any(not item.next_full_states_equal for item in outcomes)
 
@@ -86,9 +83,7 @@ def test_history_collision_and_truncation_profiles_are_exhaustive() -> None:
         target_round=2,
         state_count=2,
     )
-    profile = profile_history_collisions_v3(
-        _oracle(), config, persistent=7, state=9, round_index=0
-    )
+    profile = profile_history_collisions_v3(_oracle(), config, persistent=7, state=9, round_index=0)
     assert profile.inputs == 64
     assert 1 <= profile.image_size <= profile.inputs
     assert profile.collision_pairs >= 0
@@ -301,12 +296,8 @@ def test_branch_failure_controls_expose_fold_bottleneck_and_vector_width() -> No
     config = BranchFailureConfigV3(bits=6, branch_count=4, candidates=128)
 
     normal_deep = profile_branch_failure_v3(oracle, config, "deep", "normal")
-    constant_fold = profile_branch_failure_v3(
-        oracle, config, "deep", "constant-fold"
-    )
-    vector = profile_branch_failure_v3(
-        oracle, config, "deep-vector", "constant-first"
-    )
+    constant_fold = profile_branch_failure_v3(oracle, config, "deep", "constant-fold")
+    vector = profile_branch_failure_v3(oracle, config, "deep-vector", "constant-first")
 
     assert constant_fold.image_size == 1
     assert constant_fold.conservative_bits == 0
@@ -314,9 +305,7 @@ def test_branch_failure_controls_expose_fold_bottleneck_and_vector_width() -> No
     assert vector.physical_bits == 24
     assert vector.conservative_bits == 6
     with pytest.raises(ValueError):
-        profile_branch_failure_v3(
-            oracle, config, "deep-vector", "constant-fold"
-        )
+        profile_branch_failure_v3(oracle, config, "deep-vector", "constant-fold")
 
 
 def test_r13_design_pilot_harness_is_deterministic_schema_complete_and_nonconfirmatory() -> None:

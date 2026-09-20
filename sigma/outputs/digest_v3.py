@@ -19,6 +19,11 @@ from sigma.rounds.deep_v3 import (
     DeepVectorEvaluationV3,
 )
 from sigma.rounds.evaluate_v3 import evaluate_v3
+from sigma.rounds.history_v3 import (
+    HistoryDeepEvaluationV3,
+    HistoryDeepVectorEvaluationV3,
+    HistoryWideOnceEvaluationV3,
+)
 from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.sources import CanonicalSource
 from sigma.spec.codec_v3 import decode_record, encode_record, validate_record_prefix
@@ -212,11 +217,28 @@ class StructureVerificationV3:
     message_binding_verified: bool = False
 
 
-EvaluationV3 = WideOnceEvaluationV3 | DeepEvaluationV3 | DeepVectorEvaluationV3
+EvaluationV3 = (
+    WideOnceEvaluationV3
+    | DeepEvaluationV3
+    | DeepVectorEvaluationV3
+    | HistoryWideOnceEvaluationV3
+    | HistoryDeepEvaluationV3
+    | HistoryDeepVectorEvaluationV3
+)
 
 
 def digest_from_evaluation_v3(evaluation: EvaluationV3) -> SigmaDigestV3:
-    if not isinstance(evaluation, (WideOnceEvaluationV3, DeepEvaluationV3, DeepVectorEvaluationV3)):
+    if not isinstance(
+        evaluation,
+        (
+            WideOnceEvaluationV3,
+            DeepEvaluationV3,
+            DeepVectorEvaluationV3,
+            HistoryWideOnceEvaluationV3,
+            HistoryDeepEvaluationV3,
+            HistoryDeepVectorEvaluationV3,
+        ),
+    ):
         raise TypeError("evaluation must be a Sigma v3 evaluation")
     return SigmaDigestV3(evaluation.context, evaluation.header, evaluation.window)
 

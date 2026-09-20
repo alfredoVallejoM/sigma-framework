@@ -7,7 +7,10 @@ commitments, input-reinjected iteration and multi-state digests.
 > R12 has a traceable engineering/conformance PASS, but this is not a
 > cryptographic audit. A post-R12 semantic correction, R12.5, restores historical
 > feedback so prior trajectory state becomes part of the effective round binding.
-> R12.5 and R13 are closed research gates, but no v3 suite is production-ready or security-stable; R14–R16 remain open.
+> R12.5 and R13 are closed research gates. R14 has passed its technical freeze,
+CI, preregistration and artifact gates on candidate `b6ebc780…`, but formal
+closure still requires the exact freeze tag. No v3 suite is production-ready or
+security-stable.
 
 Sigma v2.2 remains a frozen historical baseline and regression oracle. Sigma v3
 is developed on this branch with byte-exact specifications, an independent
@@ -22,8 +25,8 @@ ablation baseline for measuring the effect of historical feedback.
 | R0–R12 engineering/conformance | PASS recorded |
 | R12.5 historical feedback | **PASS** — candidate `5ac306bb…` |
 | R13 formal security & cryptanalysis | **PASS** — candidate `8a71de3d…` |
-| R14 experimental freeze/preregistration | **next active gate** |
-| R15 confirmatory scientific campaign | pending |
+| R14 experimental freeze/preregistration | **technical PASS; TAG-01 pending** — candidate `b6ebc780…` |
+| R15 confirmatory scientific campaign | **blocked until exact R14 tag** |
 | R16 external reproduction/review | pending |
 | independent cryptographic audit | not performed |
 | production-security claim | not made |
@@ -32,6 +35,7 @@ Current governing documents:
 
 - [R14 experimental freeze plan](docs/r14-experimental-freeze-plan.md)
 - [R14 traceability](docs/traceability-v3-r14.md)
+- [R14 adversarial review](docs/adversarial-reviews/R14.md)
 - [R13 adversarial review](docs/adversarial-reviews/R13.md)
 - [R12.5 byte-exact specification](specification/sigma-v3-r12-5-history.md)
 - [R12.5 implementation traceability](docs/traceability-v3-r12-5.md)

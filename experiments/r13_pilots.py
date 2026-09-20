@@ -7,6 +7,7 @@ They are disposable and never constitute paper evidence.
 from __future__ import annotations
 
 import math
+
 from .branch_failures_v3 import BranchFailureConfigV3, profile_branch_failure_v3
 from .history_attackers_v3 import (
     find_same_persistent_crossings_v3,
@@ -151,9 +152,7 @@ def run_history_design_pilots(seed: bytes) -> list[AttackRunRecord]:
         )
     ]
 
-    full = find_full_state_collisions(
-        oracle, config, round_index=1, candidates=1024, limit=32
-    )
+    full = find_full_state_collisions(oracle, config, round_index=1, candidates=1024, limit=32)
     records.append(
         _record(
             "HIST-02",
@@ -169,18 +168,14 @@ def run_history_design_pilots(seed: bytes) -> list[AttackRunRecord]:
         )
     )
 
-    hprofile = profile_history_collisions_v3(
-        oracle, config, persistent=3, state=5, round_index=0
-    )
+    hprofile = profile_history_collisions_v3(oracle, config, persistent=3, state=5, round_index=0)
     records.append(
         _record(
             "HIST-03",
             construction="reduced-HistoryStep",
             seed_label="history/map",
             status=(
-                AttackRunStatus.SUCCESS
-                if hprofile.collision_pairs
-                else AttackRunStatus.NO_SUCCESS
+                AttackRunStatus.SUCCESS if hprofile.collision_pairs else AttackRunStatus.NO_SUCCESS
             ),
             observed=_resources(W=hprofile.inputs, Q_H=hprofile.inputs, mu=hprofile.inputs),
             metrics={
@@ -289,9 +284,7 @@ def run_parameter_design_pilots(seed: bytes) -> list[AttackRunRecord]:
         )
     ]
 
-    correlation = parameter_correlation_profile(
-        oracle, 512, persistent_bits=10, space=space
-    )
+    correlation = parameter_correlation_profile(oracle, 512, persistent_bits=10, space=space)
     records.append(
         _record(
             "PARAM-02",
@@ -357,17 +350,13 @@ def run_parameter_design_pilots(seed: bytes) -> list[AttackRunRecord]:
             metrics={
                 "guesses_per_second": None,
                 "early_reject_rate": early.early_rejected / early.guesses,
-                "work_per_guess": (
-                    early.parameter_queries + early.full_trajectory_guesses
-                )
+                "work_per_guess": (early.parameter_queries + early.full_trajectory_guesses)
                 / early.guesses,
             },
         )
     )
 
-    nonce = pow_nonce_grinding_profile(
-        oracle, 512, persistent_bits=10, space=space
-    )
+    nonce = pow_nonce_grinding_profile(oracle, 512, persistent_bits=10, space=space)
     records.append(
         _record(
             "PARAM-05",
@@ -513,9 +502,7 @@ def run_reduced_design_pilots(seed: bytes) -> list[AttackRunRecord]:
                 "success": second is not None,
                 "same_P": False if second is None else second.persistent_equal,
                 "same_header": None,
-                "first_divergence": (
-                    None if second is None else second.first_state_divergence
-                ),
+                "first_divergence": (None if second is None else second.first_state_divergence),
             },
         )
     )
@@ -533,9 +520,7 @@ def run_reduced_design_pilots(seed: bytes) -> list[AttackRunRecord]:
             construction="R12.5-multi-target",
             seed_label="reduced/multi-target",
             status=(
-                AttackRunStatus.SUCCESS
-                if bool(multi["success"])
-                else AttackRunStatus.NO_SUCCESS
+                AttackRunStatus.SUCCESS if bool(multi["success"]) else AttackRunStatus.NO_SUCCESS
             ),
             observed=_resources(
                 W=int(multi["evaluated"]),
@@ -561,9 +546,7 @@ def run_tmto_design_pilots(seed: bytes) -> list[AttackRunRecord]:
     for construction in ("r12", "r125"):
         for strategy in ("direct", "distinguished", "rho", "hellman", "rainbow"):
             result = measure_tmto_v3(
-                ReducedOracle(
-                    seed + f"/tmto/{construction}/{strategy}".encode("ascii")
-                ),
+                ReducedOracle(seed + f"/tmto/{construction}/{strategy}".encode("ascii")),
                 config,
                 strategy,  # type: ignore[arg-type]
                 construction,  # type: ignore[arg-type]
@@ -610,7 +593,10 @@ def run_branch_design_pilots(seed: bytes) -> list[AttackRunRecord]:
     records: list[AttackRunRecord] = []
     for fault in ("normal", "constant-fold", "truncated-fold"):
         result = profile_branch_failure_v3(
-            oracle, config, "deep", fault  # type: ignore[arg-type]
+            oracle,
+            config,
+            "deep",
+            fault,  # type: ignore[arg-type]
         )
         records.append(
             _record(
@@ -618,7 +604,9 @@ def run_branch_design_pilots(seed: bytes) -> list[AttackRunRecord]:
                 construction=f"Deep/{fault}",
                 seed_label=f"branch/deep/{fault}",
                 status=AttackRunStatus.SUCCESS,
-                observed=_resources(W=config.candidates, Q_R=config.candidates, mu=result.image_size),
+                observed=_resources(
+                    W=config.candidates, Q_R=config.candidates, mu=result.image_size
+                ),
                 metrics={
                     "attack_success": result.image_size < config.candidates,
                     "effective_width": result.conservative_bits,
@@ -628,7 +616,10 @@ def run_branch_design_pilots(seed: bytes) -> list[AttackRunRecord]:
         )
     for fault in ("normal", "constant-first", "copied-first-two", "permuted"):
         result = profile_branch_failure_v3(
-            oracle, config, "deep-vector", fault  # type: ignore[arg-type]
+            oracle,
+            config,
+            "deep-vector",
+            fault,  # type: ignore[arg-type]
         )
         records.append(
             _record(
@@ -672,9 +663,7 @@ def validate_r13_design_records(records: list[AttackRunRecord]) -> None:
         spec = ATTACK_REGISTRY[record.attack_id]
         missing_metrics = [metric for metric in spec.metrics if metric not in record.metrics]
         if missing_metrics:
-            raise ValueError(
-                f"{record.attack_id} missing registered metrics: {missing_metrics}"
-            )
+            raise ValueError(f"{record.attack_id} missing registered metrics: {missing_metrics}")
         if record.metrics.get("confirmatory") is not False:
             raise ValueError("R13 design pilots must be marked confirmatory=false")
 

@@ -182,3 +182,23 @@ Impact:
 R14 queda desbloqueada como fase exclusiva de freeze experimental y
 prerregistro. Ningún piloto R13 se reutiliza como resultado del paper y ningún
 claim abierto se promociona por el mero PASS de ingeniería/diseño.
+
+
+## 2026-09-20 — R14 es un freeze metodológico, no una campaña de resultados
+
+Decision:
+R14 congela claims, attackers, baselines, factors, budgets, sample sizes, seeds,
+discovery/holdout, stopping/censoring, análisis, figuras, configs, artifact
+identity y prerregistro antes de ejecutar R15. El plan rector queda en
+`docs/r14-experimental-freeze-plan.md`.
+
+Reason:
+El PASS R13 cierra el diseño formal y los falsadores, pero un paper auditable
+requiere impedir decisiones retrospectivas después de observar resultados. El
+confirmatorio debe poder ejecutarse desde un único protocolo inmutable.
+
+Impact:
+Pilotos R13/R14 no son evidencia del paper. R15 sólo aceptará configs incluidos
+en el freeze manifest R14 y ligados al mismo preregistration hash y artifact
+hash. Un cambio semántico vuelve a abrir la construcción; un cambio de
+protocolo posterior al freeze exige una nueva campaña.

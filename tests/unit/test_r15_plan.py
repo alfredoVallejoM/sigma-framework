@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-import copy
 import json
-from pathlib import Path
-
-import pytest
-
 from scripts.check_r15_plan import DATA, SCALE, check_r15_plan
 
 

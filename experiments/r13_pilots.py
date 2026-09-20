@@ -17,17 +17,25 @@ from .history_attackers_v3 import (
     profile_history_truncation_v3,
     profile_layout_ablation_v3,
 )
-from .history_reduced import ReducedHistoryConfig
+from .history_reduced import ReducedHistoryConfig, find_full_state_collisions
 from .parameter_grinding_v3 import (
     ParameterSpaceV3,
     find_cheapest_stratum,
     kdf_early_rejection_profile,
+    mitigation_profile,
+    parameter_correlation_profile,
     parameter_distribution,
     pow_nonce_grinding_profile,
 )
 from .r13_registry import ATTACK_REGISTRY_V3
 from .reduced_oracle import ReducedOracle
 from .tmto_v3 import TMTOConfigV3, measure_tmto_v3
+from .trajectory_attacks_v3 import (
+    collision_scaling_v3,
+    find_window_preimage_v3,
+    find_window_second_preimage_v3,
+    multi_target_window_attack_v3,
+)
 
 
 def _record(attack_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -75,6 +83,26 @@ def run_history_design_pilots(seed: bytes) -> list[dict[str, Any]]:
                 },
             )
         )
+
+    full_collisions = find_full_state_collisions(
+        oracle,
+        config,
+        round_index=1,
+        candidates=1024,
+        limit=1,
+    )
+    records.append(
+        _record(
+            "HIST-02",
+            {
+                "state_bits": config.state_bits,
+                "history_bits": config.history_bits,
+                "round_index": 1,
+                "queries": 1024,
+                "collision_found": bool(full_collisions),
+            },
+        )
+    )
 
     history = profile_history_collisions_v3(
         oracle,
@@ -159,6 +187,19 @@ def run_parameter_design_pilots(seed: bytes) -> list[dict[str, Any]]:
     ]
     records.append(
         _record(
+            "PARAM-02",
+            asdict(
+                parameter_correlation_profile(
+                    oracle,
+                    512,
+                    persistent_bits=10,
+                    space=space,
+                )
+            ),
+        )
+    )
+    records.append(
+        _record(
             "PARAM-03",
             asdict(
                 find_cheapest_stratum(
@@ -194,6 +235,107 @@ def run_parameter_design_pilots(seed: bytes) -> list[dict[str, Any]]:
                     persistent_bits=10,
                     space=space,
                 )
+            ),
+        )
+    )
+    records.append(
+        _record(
+            "PARAM-06",
+            asdict(
+                mitigation_profile(
+                    oracle,
+                    512,
+                    fixed_t=5,
+                    fixed_k=3,
+                    persistent_bits=10,
+                    space=space,
+                )
+            ),
+        )
+    )
+    return records
+
+
+def run_reduced_design_pilots(seed: bytes) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for point in collision_scaling_v3(
+        seed + b"/collision-scaling",
+        (3, 4, 5, 6),
+        construction="r125",
+        history_bits=6,
+        persistent_bits=4,
+        target_round=1,
+        state_count=2,
+        max_candidates=2048,
+    ):
+        records.append(_record("RED-02", asdict(point)))
+
+    config = ReducedHistoryConfig(
+        state_bits=4,
+        history_bits=5,
+        persistent_bits=3,
+        target_round=1,
+        state_count=2,
+    )
+    oracle = ReducedOracle(seed + b"/reduced-family")
+    target_window = tuple(
+        oracle.query(
+            "r13-external-target-window",
+            config.state_bits,
+            index.to_bytes(2, "big"),
+        )
+        for index in range(config.state_count)
+    )
+    preimage = find_window_preimage_v3(
+        oracle,
+        config,
+        construction="r125",
+        target_window=target_window,
+        candidates=4096,
+    )
+    records.append(
+        _record(
+            "RED-03",
+            {
+                "evaluated_candidates": (
+                    4096 if preimage is None else int(preimage["evaluated_candidates"])
+                ),
+                "success": preimage is not None,
+                "candidate": -1 if preimage is None else int(preimage["candidate"]),
+            },
+        )
+    )
+
+    second = find_window_second_preimage_v3(
+        oracle,
+        config,
+        construction="r125",
+        target_candidate=0,
+        candidates=4096,
+        persistent_policy="same",
+    )
+    records.append(
+        _record(
+            "RED-04",
+            {
+                "target_candidate": 0,
+                "candidate": -1 if second is None else second.candidate,
+                "persistent_equal": False if second is None else second.persistent_equal,
+                "evaluated_candidates": 4096 if second is None else second.evaluated_candidates,
+                "success": second is not None,
+            },
+        )
+    )
+
+    records.append(
+        _record(
+            "RED-05",
+            multi_target_window_attack_v3(
+                oracle,
+                config,
+                construction="r125",
+                targets=8,
+                search_candidates=2048,
             ),
         )
     )
@@ -277,6 +419,7 @@ def run_r13_design_pilots(seed: bytes = b"sigma-r13-design-pilots") -> list[dict
     return [
         *run_history_design_pilots(seed),
         *run_parameter_design_pilots(seed),
+        *run_reduced_design_pilots(seed),
         *run_tmto_design_pilots(seed),
         *run_branch_design_pilots(seed),
     ]
@@ -288,13 +431,20 @@ def validate_r13_design_records(records: list[dict[str, Any]]) -> None:
     observed = {str(record.get("attack_id")) for record in records}
     required = {
         "HIST-01",
+        "HIST-02",
         "HIST-03",
         "HIST-05",
         "HIST-06",
         "PARAM-01",
+        "PARAM-02",
         "PARAM-03",
         "PARAM-04",
         "PARAM-05",
+        "PARAM-06",
+        "RED-02",
+        "RED-03",
+        "RED-04",
+        "RED-05",
         "TMTO-01",
         "BRANCH-01",
     }
@@ -315,6 +465,7 @@ __all__ = [
     "run_history_design_pilots",
     "run_parameter_design_pilots",
     "run_r13_design_pilots",
+    "run_reduced_design_pilots",
     "run_tmto_design_pilots",
     "validate_r13_design_records",
 ]

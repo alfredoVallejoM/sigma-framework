@@ -6,6 +6,8 @@ from enum import IntEnum
 class SuiteIdV3(IntEnum):
     REFERENCE_IAP_V3 = 0x0301
     EXPLICIT_AUDIT_V3 = 0x0302
+    DEEP_V3 = 0x0303
+    DEEP_VECTOR_V3 = 0x0304
 
 
 class InputProfileIdV3(IntEnum):
@@ -18,6 +20,8 @@ class AnchorProfileIdV3(IntEnum):
 
 class RoundProfileIdV3(IntEnum):
     WIDE_ONCE = 0x0301
+    DEEP = 0x0302
+    DEEP_VECTOR = 0x0303
 
 
 class OutputProfileIdV3(IntEnum):
@@ -69,6 +73,7 @@ class DomainIdV3(IntEnum):
     DEEP_BRANCH_FRAME = 0x030D
     VECTOR_ROUND_FRAME = 0x030E
     EXPLICIT_EVIDENCE = 0x030F
+    DEEP_FOLD = 0x0310
 
 
 ALGORITHM_OUTPUT_SIZE_V3 = 64

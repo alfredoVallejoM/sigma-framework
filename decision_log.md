@@ -65,3 +65,21 @@ Los PASS atribuidos anteriormente a R0–R8 quedan como antecedentes no trazable
 Cada fase deberá someterse de nuevo a una única revisión adversaria y versionar su
 informe antes de recuperar el estado de cerrada. No se avanzará desde un candidato
 de fase mientras falte esa evidencia.
+
+## 2026-09-19 — Deep y DeepVector v3 son suites y claims distintos
+
+Decision:
+R9 asigna `0x0303` a Deep escalar y `0x0304` a DeepVector. Deep pliega
+explícitamente todas las ramas bajo `DEEP_FOLD (0x0310)`; DeepVector conserva
+`4 × 64` bytes y cada rama recibe el vector anterior completo. Los backends sólo
+ejecutan tareas canónicas construidas por el core.
+
+Reason:
+Un fold escalar y un estado vectorial no preservan la misma información ni
+admiten los mismos claims. Entregar semántica a cada backend permitiría que
+serial, threads y procesos implementasen funciones accidentalmente distintas.
+
+Impact:
+Los perfiles tienen IDs, contextos, anchos, evaluaciones y verificadores
+despachados distintos. No se describirá Deep como vectorial ni DeepVector como
+cuatro cadenas independientes.

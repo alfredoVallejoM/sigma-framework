@@ -14,12 +14,23 @@ from sigma.binding import (
     derive_trajectory_parameters,
 )
 from sigma.crypto.primitives import domain_tag_v3
+from sigma.rounds.deep_v3 import (
+    DeepEvaluationV3,
+    DeepVectorEvaluationV3,
+    evaluate_deep_v3,
+    evaluate_deep_vector_v3,
+)
 from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3, evaluate_wide_once_v3
 from sigma.sources import CanonicalSource
 from sigma.spec.codec_v3 import decode_record, encode_record, validate_record_prefix
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError, encode_uint
-from sigma.spec.ids_v3 import DomainIdV3, OutputProfileIdV3, SuiteIdV3
+from sigma.spec.ids_v3 import (
+    DomainIdV3,
+    OutputProfileIdV3,
+    RoundProfileIdV3,
+    SuiteIdV3,
+)
 
 _DIGEST_MAGIC = b"SIGMA3DG"
 _AUDIT_MAGIC = b"SIGMA3EA"
@@ -207,9 +218,12 @@ class StructureVerificationV3:
     message_binding_verified: bool = False
 
 
-def digest_from_evaluation_v3(evaluation: WideOnceEvaluationV3) -> SigmaDigestV3:
-    if not isinstance(evaluation, WideOnceEvaluationV3):
-        raise TypeError("evaluation must be WideOnceEvaluationV3")
+EvaluationV3 = WideOnceEvaluationV3 | DeepEvaluationV3 | DeepVectorEvaluationV3
+
+
+def digest_from_evaluation_v3(evaluation: EvaluationV3) -> SigmaDigestV3:
+    if not isinstance(evaluation, (WideOnceEvaluationV3, DeepEvaluationV3, DeepVectorEvaluationV3)):
+        raise TypeError("evaluation must be a Sigma v3 evaluation")
     return SigmaDigestV3(evaluation.context, evaluation.header, evaluation.window)
 
 
@@ -219,9 +233,19 @@ def verify_structure_v3(data: bytes) -> StructureVerificationV3:
     return StructureVerificationV3(SigmaDigestV3.from_bytes(data))
 
 
-def verify_prepared_v3(evaluation: WideOnceEvaluationV3, evidence: SigmaDigestV3) -> bool:
+def verify_prepared_v3(evaluation: EvaluationV3, evidence: SigmaDigestV3) -> bool:
     expected = digest_from_evaluation_v3(evaluation).to_bytes()
     return hmac.compare_digest(expected, evidence.to_bytes())
+
+
+def _evaluate_for_context_v3(context: SigmaContextV3, source: CanonicalSource) -> EvaluationV3:
+    if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
+        return evaluate_wide_once_v3(context, source)
+    if context.round_profile is RoundProfileIdV3.DEEP:
+        return evaluate_deep_v3(context, source)
+    if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
+        return evaluate_deep_vector_v3(context, source)
+    raise ValueError("unsupported Sigma v3 round profile")  # pragma: no cover
 
 
 def verify_full_v3(source: CanonicalSource, evidence: SigmaDigestV3) -> bool:
@@ -231,7 +255,7 @@ def verify_full_v3(source: CanonicalSource, evidence: SigmaDigestV3) -> bool:
         raise TypeError("source must be CanonicalSource")
     if not isinstance(evidence, SigmaDigestV3):
         raise TypeError("evidence must be SigmaDigestV3")
-    evaluation = evaluate_wide_once_v3(evidence.context, source)
+    evaluation = _evaluate_for_context_v3(evidence.context, source)
     return verify_prepared_v3(evaluation, evidence)
 
 
@@ -240,7 +264,7 @@ def verify_explicit_full_v3(source: CanonicalSource, evidence: ExplicitAuditEvid
 
     if not isinstance(evidence, ExplicitAuditEvidenceV3):
         raise TypeError("evidence must be ExplicitAuditEvidenceV3")
-    evaluation = evaluate_wide_once_v3(evidence.digest.context, source)
+    evaluation = _evaluate_for_context_v3(evidence.digest.context, source)
     return hmac.compare_digest(
         evaluation.prepared.binding.to_bytes(), evidence.binding.to_bytes()
     ) and verify_prepared_v3(evaluation, evidence.digest)

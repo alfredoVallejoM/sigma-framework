@@ -16,7 +16,10 @@ descarta.
 `VectorRoundFrame` usa `VECTOR_ROUND_FRAME (0x030e)` con los mismos tags y un
 vector completo en el placed stream. `DeepBranchFrame` usa `DEEP_BRANCH_FRAME
 (0x030d)` con: (1) contexto, (2) índice `uint64`, (3) posición `uint16`, (4)
-`AlgorithmId uint16`, (5) `VectorRoundFrame` completo.
+`AlgorithmId uint16`, (5) frame de estado completo. El vector R6 y la suite
+DeepVector R9 usan `VectorRoundFrame`; la suite Deep escalar R9 usa
+`RoundFrame`. `DeepFoldFrame`, añadido en R9 bajo `DEEP_FOLD (0x0310)`,
+codifica contexto, índice y secuencia completa de ramas antes del fold escalar.
 
 Los constructores rechazan contexto/binding incoherentes, layout de otra clase o
 índice, anchura incorrecta y branch/algoritmo no correspondiente. Sólo estos

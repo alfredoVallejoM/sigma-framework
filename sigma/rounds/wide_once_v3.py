@@ -17,7 +17,7 @@ from sigma.layout import LayoutPlan, derive_layout_v3
 from sigma.rounds.framing_v3 import InitFrame, RoundFrame
 from sigma.sources import BytesSource, CanonicalSource
 from sigma.spec.context_v3 import SigmaContextV3
-from sigma.spec.ids_v3 import DomainIdV3, LayoutKindV3
+from sigma.spec.ids_v3 import DomainIdV3, LayoutKindV3, RoundProfileIdV3
 
 
 @dataclass(frozen=True, init=False)
@@ -37,6 +37,8 @@ class WideOnceEvaluationV3:
     def _validate(self) -> None:
         if not isinstance(self.context, SigmaContextV3):
             raise TypeError("context must be SigmaContextV3")
+        if self.context.round_profile is not RoundProfileIdV3.WIDE_ONCE:
+            raise ValueError("context must use WideOnce round profile")
         if not isinstance(self.prepared, PreparedBindingV3):
             raise TypeError("prepared must be PreparedBindingV3")
         binding = self.prepared.binding
@@ -100,6 +102,8 @@ def evaluate_wide_once_v3(context: SigmaContextV3, source: CanonicalSource) -> W
 
     if not isinstance(context, SigmaContextV3):
         raise TypeError("context must be SigmaContextV3")
+    if context.round_profile is not RoundProfileIdV3.WIDE_ONCE:
+        raise ValueError("context must use WideOnce round profile")
     if not isinstance(source, CanonicalSource):
         raise TypeError("source must be CanonicalSource")
 

@@ -15,10 +15,16 @@ from sigma.layout import (
     placed_binding_length_v3,
 )
 from sigma.sources import CanonicalSource
+from sigma.spec.codec_v3 import encode_bytes_sequence
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import encode_uint
 from sigma.spec.ids import AlgorithmId
-from sigma.spec.ids_v3 import ALGORITHM_OUTPUT_SIZE_V3, DomainIdV3, LayoutKindV3
+from sigma.spec.ids_v3 import (
+    ALGORITHM_OUTPUT_SIZE_V3,
+    DomainIdV3,
+    LayoutKindV3,
+    RoundProfileIdV3,
+)
 from sigma.spec.transcript import TranscriptSink, TranscriptWriter, encode_transcript
 
 MAX_MATERIALIZED_FRAME = 1 << 20
@@ -239,7 +245,7 @@ class DeepBranchFrame:
     round_index: int
     branch_index: int
     algorithm: AlgorithmId
-    vector_frame: VectorRoundFrame
+    vector_frame: RoundFrame | VectorRoundFrame
 
     def __post_init__(self) -> None:
         if not isinstance(self.context, SigmaContextV3):
@@ -253,12 +259,28 @@ class DeepBranchFrame:
             raise TypeError("algorithm must be AlgorithmId")
         if self.algorithm is not self.context.joint_algorithms[self.branch_index]:
             raise ValueError("algorithm does not match branch index")
-        if not isinstance(self.vector_frame, VectorRoundFrame):
-            raise TypeError("vector_frame must be VectorRoundFrame")
+        expected_type: type[RoundFrame] | type[VectorRoundFrame]
+        if self.context.round_profile is RoundProfileIdV3.DEEP:
+            expected_type = RoundFrame
+        elif self.context.round_profile in (
+            RoundProfileIdV3.WIDE_ONCE,
+            RoundProfileIdV3.DEEP_VECTOR,
+        ):
+            expected_type = VectorRoundFrame
+        else:  # pragma: no cover - closed registered profiles
+            raise ValueError("unsupported round profile")
+        if not isinstance(self.vector_frame, expected_type):
+            raise TypeError(f"state_frame must be {expected_type.__name__}")
         if self.vector_frame.context != self.context:
-            raise ValueError("vector frame context differs from branch context")
+            raise ValueError("state frame context differs from branch context")
         if self.vector_frame.round_index != self.round_index:
-            raise ValueError("vector frame round differs from branch round")
+            raise ValueError("state frame round differs from branch round")
+
+    @property
+    def state_frame(self) -> RoundFrame | VectorRoundFrame:
+        """Semantic R9 name; `vector_frame` remains the R6-compatible field."""
+
+        return self.vector_frame
 
     def to_bytes(self) -> bytes:
         return encode_transcript(
@@ -269,5 +291,38 @@ class DeepBranchFrame:
                 (3, encode_uint(self.branch_index, 2)),
                 (4, encode_uint(self.algorithm, 2)),
                 (5, self.vector_frame.to_bytes()),
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class DeepFoldFrame:
+    context: SigmaContextV3
+    round_index: int
+    branches: tuple[bytes, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.context, SigmaContextV3):
+            raise TypeError("context must be SigmaContextV3")
+        if self.context.round_profile is not RoundProfileIdV3.DEEP:
+            raise ValueError("fold frame requires Deep scalar profile")
+        _validate_index(self.round_index)
+        if not isinstance(self.branches, tuple):
+            raise TypeError("branches must be tuple")
+        if len(self.branches) != len(self.context.joint_algorithms):
+            raise ValueError("one branch required per joint algorithm")
+        if any(
+            not isinstance(branch, bytes) or len(branch) != ALGORITHM_OUTPUT_SIZE_V3
+            for branch in self.branches
+        ):
+            raise ValueError("branches must be fixed-width bytes")
+
+    def to_bytes(self) -> bytes:
+        return encode_transcript(
+            DomainIdV3.DEEP_FOLD,
+            (
+                (1, self.context.to_bytes()),
+                (2, encode_uint(self.round_index, 8)),
+                (3, encode_bytes_sequence(self.branches)),
             ),
         )

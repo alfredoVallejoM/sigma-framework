@@ -182,6 +182,26 @@ def _isolated_install_and_cli(wheel: Path, root: Path) -> list[StageResult]:
             ],
             cwd=scratch,
         ),
+        _run(
+            "smoke-installed-history-v3",
+            [
+                str(python),
+                "-I",
+                "-c",
+                (
+                    "from sigma.sources import BytesSource; "
+                    "from sigma.spec.context_v3 import SigmaContextV3; "
+                    "from sigma.spec.ids_v3 import SuiteIdV3; "
+                    "from sigma.v3 import evaluate_v3; "
+                    "c=SigmaContextV3.for_suite("
+                    "SuiteIdV3.REFERENCE_IAP_HISTORY_V3,"
+                    "salt=b'gate',challenge=b'gate',application_context=b'gate'); "
+                    "e=evaluate_v3(c,BytesSource(b'wheel-history-smoke')); "
+                    "assert len(e.histories)==len(e.states)"
+                ),
+            ],
+            cwd=scratch,
+        ),
     ]
     return results
 
@@ -234,6 +254,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                         "reference",
                         "tests",
                     ],
+                ),
+                _run(
+                    "r12-corpus-check",
+                    [sys.executable, "-m", "scripts.generate_v3_r12_corpus", "--check"],
+                ),
+                _run(
+                    "r125-corpus-check",
+                    [sys.executable, "-m", "scripts.generate_v3_r125_corpus", "--check"],
                 ),
                 _run(
                     "tests-with-coverage",

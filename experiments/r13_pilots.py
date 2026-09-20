@@ -627,7 +627,9 @@ def run_branch_design_pilots(seed: bytes) -> list[AttackRunRecord]:
                 construction=f"DeepVector/{fault}",
                 seed_label=f"branch/vector/{fault}",
                 status=AttackRunStatus.SUCCESS,
-                observed=_resources(W=config.candidates, Q_R=config.candidates, mu=result.image_size),
+                observed=_resources(
+                    W=config.candidates, Q_R=config.candidates, mu=result.image_size
+                ),
                 metrics={
                     "affected_branches": None,
                     "hamming_distance": None,

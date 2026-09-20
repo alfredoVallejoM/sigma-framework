@@ -179,9 +179,10 @@ def test_history_deep_thread_backend_is_mathematically_identical(
         BytesSource(b"backend-equality"),
         backend=ThreadDeepBranchBackendV3(2),
     )
-    assert digest_from_evaluation_v3(serial).to_bytes() == digest_from_evaluation_v3(
-        threaded
-    ).to_bytes()
+    assert (
+        digest_from_evaluation_v3(serial).to_bytes()
+        == digest_from_evaluation_v3(threaded).to_bytes()
+    )
     assert serial.states == threaded.states
     assert serial.histories == threaded.histories
 

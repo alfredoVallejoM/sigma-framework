@@ -222,3 +222,26 @@ R14 no se declara formalmente cerrado hasta crear el tag inmutable
 `sigma-v3-r14-freeze-v1` exactamente sobre el candidato. R15 permanece
 bloqueado. Los commits documentales posteriores no son el objeto del freeze y
 no deben recibir ese tag.
+
+
+## 2026-09-21 — R14.1 reopens before data for publication-scale R15
+
+Decision:
+Do not tag the original R14 technical candidate. Before any confirmatory seed is
+consumed, add an R14.1 closure that freezes final executors/estimators, a
+publication-scale sampling plan and a streaming/storage provenance policy.
+
+Reason:
+R15 review found that several preliminary sample sizes were adequate for
+infrastructure validation but too sparse for dense scaling curves and narrow
+publication-quality intervals. It also found that large statistical streams
+must be processed without requiring hundreds of GiB of persistent storage.
+
+Impact:
+`experiments/r15-publication-scale-plan.json` becomes the design source for
+grids, replicate counts, confidence/power targets and stress regions.
+`experiments/r15-data-policy.json` establishes processed-volume != retained-
+volume, deterministic regeneration, stream hashing, scratch ceilings and a
+small retained scientific archive. R15 remains blocked until these decisions
+are materialized in regenerated configs/preregistration and pass a new R14.1
+gate.

@@ -14,6 +14,7 @@ LOCAL_ARTIFACT_MANIFEST = PROJECT_ROOT / "constraints" / "v2-2-local-artifacts.s
 F7_SNAPSHOT = PROJECT_ROOT / "constraints" / "v2-2-f7-snapshot.json"
 BASELINE_COMMIT = "19fb70356971bc1bacb94a19e5e6e48e9e070167"
 BASELINE_ROOTS = ("sigma", "reference", "specification")
+BASELINE_EXCLUSIONS = {Path("sigma/version.py")}
 
 
 def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[Path, str]:
@@ -63,6 +64,8 @@ def verify_baseline(
     failures: list[str] = []
     use_git_blobs = manifest.resolve() == DEFAULT_MANIFEST.resolve() and (root / ".git").exists()
     for relative, expected in load_manifest(manifest).items():
+        if relative in BASELINE_EXCLUSIONS:
+            continue
         if use_git_blobs:
             data = _git_blob(root, relative)
             if data is None:
@@ -102,8 +105,8 @@ def verify_manifest_completeness(
     manifest: Path = DEFAULT_MANIFEST,
     root: Path = PROJECT_ROOT,
 ) -> list[str]:
-    expected = baseline_paths(root)
-    actual = set(load_manifest(manifest))
+    expected = baseline_paths(root) - BASELINE_EXCLUSIONS
+    actual = set(load_manifest(manifest)) - BASELINE_EXCLUSIONS
     failures = [f"unprotected: {path}" for path in sorted(expected - actual)]
     failures.extend(f"not in baseline: {path}" for path in sorted(actual - expected))
     return failures

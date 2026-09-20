@@ -1,0 +1,326 @@
+{
+  "schema": "sigma-v3-r15-publication-scale-plan-v1",
+  "status": "pre-freeze-design",
+  "confirmatory_evidence": false,
+  "confidence": {
+    "primary_ci": 0.95,
+    "rare_event_one_sided_upper": 0.99,
+    "power_target": 0.95,
+    "minimum_exceptional_power": 0.9,
+    "bootstrap_replicates_primary": 10000,
+    "bootstrap_replicates_final_optional": 50000,
+    "minimum_estimable_points_per_primary_curve": 6,
+    "preferred_estimable_points_per_primary_curve": "7-8",
+    "default_width_step_bits": 2
+  },
+  "campaigns": {
+    "HIST-01A": {
+      "widths": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "round_indices": [
+        1,
+        2,
+        4
+      ],
+      "replicates_per_cell": 512,
+      "crossing_target": 32
+    },
+    "HIST-01B": {
+      "widths": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "round_indices": [
+        1,
+        2,
+        4
+      ],
+      "batches_per_cell": 256,
+      "trials_per_batch": 1024
+    },
+    "HIST-02": {
+      "widths": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "replicates_per_cell": 512
+    },
+    "HIST-03": {
+      "widths": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "games": [
+        "collision",
+        "second-preimage",
+        "fixed-point",
+        "cycle"
+      ],
+      "replicates_per_cell": 256
+    },
+    "HIST-05": {
+      "history_widths": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18
+      ],
+      "replicates_per_cell": 128
+    },
+    "HIST-06": {
+      "history_widths": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18
+      ],
+      "slots": [
+        17,
+        33,
+        65,
+        129
+      ],
+      "variants": [
+        "fixed",
+        "values-only",
+        "adaptive"
+      ],
+      "replicates_per_cell": 256
+    },
+    "LAYOUT-04": {
+      "history_widths": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18
+      ],
+      "slots": [
+        17,
+        33,
+        65,
+        129
+      ],
+      "variants": [
+        "fixed",
+        "values-only",
+        "adaptive"
+      ],
+      "replicates_per_cell": 256
+    },
+    "RED-02": {
+      "widths_by_k": {
+        "1": [
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20
+        ],
+        "2": [
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16
+        ],
+        "3": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "4": [
+          4,
+          6,
+          8,
+          10
+        ]
+      },
+      "constructions": [
+        "r12",
+        "r125"
+      ],
+      "replicates_per_cell": 512,
+      "budget_rule": "min(frozen_cap,4*2^(k*n/2))"
+    },
+    "RED-03": {
+      "widths": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "estimable_widths": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "stress_widths": [
+        12,
+        14,
+        16
+      ],
+      "replicates_estimable": 512,
+      "replicates_stress": 256
+    },
+    "RED-04": {
+      "widths": [
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "policies": [
+        "same-persistent",
+        "any-persistent"
+      ],
+      "replicates_estimable": 512,
+      "replicates_stress": 256
+    },
+    "RED-05": {
+      "widths": [
+        6,
+        8,
+        10,
+        12
+      ],
+      "targets": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "constructions": [
+        "r12",
+        "r125"
+      ],
+      "replicates_per_cell": 512
+    },
+    "TMTO": {
+      "widths": [
+        8,
+        10,
+        12,
+        14,
+        16,
+        18
+      ],
+      "strategies": [
+        "direct",
+        "distinguished",
+        "rho",
+        "hellman",
+        "rainbow"
+      ],
+      "constructions": [
+        "r12",
+        "r125"
+      ],
+      "replicates_per_cell": 256
+    },
+    "PARAM-01": {
+      "samples_per_replicate": 186000,
+      "replicates": 64,
+      "expected_per_joint_cell": 2000
+    },
+    "PARAM-02": {
+      "samples_per_replicate": 32768,
+      "replicates": 128,
+      "permutations": 5000
+    },
+    "PARAM-03": {
+      "candidate_budgets": [
+        93,
+        186,
+        465,
+        930,
+        1860,
+        4650,
+        9300
+      ],
+      "replicates_per_cell": 512
+    },
+    "PARAM-04": {
+      "physical_hosts": 3,
+      "paired_replicates_per_host": 256,
+      "guesses_per_replicate": 4096
+    },
+    "PARAM-05": {
+      "physical_hosts": 3,
+      "nonce_budgets": [
+        4096,
+        16384
+      ],
+      "paired_replicates_per_host_per_budget": 512
+    },
+    "PARAM-06": {
+      "physical_hosts": 3,
+      "modes": [
+        "input-derived",
+        "context-fixed",
+        "cost-bucketed"
+      ],
+      "replicates_per_host_per_mode": 512
+    },
+    "BRANCH-05": {
+      "faults": 8,
+      "replicates_per_fault": 1024
+    },
+    "BRANCH-06": {
+      "faults": 6,
+      "replicates_per_fault": 1024
+    },
+    "STAT-01": {
+      "cells": 24,
+      "streams_per_cell": 64,
+      "retention": "manifest+hashes+logs; streams ephemeral",
+      "bytes_per_stream": "freeze after adapter validation"
+    }
+  }
+}

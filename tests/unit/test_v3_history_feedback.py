@@ -4,6 +4,20 @@ import dataclasses
 
 import pytest
 
+from sigma.applications.kdf_argon2id_v3 import (
+    Argon2idParametersV3,
+    compose_argon2id_output_v3,
+)
+from sigma.applications.pow_v3 import (
+    PowParametersV3,
+    evaluate_nonce_v3,
+    verify_pow_v3,
+)
+from sigma.applications.signed_v3 import (
+    sign_digest_ed25519_v3,
+    verify_full_signed_v3,
+    verify_signed_digest_v3,
+)
 from sigma.binding import (
     HistoryCommitmentV3,
     RoundBindingV3,
@@ -200,3 +214,68 @@ def test_history_evaluations_are_factory_only() -> None:
     )
     with pytest.raises(TypeError):
         dataclasses.replace(evaluation)
+
+
+def test_history_suite_is_usable_by_kdf_composition_without_new_security_claims() -> None:
+    parameters = Argon2idParametersV3(
+        memory_kib=64,
+        time_cost=1,
+        parallelism=1,
+        output_length=32,
+        suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    )
+    derived = compose_argon2id_output_v3(
+        b"K" * 32,
+        b"history-kdf-salt",
+        parameters,
+    )
+    assert derived.sigma_digest.context.suite_id is SuiteIdV3.REFERENCE_IAP_HISTORY_V3
+    assert derived.password_record().sigma_digest == derived.sigma_digest
+
+
+def test_history_suite_is_usable_by_pow_and_verification_recomputes_history() -> None:
+    parameters = PowParametersV3(
+        b"history-pow-challenge",
+        0,
+        suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    )
+    proof = evaluate_nonce_v3(b"payload", 7, parameters)
+    assert proof.digest.context.suite_id is SuiteIdV3.REFERENCE_IAP_HISTORY_V3
+    assert verify_pow_v3(b"payload", proof, parameters)
+    assert not verify_pow_v3(b"payload!", proof, parameters)
+
+
+def test_signed_history_digest_distinguishes_attestation_from_full_binding() -> None:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    message = b"signed-history"
+    evaluation = evaluate_v3(
+        _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3),
+        BytesSource(message),
+    )
+    digest = digest_from_evaluation_v3(evaluation)
+    private_bytes = bytes(range(32))
+    private_key = Ed25519PrivateKey.from_private_bytes(private_bytes)
+    public_bytes = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    commitment = sign_digest_ed25519_v3(digest, private_bytes, b"history-key")
+    assert verify_signed_digest_v3(
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )
+    assert verify_full_signed_v3(
+        BytesSource(message),
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )
+    assert not verify_full_signed_v3(
+        BytesSource(message + b"!"),
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )

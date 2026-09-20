@@ -103,3 +103,43 @@ Impact:
 Los caminos de entrada deben ser byte-idénticos, los límites de spool son
 explícitos y todos los temporales, mappings y procesos se liberan en éxito,
 error y cancelación.
+
+
+## 2026-09-20 — El estado histórico forma parte del binding efectivo de ronda
+
+Decision:
+R12 se conserva como baseline histórico de la recurrencia con binding
+persistente fijo. Antes de R13 se abre R12.5 para introducir un compromiso
+histórico H_i y un binding efectivo E_i=(P_X,H_i). El estado matemático de la
+trayectoria pasa a ser Z_i=(H_i,S_i); una igualdad puntual de S_i no debe
+coalescer dos historias distintas.
+
+Reason:
+La intención completa de Sigma-IAP exige retroalimentar causalmente el pasado de
+la trayectoria. El R12 actual reinyecta S_i como base del frame y P_X como
+binding fijo, pero no conserva una memoria criptográfica separada de estados
+anteriores.
+
+Impact:
+Se deben definir HistorySeed/HistoryStep, decidir la dependencia del layout,
+actualizar frames y evaluadores, regenerar corpus/KAT/reference y repetir la
+revisión adversarial antes de formalizar R13. Los IDs y artefactos R12 no se
+reescriben silenciosamente.
+
+## 2026-09-20 — El paper se gobierna por una matriz científica de ataques y evidencia
+
+Decision:
+La planificación de publicación se divide en R13 seguridad/criptoanálisis,
+R14 freeze y prerregistro, R15 confirmatorio y R16 reproducción/auditoría
+externa. Las campañas y baselines están definidas en
+docs/paper-cryptographic-validation-plan-v3.md.
+
+Reason:
+Tests de conformidad, difusión o aleatoriedad no sustituyen juegos de seguridad,
+reducciones ni ataques. Cada claim debe ser falsable y trazable a raw data,
+artefacto, baseline y nivel de evidencia.
+
+Impact:
+Ninguna cifra de piloto se usa como resultado confirmatorio. R12 se mantiene
+como baseline de ablación para medir exactamente el efecto del feedback
+histórico.

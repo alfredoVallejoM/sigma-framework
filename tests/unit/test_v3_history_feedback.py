@@ -219,8 +219,8 @@ def test_history_evaluations_are_factory_only() -> None:
 
 def test_history_suite_is_usable_by_kdf_composition_without_new_security_claims() -> None:
     parameters = Argon2idParametersV3(
-        memory_kib=64,
-        time_cost=1,
+        memory_kib=19_456,
+        time_cost=2,
         parallelism=1,
         output_length=32,
         suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,

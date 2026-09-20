@@ -358,6 +358,36 @@ discovery y se evalúa en holdout inmutable.
 Repetición: múltiples seeds y hosts, orden aleatorio de tratamientos, warm-up
 cuando proceda, intervalos, effect sizes y publicación de resultados negativos.
 
+### Publication-scale rule
+
+Las curvas principales de R15 deben tener al menos 6 puntos estimables,
+preferiblemente 7–8, con pasos de 2 bits cuando se estudien anchuras y con
+puntos adicionales de stress/censoring cuando sean informativos.
+
+Los primary endpoints reportan 95% CI. Rare/zero-event boundaries reportan
+además 99% one-sided upper bounds. El target de power es 95% cuando el power
+calculation sea aplicable; 90% es el mínimo excepcional.
+
+El tamaño exacto por familia se gobierna por
+`experiments/r15-publication-scale-plan.json` y se materializa durante
+R14.1 antes de cualquier dato R15.
+
+### Streaming/data rule
+
+Volumen procesado no equivale a volumen retenido. Los streams estadísticos
+grandes son deterministically regenerable ephemeral computation:
+
+[
+seed+generator+length+hash Rightarrow stream.
+]
+
+Git no almacena grandes streams. PractRand/TestU01/NIST deben consumir pipes,
+callbacks o un único fichero temporal por vez. El límite objetivo de scratch es
+10 GiB general y 2 GiB preferido para STAT. El archive científico retenido se
+mantiene en el orden de 1–5 GiB o menos.
+
+La política exacta está en `experiments/r15-data-policy.json`.
+
 ## 25. Baselines obligatorios
 
 - SHA-512;
@@ -415,9 +445,11 @@ attackers y matriz claim/evidence. Sin resultados confirmatorios.
 R14 — Experimental Freeze: implementación/IDs/wire/corpus/attackers/schemas,
 pilotos y prerregistro congelados; gates remoto y local verdes sobre tag limpio.
 
-R15 — Confirmatory Scientific Campaign: ejecutar HIST, REDUCED, TMTO, PARAM,
-LAYOUT, DIFF, STAT, BRANCH, FAULT, APP-*, PARSE, DOS, CONC y PERF según
-prerregistro. Conservar fallos, censura y resultados negativos.
+R15 — Confirmatory Scientific Campaign: ejecutar exclusivamente el conjunto
+confirmatorio finalmente congelado en R14.1, a escala de publicación y con
+política streaming/storage reproducible. Conservar fallos, censura y resultados
+negativos. DIFF/FAULT/PARSE/DOS/CONC/PERF no se incorporan retroactivamente como
+nuevas campañas confirmatorias si no figuran en el freeze final.
 
 R16 — External Reproduction & Publication: segundo host/persona, reproducción,
 archivo persistente y revisión criptográfica externa.

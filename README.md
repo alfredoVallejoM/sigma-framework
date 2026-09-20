@@ -21,8 +21,8 @@ ablation baseline for measuring the effect of historical feedback.
 |---|---|
 | R0–R12 engineering/conformance | PASS recorded |
 | R12.5 historical feedback | **PASS** — candidate `5ac306bb…` |
-| R13 formal security & cryptanalysis | **next active gate** |
-| R14 experimental freeze/preregistration | pending |
+| R13 formal security & cryptanalysis | **PASS** — candidate `8a71de3d…` |
+| R14 experimental freeze/preregistration | **next active gate** |
 | R15 confirmatory scientific campaign | pending |
 | R16 external reproduction/review | pending |
 | independent cryptographic audit | not performed |
@@ -34,6 +34,8 @@ Current governing documents:
 - [R12.5 implementation traceability](docs/traceability-v3-r12-5.md)
 - [R12.5 adversarial review](docs/adversarial-reviews/R12-5.md)
 - [R12.5 history-feedback plan](docs/sigma-v3-r12-5-history-feedback-plan.md)
+- [R14 experimental freeze plan](docs/r14-experimental-freeze-plan.md)
+- [R14 traceability](docs/traceability-v3-r14.md)
 - [cryptographic/scientific paper validation plan](docs/paper-cryptographic-validation-plan-v3.md)
 - [v3 assessment and development plan](docs/assessment-and-development-plan-v3-2026-09-19.md)
 - [R12 traceability](docs/traceability-v3-r12.md)

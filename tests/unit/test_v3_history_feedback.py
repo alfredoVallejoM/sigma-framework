@@ -132,9 +132,7 @@ def test_same_full_dynamic_state_reproduces_identical_frame() -> None:
     state = evaluation.states[0]
     history = evaluation.histories[0]
     round_binding = RoundBindingV3(evaluation.prepared.binding, history)
-    layout = derive_history_layout_v3(
-        context, round_binding, round_index=0, base_length=len(state)
-    )
+    layout = derive_history_layout_v3(context, round_binding, round_index=0, base_length=len(state))
     first = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
     second = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
     assert first == second
@@ -152,9 +150,7 @@ def test_same_history_with_different_visible_state_changes_round_frame() -> None
         context, round_binding, round_index=0, base_length=len(state)
     )
     original = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
-    changed = HistoryRoundFrame(
-        context, round_binding, layout, 0, changed_state
-    ).to_bytes()
+    changed = HistoryRoundFrame(context, round_binding, layout, 0, changed_state).to_bytes()
     assert original != changed
 
 
@@ -193,9 +189,7 @@ def test_persistent_binding_substitution_cannot_preserve_round_frame() -> None:
     substituted_layout = derive_history_layout_v3(
         context, substituted, round_index=0, base_length=len(state)
     )
-    left_frame = HistoryRoundFrame(
-        context, left_binding, left_layout, 0, state
-    ).to_bytes()
+    left_frame = HistoryRoundFrame(context, left_binding, left_layout, 0, state).to_bytes()
     substituted_frame = HistoryRoundFrame(
         context, substituted, substituted_layout, 0, state
     ).to_bytes()
@@ -231,14 +225,10 @@ def test_deep_vector_history_consumes_the_complete_previous_vector() -> None:
     layout = derive_history_layout_v3(
         context, round_binding, round_index=0, base_length=len(vector)
     )
-    original = HistoryVectorRoundFrame(
-        context, round_binding, layout, 0, vector
-    ).to_bytes()
+    original = HistoryVectorRoundFrame(context, round_binding, layout, 0, vector).to_bytes()
     mutated = bytearray(vector)
     mutated[len(mutated) // 2] ^= 1
-    changed = HistoryVectorRoundFrame(
-        context, round_binding, layout, 0, bytes(mutated)
-    ).to_bytes()
+    changed = HistoryVectorRoundFrame(context, round_binding, layout, 0, bytes(mutated)).to_bytes()
     assert original != changed
     assert history_step_v3(
         context, evaluation.prepared.binding, history, 0, vector

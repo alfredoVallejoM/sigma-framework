@@ -86,7 +86,7 @@ def test_history_commitment_rejects_invalid_construction(
     round_index, digest, error: type[Exception]
 ) -> None:
     with pytest.raises(error):
-        HistoryCommitmentV3(round_index, digest)  # type: ignore[arg-type]
+        HistoryCommitmentV3(round_index, digest)
 
 
 def test_history_and_round_binding_parsers_reject_malformed_wire() -> None:
@@ -167,7 +167,7 @@ def test_history_layout_placement_rejects_invalid_values(
     field, slot, error: type[Exception]
 ) -> None:
     with pytest.raises(error):
-        HistoryLayoutPlacement(field, slot)  # type: ignore[arg-type]
+        HistoryLayoutPlacement(field, slot)
 
 
 def test_history_layout_parser_and_plan_invariants_reject_bad_inputs() -> None:

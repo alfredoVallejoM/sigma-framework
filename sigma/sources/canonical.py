@@ -224,9 +224,10 @@ class MmapFileSource(CanonicalSource):
             self._require_initial_stat(self._path.stat())
             if total != self._byte_length:
                 raise SourceChangedError("file length changed during mmap snapshot")
-            if os.name == "nt" and _path_content_digest(
-                self._path, self._byte_length
-            ) != source_digest.digest():
+            if (
+                os.name == "nt"
+                and _path_content_digest(self._path, self._byte_length) != source_digest.digest()
+            ):
                 raise SourceChangedError("file content changed during mmap snapshot")
             self._file.flush()
             self._file.seek(0)

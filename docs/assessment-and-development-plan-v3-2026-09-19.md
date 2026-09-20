@@ -124,7 +124,7 @@ Estas decisiones deben cerrarse por escrito y acompañarse de vectores mínimos 
 | SPEC-V3-007 | Semántica de streams no seekable, spool, límites de disco, errores y limpieza segura. | I/O |
 | SPEC-V3-008 | Límites de parser y orden de validaciones baratas antes de hashes, spool o trabajo costoso. | Seguridad operativa |
 | SPEC-V3-009 | Perfil de trayectoria de KDF y límites de variación de coste por candidato. | KDF |
-| SPEC-V3-010 | Derivación PoW excluyendo nonce o suspensión inicial del perfil. | PoW |
+| SPEC-V3-010 | RESUELTA EN R11: el nonce entra en el record canónico antes de ancla, binding, derivación de parámetros y rondas; queda prohibida una trayectoria que lo excluya. | PoW |
 | SPEC-V3-011 | Política de convivencia, import paths y migración v2.2 -> v3; no habrá conversión de digests. | Release/API |
 | SPEC-V3-012 | Regla exacta de estabilidad de fichero entre las pasadas de preparación e inicialización. | File API |
 

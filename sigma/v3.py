@@ -1,5 +1,31 @@
-"""Public facade for the incompatible Sigma v3 line through R10."""
+"""Public facade for the incompatible Sigma v3 line through R11."""
 
+from sigma.applications.kdf_argon2id_v3 import (
+    Argon2idParametersV3,
+    SigmaDerivedKeyV3,
+    SigmaPasswordRecordV3,
+    compose_argon2id_output_v3,
+    derive_argon2id_sigma_v3,
+    derive_argon2id_v3,
+    derive_key_from_password_v3,
+    verify_password_v3,
+)
+from sigma.applications.pow_v3 import (
+    PowParametersV3,
+    PowPredicateV3,
+    PowProofV3,
+    accepts_v3,
+    evaluate_nonce_v3,
+    pow_input_v3,
+    solve_pow_v3,
+    verify_pow_v3,
+)
+from sigma.applications.signed_v3 import (
+    SigmaSignedCommitmentV3,
+    sign_digest_ed25519_v3,
+    verify_full_signed_v3,
+    verify_signed_digest_v3,
+)
 from sigma.incremental_v3 import IncrementalSigmaV3, SigmaCheckpointV3
 from sigma.io_v3 import digest_file_v3, evaluate_file_v3, evaluate_reader_v3
 from sigma.outputs.digest_v3 import (
@@ -40,6 +66,7 @@ from sigma.spec.context_v3 import SigmaContextV3
 
 __all__ = [
     "SERIAL_DEEP_BRANCH_BACKEND_V3",
+    "Argon2idParametersV3",
     "CancellationTokenV3",
     "DeepBranchBackendV3",
     "DeepBranchExecutionError",
@@ -49,13 +76,24 @@ __all__ = [
     "EvaluationV3",
     "ExplicitAuditEvidenceV3",
     "IncrementalSigmaV3",
+    "PowParametersV3",
+    "PowPredicateV3",
+    "PowProofV3",
     "ProcessDeepBranchBackendV3",
     "SigmaCheckpointV3",
     "SigmaContextV3",
+    "SigmaDerivedKeyV3",
     "SigmaDigestV3",
+    "SigmaPasswordRecordV3",
+    "SigmaSignedCommitmentV3",
     "StructureVerificationV3",
     "ThreadDeepBranchBackendV3",
     "WideOnceEvaluationV3",
+    "accepts_v3",
+    "compose_argon2id_output_v3",
+    "derive_argon2id_sigma_v3",
+    "derive_argon2id_v3",
+    "derive_key_from_password_v3",
     "digest_file_v3",
     "digest_from_evaluation_v3",
     "evaluate_deep_bytes_v3",
@@ -63,14 +101,22 @@ __all__ = [
     "evaluate_deep_vector_bytes_v3",
     "evaluate_deep_vector_v3",
     "evaluate_file_v3",
+    "evaluate_nonce_v3",
     "evaluate_reader_v3",
     "evaluate_v3",
     "evaluate_wide_once_bytes_v3",
     "evaluate_wide_once_v3",
     "next_deep_state_v3",
     "next_deep_vector_state_v3",
+    "pow_input_v3",
+    "sign_digest_ed25519_v3",
+    "solve_pow_v3",
     "verify_explicit_full_v3",
+    "verify_full_signed_v3",
     "verify_full_v3",
+    "verify_password_v3",
+    "verify_pow_v3",
     "verify_prepared_v3",
+    "verify_signed_digest_v3",
     "verify_structure_v3",
 ]

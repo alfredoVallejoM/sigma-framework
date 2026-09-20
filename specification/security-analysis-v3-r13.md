@@ -518,7 +518,7 @@ Los siguientes módulos fijan falsadores y recursos antes del prerregistro:
 | PARAM-01..06 | `experiments/parameter_grinding_v3.py` | uniformidad, correlación, grinding, KDF/PoW y mitigación |
 | TMTO-01 | `experiments/tmto_v3.py` | direct/distinguished/rho/Hellman/rainbow |
 | BRANCH-01 | `experiments/branch_failures_v3.py` | ramas/folds rotos y Deep vs DeepVector |
-| registry | `experiments/r13_registry.py` | claim, baseline, recursos, éxito, censura y esquema |
+| registry | `experiments/r13_attack_registry.py` | claim, baseline, recursos, éxito, censura y esquema |
 | design gate | `scripts/check_r13_design.py` | ejecuta pilotos desechables y valida todos los esquemas |
 
 Los design pilots no son evidencia E2/E3 del paper. Sirven para garantizar que

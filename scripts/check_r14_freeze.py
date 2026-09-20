@@ -101,10 +101,7 @@ def validate_r14_freeze(manifest: Path = DEFAULT_MANIFEST) -> dict[str, object]:
         if path.name not in {"campaign-index.json", "protocol-freeze.json"}
     ]
     expected = set(confirmatory_attack_ids())
-    actual = {
-        json.loads(path.read_text(encoding="utf-8"))["attack_id"]
-        for path in config_files
-    }
+    actual = {json.loads(path.read_text(encoding="utf-8"))["attack_id"] for path in config_files}
     if actual != expected:
         raise RuntimeError("frozen config attack set differs from protocol")
 

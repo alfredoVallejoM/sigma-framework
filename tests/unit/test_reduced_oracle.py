@@ -1,9 +1,23 @@
 from experiments.exp02_collisions import run as run_collisions
 from experiments.exp02_collisions import summarize as summarize_collisions
+from experiments.exp03_persistence import _clopper_pearson
 from experiments.exp03_persistence import run as run_persistence
 from experiments.exp03_persistence import summarize as summarize_persistence
 from experiments.exp04_anchor_robustness import run as run_anchors
 from experiments.reduced_oracle import ReducedOracle, trajectory
+
+
+def test_dependency_free_clopper_pearson_matches_closed_boundaries() -> None:
+    low, high = _clopper_pearson(0, 32)
+    assert low == 0.0
+    assert abs(high - (1.0 - 0.025 ** (1.0 / 32.0))) < 1e-12
+
+    low, high = _clopper_pearson(32, 32)
+    assert high == 1.0
+    assert abs(low - 0.025 ** (1.0 / 32.0)) < 1e-12
+
+    low, high = _clopper_pearson(16, 32)
+    assert abs(low - (1.0 - high)) < 1e-12
 
 
 def test_reduced_oracle_is_deterministic_and_domain_separated() -> None:

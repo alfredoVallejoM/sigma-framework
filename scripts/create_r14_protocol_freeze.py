@@ -58,10 +58,7 @@ FROZEN_PATHS = (
     "specification/sigma-v3-r12-5-history.md",
     "specification/test-vectors/conformance-v3-r12-5.json.gz.b64",
     "reference/independent_v3.py",
-    *tuple(
-        f"experiments/configs/v3-confirmatory-frozen/{name}"
-        for name in CONFIG_NAMES
-    ),
+    *tuple(f"experiments/configs/v3-confirmatory-frozen/{name}" for name in CONFIG_NAMES),
 )
 
 

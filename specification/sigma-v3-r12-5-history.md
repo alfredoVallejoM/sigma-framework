@@ -56,18 +56,18 @@ by the primitive wrapper exactly as other v3 hashes are.
 
 R12.5 keeps the persistent input binding unchanged in structure:
 
-[
-P_X=(A_X,kappa_X,Lambda_X,J_X).
-]
+\[
+P_X=(A_X,\kappa_X,\Lambda_X,J_X).
+\]
 
 Its wire remains `SIGMA3BI`. Because the R12.5 suite ID is inside the context,
 its values are nevertheless R12.5-specific.
 
 Trajectory parameters remain derived only from `(C,P_X)`:
 
-[
-(t_X,k_X)=DeriveParameters(C,P_X).
-]
+\[
+(t_X,k_X)=\operatorname{DeriveParameters}(C,P_X).
+\]
 
 Historical feedback therefore changes the round dynamics, not the already
 declared `t,k` derivation.
@@ -89,17 +89,17 @@ round `i`.
 
 ### 4.2 Genesis
 
-[
-T_0=TR(HISTORY_SEED,(1,C),(2,P_X))
-]
+\[
+T_0=\operatorname{TR}(\mathrm{HISTORY\_SEED},(1,C),(2,P_X))
+\]
 
-[
+\[
 H_0 =
-SIG3HIST{
-  round=0,;
-  digest=H_{SHA3-512}(HISTORY_SEED,T_0)
-}.
-]
+\operatorname{SIG3HIST}\!\left(
+  0,\,
+  H_{\mathrm{SHA3\text{-}512}}(\mathrm{HISTORY\_SEED},T_0)
+\right).
+\]
 
 No synthetic `S_{-1}` exists.
 
@@ -107,21 +107,23 @@ No synthetic `S_{-1}` exists.
 
 For round `i`, after the round has consumed `(H_i,S_i)`, define:
 
-[
+\[
 T^H_i =
-TR(HISTORY_STEP,
- (1,C),(2,P_X),(3,uint64(i)),(4,H_i),(5,S_i)).
-]
+\operatorname{TR}\!\left(
+  \mathrm{HISTORY\_STEP},
+  (1,C),(2,P_X),(3,\operatorname{uint64}(i)),(4,H_i),(5,S_i)
+\right).
+\]
 
 Then
 
-[
+\[
 H_{i+1} =
-SIG3HIST{
-  round=i+1,;
-  digest=H_{SHA3-512}(HISTORY_STEP,T^H_i)
-}.
-]
+\operatorname{SIG3HIST}\!\left(
+  i+1,\,
+  H_{\mathrm{SHA3\text{-}512}}(\mathrm{HISTORY\_STEP},T^H_i)
+\right).
+\]
 
 Consequently `H_i` commits to `P_X,S_0,...,S_{i-1}`; it does not depend on
 `S_i` until the next history value is created. This ordering is normative and
@@ -131,9 +133,9 @@ prevents circular definition.
 
 The effective round binding is
 
-[
+\[
 E_{X,i}=(P_X,H_{X,i}).
-]
+\]
 
 Its wire is:
 
@@ -164,12 +166,14 @@ ROUND uses five typed fields:
 
 For round `i` and current state width `L`:
 
-[
-seed_i =
-TR(HISTORY_LAYOUT_ROUND,
- (1,C),(2,Lambda_X),(3,H_i),(4,uint16(ROUND)),
- (5,uint64(i)),(6,uint64(L))).
-]
+\[
+\mathrm{seed}_i =
+\operatorname{TR}\!\left(
+  \mathrm{HISTORY\_LAYOUT\_ROUND},
+  (1,C),(2,\Lambda_X),(3,H_i),(4,\operatorname{uint16}(\mathrm{ROUND})),
+  (5,\operatorname{uint64}(i)),(6,\operatorname{uint64}(L))
+\right).
+\]
 
 A SHAKE256 reader under the same domain samples one unbiased slot in `[0,L]`
 for each of the five fields, in field-ID order. Rejection sampling is the R4
@@ -217,21 +221,24 @@ semantics.
 
 The full dynamic state is
 
-[
+\[
 Z_i=(H_i,S_i).
-]
+\]
 
 ### 7.1 WideOnce-history
 
-[
+\[
 F_i =
-TR(HISTORY_ROUND_FRAME,
- (1,C),(2,uint64(i)),(3,Pi_i),(4,Place(S_i,E_i))).
-]
+\operatorname{TR}\!\left(
+  \mathrm{HISTORY\_ROUND\_FRAME},
+  (1,C),(2,\operatorname{uint64}(i)),(3,\Pi_i),
+  (4,\operatorname{Place}(S_i,E_i))
+\right).
+\]
 
-[
-S_{i+1}=H_{state}(HISTORY_ROUND_FRAME,F_i).
-]
+\[
+S_{i+1}=H_{\mathrm{state}}(\mathrm{HISTORY\_ROUND\_FRAME},F_i).
+\]
 
 Only after this round binding is fixed is `H_{i+1}` calculated from `H_i,S_i`
 as in Section 4.3.
@@ -240,38 +247,43 @@ as in Section 4.3.
 
 The state frame is the WideOnce-history frame above. Each branch receives:
 
-[
+\[
 D_{i,j} =
-TR(HISTORY_DEEP_BRANCH_FRAME,
- (1,C),(2,uint64(i)),(3,uint16(j)),(4,uint16(alg_j)),(5,F_i)).
-]
+\operatorname{TR}\!\left(
+  \mathrm{HISTORY\_DEEP\_BRANCH\_FRAME},
+  (1,C),(2,\operatorname{uint64}(i)),(3,\operatorname{uint16}(j)),
+  (4,\operatorname{uint16}(\mathrm{alg}_j)),(5,F_i)
+\right).
+\]
 
-[
-R_{i,j}=H_j(HISTORY_DEEP_BRANCH_FRAME,D_{i,j}).
-]
+\[
+R_{i,j}=H_j(\mathrm{HISTORY\_DEEP\_BRANCH\_FRAME},D_{i,j}).
+\]
 
 The scalar fold is:
 
-[
+\[
 Q_i =
-TR(HISTORY_DEEP_FOLD,
- (1,C),(2,uint64(i)),(3,byteseq(R_{i,*}))).
-]
+\operatorname{TR}\!\left(
+  \mathrm{HISTORY\_DEEP\_FOLD},
+  (1,C),(2,\operatorname{uint64}(i)),(3,\operatorname{byteseq}(R_{i,*}))
+\right).
+\]
 
-[
-S_{i+1}=H_{state}(HISTORY_DEEP_FOLD,Q_i).
-]
+\[
+S_{i+1}=H_{\mathrm{state}}(\mathrm{HISTORY\_DEEP\_FOLD},Q_i).
+\]
 
 ### 7.3 DeepVector-history
 
 The complete vector `V_i` is the base object in a
 `HISTORY_VECTOR_ROUND_FRAME`. Every branch consumes that complete frame:
 
-[
-R_{i,j}=H_j(HISTORY_DEEP_BRANCH_FRAME,D_{i,j}),
-qquad
-V_{i+1}=R_{i,0}VertcdotsVert R_{i,3}.
-]
+\[
+R_{i,j}=H_j(\mathrm{HISTORY\_DEEP\_BRANCH\_FRAME},D_{i,j}),
+\qquad
+V_{i+1}=R_{i,0}\Vert\cdots\Vert R_{i,3}.
+\]
 
 There are no independent component chains and no scalar fold.
 
@@ -279,10 +291,9 @@ There are no independent component chains and no scalar fold.
 
 For the byte-exact construction:
 
-[
-H_i^X
-e H_i^Y,quad S_i^X=S_i^Y
-]
+\[
+H_i^X \neq H_i^Y,\qquad S_i^X=S_i^Y
+\]
 
 implies distinct canonical round layouts and/or placed streams and, in every
 case, distinct complete round-frame bytes. Therefore equality of the observable

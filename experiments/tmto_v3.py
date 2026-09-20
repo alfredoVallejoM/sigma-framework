@@ -27,7 +27,14 @@ class TMTOConfigV3:
     targets: int = 4
 
     def __post_init__(self) -> None:
-        for name in ("bits", "history_bits", "entries", "chain_length", "distinguished_bits", "targets"):
+        for name in (
+            "bits",
+            "history_bits",
+            "entries",
+            "chain_length",
+            "distinguished_bits",
+            "targets",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f"{name} must be int")
@@ -82,9 +89,7 @@ def _chain(
     mask = (1 << config.state_bits) - 1
     path = [(history, state)]
     for step in range(length):
-        history, state = _step(
-            oracle, config, construction, persistent, history, state, step
-        )
+        history, state = _step(oracle, config, construction, persistent, history, state, step)
         if rainbow:
             state = (state + (step + 1) * 0x9E37) & mask
         path.append((history, state))

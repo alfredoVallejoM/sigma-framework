@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 from reference.independent_v3 import evaluate_suite
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3
 from sigma.rounds.deep_v3 import DeepEvaluationV3, DeepVectorEvaluationV3
+from sigma.rounds.wide_once_v3 import WideOnceEvaluationV3
 from sigma.rounds.framing_v3 import (
     DeepBranchFrame,
     DeepFoldFrame,
@@ -43,6 +44,7 @@ def _assert_independent_equal(
         application_context=application_context,
     )
     actual = evaluate_v3(context, BytesSource(message))
+    assert isinstance(actual, (WideOnceEvaluationV3, DeepEvaluationV3, DeepVectorEvaluationV3))
     expected = evaluate_suite(
         message,
         suite_id=int(suite_id),

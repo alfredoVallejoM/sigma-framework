@@ -20,8 +20,8 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 | R15-D | reduced cryptanalysis | **REAL ACQUISITION BLOCKED; 32-cell shadow battery launched** |
 | R15-E | KDF/PoW/mitigation | **REAL ACQUISITION BLOCKED; production-primitive shadow battery launched** |
 | R15-F | external STAT | **REAL BATTERIES BLOCKED; 24-cell exact-stream shadow launched** |
-| R15-G | locked analysis | blocked |
-| R15-H | adversarial data audit | blocked |
+| R15-G | locked analysis | **REAL ANALYSIS BLOCKED; 15-figure/9-table synthetic rehearsal launched** |
+| R15-H | adversarial data audit | **REAL AUDIT BLOCKED; synthetic complete-dataset audit launched** |
 | R15 closure | dataset + review + handoff R16 | blocked |
 
 ## Publication-scale doctrine
@@ -105,3 +105,11 @@ R15-F now has exact pre-data stream semantics in
 constructions × 3 corpora, verifies chunking-invariant regeneration and the
 broken-control defect, but does not invoke external NIST/PractRand/TestU01
 binaries and therefore remains non-confirmatory.
+
+
+R15-G shadow executes the frozen statistical estimators against deterministic
+synthetic inputs for all F01–F15 and binds the resulting analysis bundle by
+SHA-256. R15-H shadow builds an append-only synthetic dataset and verifies
+RunKey completeness, duplicate rejection, record/receipt tamper detection,
+missing-record rejection and deterministic ledger ordering. Neither rehearsal
+derives or consumes confirmatory R15 seeds.

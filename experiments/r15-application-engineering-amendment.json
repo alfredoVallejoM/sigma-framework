@@ -1,0 +1,68 @@
+{
+  "schema": "sigma-v3-r15-application-engineering-amendment-v1",
+  "status": "effective-before-param04-06-execution",
+  "effective_date": "2026-09-21",
+  "base_freeze_id": "sigma-v3-r14-20260921-v2",
+  "base_tag": "sigma-v3-r14-freeze-v1",
+  "base_source_commit": "80214afde29b3596af83265e18c1e2926e14dd2f",
+  "reason": "The user does not require hardware-generalizable KDF/PoW benchmarks. Physical-host replication is therefore removed from the mandatory R15 closure path before any PARAM-04/05/06 engineering acquisition.",
+  "reclassified_attacks": [
+    "PARAM-04",
+    "PARAM-05",
+    "PARAM-06"
+  ],
+  "previous_classification": "confirmatory-physical",
+  "new_classification": "exploratory-engineering",
+  "confirmatory_namespace_forbidden": true,
+  "engineering_namespace": "sigma-v3-r15-exploratory-engineering-v1",
+  "counts_toward_r15_pass": false,
+  "counts_toward_core_security_claims": false,
+  "physical_host_manifest_required": false,
+  "affected_claims": {
+    "C15": "boundary retained",
+    "C16": "reclassified from confirmatory-primary to exploratory-application observation",
+    "C17": "reclassified from confirmatory-primary to exploratory-application observation"
+  },
+  "mandatory_confirmatory_universe": {
+    "internal_run_units": 143552,
+    "stat_run_units": 1536,
+    "total_run_units": 145088
+  },
+  "removed_physical_confirmatory_run_units": 8448,
+  "engineering_scale": {
+    "PARAM-04": {
+      "replicates": 16,
+      "guesses_per_replicate": 32,
+      "argon_memory_kib": 19456,
+      "argon_time_cost": 2,
+      "argon_parallelism": 1,
+      "modes": [
+        "argon2id",
+        "full-sigma",
+        "early-reject-sigma"
+      ]
+    },
+    "PARAM-05": {
+      "replicates_per_nonce_budget": 16,
+      "nonce_budgets": [
+        128,
+        512
+      ],
+      "modes": [
+        "full-each",
+        "prepare-select-evaluate"
+      ]
+    },
+    "PARAM-06": {
+      "replicates": 16,
+      "samples_per_replicate": 512,
+      "modes": [
+        "input-derived",
+        "context-fixed",
+        "cost-bucketed"
+      ]
+    }
+  },
+  "expected_engineering_records": 64,
+  "interpretation": "Results are environment-specific engineering measurements from hosted runners. They may reveal implementation trends or application-level failure modes but are not hardware-generalizable benchmarks and are excluded from confirmatory R15 inference."
+}

@@ -379,6 +379,22 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r15-structural-shadow",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_structural_shadow",
+                    ],
+                ),
+                _run(
+                    "r15-reduced-shadow",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_reduced_shadow",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

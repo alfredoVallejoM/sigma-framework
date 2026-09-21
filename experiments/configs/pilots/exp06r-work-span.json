@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-06",
   "master_seed": "sigma-exp06r-work-span-pilot-v1",
   "suite_family": "v2-2",

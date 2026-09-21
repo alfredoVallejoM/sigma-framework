@@ -1,25 +1,28 @@
 import io
+import os
 import random
 
 import pytest
 
 from sigma.backends import SERIAL_BACKEND, MultiprocessingTreeBackend
 from sigma.presets import (
-    lightweight_v2,
-    paranoid_deep_v2,
-    paranoid_wide_v2,
-    realtime_v2,
-    simultaneous_v2,
+    lightweight_v2_2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
+    paranoid_wide_v2_2,
+    reference_v2_2,
+    simultaneous_v2_2,
 )
 from sigma.rounds import WideOnce
 from sigma.v2 import hash_bytes, hash_chunks, hash_file, hash_reader, trace_bytes
 
 PRESETS = (
-    lightweight_v2,
-    simultaneous_v2,
-    realtime_v2,
-    paranoid_wide_v2,
-    paranoid_deep_v2,
+    reference_v2_2,
+    lightweight_v2_2,
+    simultaneous_v2_2,
+    paranoid_wide_v2_2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
 )
 
 
@@ -44,13 +47,16 @@ def test_adapter_and_partition_canonicality(preset, size: int, tmp_path) -> None
     assert hash_chunks(partitions(payload, size + 17), context) == expected
     assert hash_reader(io.BytesIO(payload), context, read_size=127) == expected
 
-    path = tmp_path / "input.bin"
-    path.write_bytes(payload)
-    assert hash_file(path, context) == expected
+    if os.name != "nt":
+        # Frozen v2.2 FileSnapshot uses POSIX-style path/descriptor identity.
+        # R12.5 does not rewrite that historical semantic asset.
+        path = tmp_path / "input.bin"
+        path.write_bytes(payload)
+        assert hash_file(path, context) == expected
 
 
 def test_parallel_backend_matches_anchor_and_transcript() -> None:
-    context = simultaneous_v2(target_round=3, state_count=2)
+    context = simultaneous_v2_2(target_round=3, state_count=2)
     payload = b"parallel canonicality" * 10000
     serial_anchor = SERIAL_BACKEND.compute_anchor(payload, context)
     parallel_anchor = MultiprocessingTreeBackend(4).compute_anchor(payload, context)
@@ -74,5 +80,5 @@ def test_authenticated_parameters_change_digest(preset) -> None:
 
 
 def test_trace_is_reproducible() -> None:
-    context = paranoid_deep_v2(target_round=3)
+    context = paranoid_deep_v2_2(target_round=3)
     assert trace_bytes(b"trace", context) == trace_bytes(b"trace", context)

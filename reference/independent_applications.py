@@ -6,20 +6,78 @@ from typing import Any
 from reference.independent_v22 import (
     ALGORITHMS,
     LIGHT_ALGORITHMS,
+    deep_vector,
     domain,
     encode_digest,
     sequential_suite,
     tlv,
+    tree_suite,
     u16,
     u32,
     u64,
 )
 
-POW_MAGIC = b"SIGMAPOW2"
+POW_MAGIC = b"SIGMAPOW3"
 KDF_MAGIC = b"SIGMAKDF2"
-KDF_RESULT_MAGIC = b"SIGMAKDR2"
-KDF_FINAL_DOMAIN = b"SIGMA-KDF-FINAL-V1"
+KDF_RECORD_MAGIC = b"SIGMAKVR2"
+KDF_FINAL_DOMAIN = b"SIGMA-KDF-BIND-V2"
+KDF_KEY_DOMAIN = b"SIGMA-KDF-KEY-V2"
 SIGNED_MAGIC = b"SIGMASIG"
+
+SUITE_PARAMETERS = {
+    0x0101: (1, 1, ALGORITHMS),
+    0x0102: (1, 1, LIGHT_ALGORITHMS),
+    0x0104: (3, 1, ALGORITHMS),
+    0x0105: (3, 2, ALGORITHMS),
+}
+
+
+def active_suite(
+    message: bytes,
+    suite_id: int,
+    target_round: int,
+    state_count: int,
+    *,
+    salt: bytes = b"",
+    challenge: bytes = b"",
+    application_context: bytes = b"",
+) -> dict[str, Any]:
+    """Evaluate any registered v2.2 suite without importing :mod:`sigma`."""
+
+    if suite_id == 0x0103:
+        return tree_suite(
+            message,
+            target_round,
+            state_count,
+            salt=salt,
+            challenge=challenge,
+            application_context=application_context,
+        )
+    if suite_id == 0x0106:
+        return deep_vector(
+            message,
+            target_round,
+            state_count,
+            salt=salt,
+            challenge=challenge,
+            application_context=application_context,
+        )
+    try:
+        anchor_profile, round_profile, algorithms = SUITE_PARAMETERS[suite_id]
+    except KeyError as exc:
+        raise ValueError(f"unsupported independent v2.2 suite: {suite_id:#06x}") from exc
+    return sequential_suite(
+        message,
+        suite_id,
+        anchor_profile,
+        round_profile,
+        target_round,
+        state_count,
+        algorithms=algorithms,
+        salt=salt,
+        challenge=challenge,
+        application_context=application_context,
+    )
 
 
 def pow_parameters(
@@ -56,7 +114,7 @@ def pow_candidate(
     message = POW_MAGIC + tlv((1, payload), (2, u64(nonce)))
     evaluated = sequential_suite(
         message,
-        0x0001,
+        0x0101,
         1,
         1,
         target_round,
@@ -64,7 +122,7 @@ def pow_candidate(
         algorithms=ALGORITHMS,
         challenge=challenge,
         application_context=application_context,
-        evidence_version=1,
+        evidence_version=2,
     )
     return {"parameters": parameters, "message": message, **evaluated}
 
@@ -86,42 +144,48 @@ def argon2_parameters(
 
 
 def kdf_from_base_key(
-    base_key: bytes, parameters: bytes, salt: bytes, output_length: int
+    base_key: bytes,
+    parameters: bytes,
+    salt: bytes,
+    output_length: int,
+    *,
+    suite_id: int = 0x0102,
 ) -> dict[str, Any]:
-    evaluated = sequential_suite(
+    if suite_id not in {0x0102, 0x0104, 0x0105, 0x0106}:
+        raise ValueError("suite is not registered for independent KDF composition")
+    evaluated = active_suite(
         base_key,
-        0x0102,
+        suite_id,
         1,
-        1,
-        algorithms=LIGHT_ALGORITHMS,
+        2,
         salt=salt,
         application_context=KDF_FINAL_DOMAIN + parameters,
     )
     digest = evaluated["digest"]
-    final_input = tlv((1, parameters), (2, salt), (3, digest))
-    final_key = hashlib.shake_256(KDF_FINAL_DOMAIN + final_input).digest(output_length)
-    result = KDF_RESULT_MAGIC + tlv((1, parameters), (2, salt), (3, digest), (4, final_key))
-    return {**evaluated, "final_key": final_key, "result": result}
+    final_input = tlv((1, base_key), (2, parameters), (3, salt), (4, digest))
+    final_key = hashlib.shake_256(KDF_KEY_DOMAIN + final_input).digest(output_length)
+    record = KDF_RECORD_MAGIC + tlv((1, parameters), (2, salt), (3, digest))
+    return {**evaluated, "final_key": final_key, "record": record}
 
 
-def signed_lightweight(
+def signed_commitment(
     message: bytes,
     private_key_seed: bytes,
     public_key_id: bytes,
     *,
+    suite_id: int = 0x0102,
     target_round: int = 1,
     state_count: int = 2,
 ) -> dict[str, Any]:
-    evaluated = sequential_suite(
+    evaluated = active_suite(
         message,
-        0x0102,
-        1,
-        1,
+        suite_id,
         target_round,
         state_count,
-        algorithms=LIGHT_ALGORITHMS,
     )
-    published = evaluated["states"][-state_count:]
+    trajectory = evaluated.get("states", evaluated.get("vectors"))
+    assert trajectory is not None
+    published = trajectory[-state_count:]
     encoded_states = u16(len(published)) + b"".join(u16(len(state)) + state for state in published)
     unsigned = (
         SIGNED_MAGIC
@@ -142,8 +206,29 @@ def signed_lightweight(
     assert encode_digest(evaluated["context"], published) == evaluated["digest"]
     return {
         **evaluated,
+        "states": trajectory,
         "unsigned": unsigned,
         "signing_input": signing_input,
         "signature": signature,
         "commitment": commitment,
     }
+
+
+def signed_lightweight(
+    message: bytes,
+    private_key_seed: bytes,
+    public_key_id: bytes,
+    *,
+    target_round: int = 1,
+    state_count: int = 2,
+) -> dict[str, Any]:
+    """Compatibility wrapper for the original independent application vector."""
+
+    return signed_commitment(
+        message,
+        private_key_seed,
+        public_key_id,
+        suite_id=0x0102,
+        target_round=target_round,
+        state_count=state_count,
+    )

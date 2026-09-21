@@ -29,6 +29,14 @@ def record_oracle_input(algorithm: AlgorithmId, data: bytes) -> None:
         target.append(OracleInput(algorithm, data))
 
 
+def extend_oracle_inputs(records: list[OracleInput]) -> None:
+    """Merge worker records into the active coordinator capture."""
+
+    target = _CAPTURE.get()
+    if target is not None:
+        target.extend(records)
+
+
 @contextmanager
 def capture_oracle_inputs() -> Iterator[list[OracleInput]]:
     records: list[OracleInput] = []

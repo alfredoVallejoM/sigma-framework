@@ -1,6 +1,6 @@
 # ADR-0002: RealTime es una política de ejecución
 
-- Estado: aceptada
+- Estado: implementada
 - Fecha: 2026-09-02
 - Obligación: LIB-11
 

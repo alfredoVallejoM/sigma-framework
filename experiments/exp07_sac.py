@@ -5,7 +5,7 @@ import statistics
 from typing import Any
 
 from sigma.anchors import CrossWide
-from sigma.presets import get_preset, paranoid_wide_v2
+from sigma.presets import get_preset
 from sigma.rounds import Deep, DeepVector, WideOnce
 from sigma.spec.ids import RoundProfileId
 
@@ -74,11 +74,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
         "target_round": int(config.get("target_round", 2)),
         "state_count": int(config.get("state_count", 2)),
     }
-    context = (
-        get_preset(str(config["preset"]), **parameters)
-        if "preset" in config
-        else paranoid_wide_v2(**parameters)
-    )
+    context = get_preset(str(config["preset"]), **parameters)
     rng = derived_random(str(config["master_seed"]), "EXP-07/messages")
     for sample in range(samples):
         message = rng.randbytes(message_bytes)

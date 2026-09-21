@@ -4,12 +4,9 @@ from itertools import pairwise
 from typing import Any
 
 from sigma.presets import (
-    lightweight_v2,
     lightweight_v2_2,
-    paranoid_deep_v2,
     paranoid_deep_v2_2,
     paranoid_deep_vector_v2_2,
-    paranoid_wide_v2,
     paranoid_wide_v2_2,
 )
 from sigma.v2 import hash_bytes
@@ -31,7 +28,7 @@ def _message(corpus: str, index: int, size: int) -> bytes:
     raise ValueError(f"unsupported corpus: {corpus}")
 
 
-def _output(construction: str, message: bytes, revised: bool = False) -> bytes:
+def _output(construction: str, message: bytes) -> bytes:
     if construction == "sha256":
         return hashlib.sha256(message).digest()
     if construction == "sha512":
@@ -41,27 +38,21 @@ def _output(construction: str, message: bytes, revised: bool = False) -> bytes:
     if construction == "blake2b-512":
         return hashlib.blake2b(message, digest_size=64).digest()
     if construction == "sigma-wide":
-        return b"".join(
-            hash_bytes(message, lightweight_v2_2() if revised else lightweight_v2()).states
-        )
+        return b"".join(hash_bytes(message, lightweight_v2_2()).states)
     if construction == "sigma-cross":
-        return b"".join(
-            hash_bytes(message, paranoid_wide_v2_2() if revised else paranoid_wide_v2()).states
-        )
+        return b"".join(hash_bytes(message, paranoid_wide_v2_2()).states)
     if construction == "sigma-deep":
-        return b"".join(
-            hash_bytes(message, paranoid_deep_v2_2() if revised else paranoid_deep_v2()).states
-        )
-    if construction == "sigma-deep-vector" and revised:
+        return b"".join(hash_bytes(message, paranoid_deep_v2_2()).states)
+    if construction == "sigma-deep-vector":
         return b"".join(hash_bytes(message, paranoid_deep_vector_v2_2()).states)
     raise ValueError(f"unsupported construction: {construction}")
 
 
-def _output_domains(construction: str, message: bytes, revised: bool) -> dict[str, bytes]:
+def _output_domains(construction: str, message: bytes) -> dict[str, bytes]:
     """Return streams which never concatenate independently framed state objects."""
 
-    if not revised or not construction.startswith("sigma-"):
-        return {"digest": _output(construction, message, revised)}
+    if not construction.startswith("sigma-"):
+        return {"digest": _output(construction, message)}
     context = {
         "sigma-wide": lightweight_v2_2,
         "sigma-cross": paranoid_wide_v2_2,
@@ -80,14 +71,13 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     streams = int(config.get("streams", 1))
     if streams < 1:
         raise ValueError("EXP-08 streams must be positive")
-    revised = config.get("suite_family") == "v2-2"
     records = []
     for corpus in config["corpora"]:
         for construction in config["constructions"]:
             for stream in range(streams):
                 for index in range(count):
                     message = _message(str(corpus), stream * count + index, size)
-                    outputs = _output_domains(str(construction), message, revised)
+                    outputs = _output_domains(str(construction), message)
                     for domain, output in outputs.items():
                         records.append(
                             {
@@ -228,8 +218,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             for index, value in enumerate(values)
         )
         qq_rmse = math.sqrt(
-            sum((value - (index + 0.5) / count) ** 2 for index, value in enumerate(values))
-            / count
+            sum((value - (index + 0.5) / count) ** 2 for index, value in enumerate(values)) / count
         )
         common = {
             "p_value_count": count,

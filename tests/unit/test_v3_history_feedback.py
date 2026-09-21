@@ -1,0 +1,397 @@
+from __future__ import annotations
+
+import dataclasses
+
+import pytest
+
+from sigma.applications.kdf_argon2id_v3 import (
+    Argon2idParametersV3,
+    compose_argon2id_output_v3,
+)
+from sigma.applications.pow_v3 import (
+    PowParametersV3,
+    evaluate_nonce_v3,
+    verify_pow_v3,
+)
+from sigma.applications.signed_v3 import (
+    sign_digest_ed25519_v3,
+    verify_full_signed_v3,
+    verify_signed_digest_v3,
+)
+from sigma.binding import (
+    HistoryCommitmentV3,
+    RoundBindingV3,
+    history_seed_v3,
+    history_step_v3,
+)
+from sigma.layout import HistoryLayoutPlan, derive_history_layout_v3
+from sigma.outputs.digest_v3 import digest_from_evaluation_v3, verify_full_v3
+from sigma.rounds.backends_v3 import ThreadDeepBranchBackendV3
+from sigma.rounds.history_framing_v3 import HistoryRoundFrame, HistoryVectorRoundFrame
+from sigma.rounds.history_v3 import (
+    HistoryDeepEvaluationV3,
+    HistoryDeepVectorEvaluationV3,
+    HistoryWideOnceEvaluationV3,
+)
+from sigma.sources import BytesSource
+from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.encoding import DecodeError
+from sigma.spec.ids_v3 import (
+    LayoutProfileIdV3,
+    RoundBindingFieldIdV3,
+    SuiteIdV3,
+    TrajectoryProfileIdV3,
+)
+from sigma.v3 import evaluate_v3
+
+HISTORY_SUITES = (
+    SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    SuiteIdV3.DEEP_HISTORY_V3,
+    SuiteIdV3.DEEP_VECTOR_HISTORY_V3,
+)
+
+
+def _context(suite_id: SuiteIdV3) -> SigmaContextV3:
+    return SigmaContextV3.for_suite(
+        suite_id,
+        salt=b"r12.5-history",
+        challenge=b"history-challenge",
+        application_context=b"tests/unit/history-feedback",
+    )
+
+
+@pytest.mark.parametrize("suite_id", HISTORY_SUITES)
+def test_history_suites_use_distinct_registered_profiles(suite_id: SuiteIdV3) -> None:
+    context = _context(suite_id)
+    assert context.layout_profile is LayoutProfileIdV3.SHAKE256_HISTORY_REJECTION
+    assert context.trajectory_profile is TrajectoryProfileIdV3.HISTORY_FEEDBACK
+
+
+def test_history_commitment_and_round_binding_round_trip() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"round-trip"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    seed = evaluation.histories[0]
+    assert HistoryCommitmentV3.from_bytes(seed.to_bytes()) == seed
+    binding = RoundBindingV3(evaluation.prepared.binding, seed)
+    assert RoundBindingV3.from_bytes(binding.to_bytes()) == binding
+
+
+def test_history_is_causal_and_tracks_strict_past() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"causal-history"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    persistent = evaluation.prepared.binding
+    assert evaluation.histories[0] == history_seed_v3(context, persistent)
+    for index, state in enumerate(evaluation.states[:-1]):
+        assert evaluation.histories[index + 1] == history_step_v3(
+            context,
+            persistent,
+            evaluation.histories[index],
+            index,
+            state,
+        )
+        assert evaluation.histories[index].round_index == index
+
+
+def test_same_visible_state_with_different_history_never_has_same_round_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"state-crossing"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    state = evaluation.states[0]
+    original = evaluation.histories[0]
+    changed = bytes((original.digest[0] ^ 1,)) + original.digest[1:]
+    alternative = HistoryCommitmentV3(original.round_index, changed)
+    first_binding = RoundBindingV3(evaluation.prepared.binding, original)
+    second_binding = RoundBindingV3(evaluation.prepared.binding, alternative)
+    first_layout = derive_history_layout_v3(
+        context, first_binding, round_index=0, base_length=len(state)
+    )
+    second_layout = derive_history_layout_v3(
+        context, second_binding, round_index=0, base_length=len(state)
+    )
+    first = HistoryRoundFrame(context, first_binding, first_layout, 0, state).to_bytes()
+    second = HistoryRoundFrame(context, second_binding, second_layout, 0, state).to_bytes()
+    assert first != second
+
+
+def test_history_layout_contains_all_five_effective_binding_fields() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"five-fields"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    plan = evaluation.round_layouts[0]
+    assert isinstance(plan, HistoryLayoutPlan)
+    assert {item.field for item in plan.placements} == set(RoundBindingFieldIdV3)
+    assert len(plan.placements) == 5
+
+
+def test_same_full_dynamic_state_reproduces_identical_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"deterministic-full-state"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    state = evaluation.states[0]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(context, round_binding, round_index=0, base_length=len(state))
+    first = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    second = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    assert first == second
+
+
+def test_same_history_with_different_visible_state_changes_round_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"state-separation"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    state = evaluation.states[0]
+    changed_state = bytes((state[0] ^ 1,)) + state[1:]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(context, round_binding, round_index=0, base_length=len(state))
+    original = HistoryRoundFrame(context, round_binding, layout, 0, state).to_bytes()
+    changed = HistoryRoundFrame(context, round_binding, layout, 0, changed_state).to_bytes()
+    assert original != changed
+
+
+def test_mutating_any_prior_state_changes_future_history() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"history-prefix-sensitivity"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    binding = evaluation.prepared.binding
+    h0 = evaluation.histories[0]
+    s0 = evaluation.states[0]
+    altered_s0 = bytes((s0[0] ^ 1,)) + s0[1:]
+    h1 = history_step_v3(context, binding, h0, 0, s0)
+    altered_h1 = history_step_v3(context, binding, h0, 0, altered_s0)
+    assert h1 != altered_h1
+
+    s1 = evaluation.states[1]
+    h2 = history_step_v3(context, binding, h1, 1, s1)
+    altered_h2 = history_step_v3(context, binding, altered_h1, 1, s1)
+    assert h2 != altered_h2
+
+
+def test_persistent_binding_substitution_cannot_preserve_round_frame() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    left = evaluate_v3(context, BytesSource(b"binding-left"))
+    right = evaluate_v3(context, BytesSource(b"binding-right"))
+    assert isinstance(left, HistoryWideOnceEvaluationV3)
+    assert isinstance(right, HistoryWideOnceEvaluationV3)
+
+    state = left.states[0]
+    history = left.histories[0]
+    left_binding = RoundBindingV3(left.prepared.binding, history)
+    substituted = RoundBindingV3(right.prepared.binding, history)
+    left_layout = derive_history_layout_v3(
+        context, left_binding, round_index=0, base_length=len(state)
+    )
+    substituted_layout = derive_history_layout_v3(
+        context, substituted, round_index=0, base_length=len(state)
+    )
+    left_frame = HistoryRoundFrame(context, left_binding, left_layout, 0, state).to_bytes()
+    substituted_frame = HistoryRoundFrame(
+        context, substituted, substituted_layout, 0, state
+    ).to_bytes()
+    assert left_frame != substituted_frame
+
+
+def test_history_from_another_suite_is_rejected() -> None:
+    wide_context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    deep_context = _context(SuiteIdV3.DEEP_HISTORY_V3)
+    wide = evaluate_v3(wide_context, BytesSource(b"cross-suite"))
+    assert isinstance(wide, HistoryWideOnceEvaluationV3)
+    with pytest.raises(ValueError, match="suites differ"):
+        history_seed_v3(deep_context, wide.prepared.binding)
+
+
+def test_history_parser_rejects_every_truncated_prefix() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"truncated-history"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    encoded = evaluation.histories[0].to_bytes()
+    for length in range(len(encoded)):
+        with pytest.raises(DecodeError):
+            HistoryCommitmentV3.from_bytes(encoded[:length])
+
+
+def test_deep_vector_history_consumes_the_complete_previous_vector() -> None:
+    context = _context(SuiteIdV3.DEEP_VECTOR_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"vector-history"))
+    assert isinstance(evaluation, HistoryDeepVectorEvaluationV3)
+    vector = evaluation.states[0]
+    history = evaluation.histories[0]
+    round_binding = RoundBindingV3(evaluation.prepared.binding, history)
+    layout = derive_history_layout_v3(
+        context, round_binding, round_index=0, base_length=len(vector)
+    )
+    original = HistoryVectorRoundFrame(context, round_binding, layout, 0, vector).to_bytes()
+    mutated = bytearray(vector)
+    mutated[len(mutated) // 2] ^= 1
+    changed = HistoryVectorRoundFrame(context, round_binding, layout, 0, bytes(mutated)).to_bytes()
+    assert original != changed
+    assert history_step_v3(
+        context, evaluation.prepared.binding, history, 0, vector
+    ) != history_step_v3(context, evaluation.prepared.binding, history, 0, bytes(mutated))
+
+
+def test_history_step_rejects_replay_under_wrong_round_index() -> None:
+    context = _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    evaluation = evaluate_v3(context, BytesSource(b"replay"))
+    assert isinstance(evaluation, HistoryWideOnceEvaluationV3)
+    with pytest.raises(ValueError, match="round_index"):
+        history_step_v3(
+            context,
+            evaluation.prepared.binding,
+            evaluation.histories[0],
+            1,
+            evaluation.states[0],
+        )
+
+
+@pytest.mark.parametrize(
+    ("suite_id", "expected_type"),
+    (
+        (SuiteIdV3.REFERENCE_IAP_HISTORY_V3, HistoryWideOnceEvaluationV3),
+        (SuiteIdV3.DEEP_HISTORY_V3, HistoryDeepEvaluationV3),
+        (SuiteIdV3.DEEP_VECTOR_HISTORY_V3, HistoryDeepVectorEvaluationV3),
+    ),
+)
+def test_all_history_families_keep_one_history_per_state(
+    suite_id: SuiteIdV3,
+    expected_type: type,
+) -> None:
+    evaluation = evaluate_v3(_context(suite_id), BytesSource(b"all-families"))
+    assert isinstance(evaluation, expected_type)
+    assert isinstance(
+        evaluation,
+        (HistoryWideOnceEvaluationV3, HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3),
+    )
+    assert len(evaluation.histories) == len(evaluation.states)
+    assert len(evaluation.round_layouts) == len(evaluation.states) - 1
+
+
+@pytest.mark.parametrize("suite_id", HISTORY_SUITES)
+def test_history_digest_full_verification_recomputes_feedback(suite_id: SuiteIdV3) -> None:
+    message = b"history-full-verify"
+    evaluation = evaluate_v3(_context(suite_id), BytesSource(message))
+    digest = digest_from_evaluation_v3(evaluation)
+    assert verify_full_v3(BytesSource(message), digest)
+    assert not verify_full_v3(BytesSource(message + b"!"), digest)
+
+
+@pytest.mark.parametrize(
+    "suite_id",
+    (SuiteIdV3.DEEP_HISTORY_V3, SuiteIdV3.DEEP_VECTOR_HISTORY_V3),
+)
+def test_history_deep_thread_backend_is_mathematically_identical(
+    suite_id: SuiteIdV3,
+) -> None:
+    context = _context(suite_id)
+    serial = evaluate_v3(context, BytesSource(b"backend-equality"))
+    threaded = evaluate_v3(
+        context,
+        BytesSource(b"backend-equality"),
+        backend=ThreadDeepBranchBackendV3(2),
+    )
+    assert isinstance(serial, (HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3))
+    assert isinstance(threaded, (HistoryDeepEvaluationV3, HistoryDeepVectorEvaluationV3))
+    assert (
+        digest_from_evaluation_v3(serial).to_bytes()
+        == digest_from_evaluation_v3(threaded).to_bytes()
+    )
+    assert serial.states == threaded.states
+    assert serial.histories == threaded.histories
+
+
+def test_r12_and_r125_are_explicitly_distinct_constructions() -> None:
+    message = b"ablation-baseline"
+    old_context = SigmaContextV3.for_suite(
+        SuiteIdV3.REFERENCE_IAP_V3,
+        salt=b"same",
+        challenge=b"same",
+        application_context=b"same",
+    )
+    new_context = SigmaContextV3.for_suite(
+        SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+        salt=b"same",
+        challenge=b"same",
+        application_context=b"same",
+    )
+    old = digest_from_evaluation_v3(evaluate_v3(old_context, BytesSource(message)))
+    new = digest_from_evaluation_v3(evaluate_v3(new_context, BytesSource(message)))
+    assert old.to_bytes() != new.to_bytes()
+
+
+def test_history_evaluations_are_factory_only() -> None:
+    with pytest.raises(TypeError):
+        HistoryWideOnceEvaluationV3()
+    evaluation = evaluate_v3(
+        _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3),
+        BytesSource(b"factory-only"),
+    )
+    with pytest.raises(TypeError):
+        dataclasses.replace(evaluation)
+
+
+def test_history_suite_is_usable_by_kdf_composition_without_new_security_claims() -> None:
+    parameters = Argon2idParametersV3(
+        memory_kib=19_456,
+        time_cost=2,
+        parallelism=1,
+        output_length=32,
+        suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    )
+    derived = compose_argon2id_output_v3(
+        b"K" * 32,
+        b"history-kdf-salt",
+        parameters,
+    )
+    assert derived.sigma_digest.context.suite_id is SuiteIdV3.REFERENCE_IAP_HISTORY_V3
+    assert derived.password_record().sigma_digest == derived.sigma_digest
+
+
+def test_history_suite_is_usable_by_pow_and_verification_recomputes_history() -> None:
+    parameters = PowParametersV3(
+        b"history-pow-challenge",
+        0,
+        suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+    )
+    proof = evaluate_nonce_v3(b"payload", 7, parameters)
+    assert proof.digest.context.suite_id is SuiteIdV3.REFERENCE_IAP_HISTORY_V3
+    assert verify_pow_v3(b"payload", proof, parameters)
+    assert not verify_pow_v3(b"payload!", proof, parameters)
+
+
+def test_signed_history_digest_distinguishes_attestation_from_full_binding() -> None:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    message = b"signed-history"
+    evaluation = evaluate_v3(
+        _context(SuiteIdV3.REFERENCE_IAP_HISTORY_V3),
+        BytesSource(message),
+    )
+    digest = digest_from_evaluation_v3(evaluation)
+    private_bytes = bytes(range(32))
+    private_key = Ed25519PrivateKey.from_private_bytes(private_bytes)
+    public_bytes = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    commitment = sign_digest_ed25519_v3(digest, private_bytes, b"history-key")
+    assert verify_signed_digest_v3(
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )
+    assert verify_full_signed_v3(
+        BytesSource(message),
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )
+    assert not verify_full_signed_v3(
+        BytesSource(message + b"!"),
+        commitment,
+        public_bytes,
+        expected_public_key_id=b"history-key",
+    )

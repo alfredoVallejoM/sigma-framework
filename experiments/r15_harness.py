@@ -127,7 +127,12 @@ def write_checkpoint_v3(
     validate_harness_seed_v3(key, seed_hex)
     payload = _checkpoint_payload(key, seed_hex, next_step, state_hex, total_steps)
     checkpoint = HarnessCheckpointV3(
-        **payload,
+        schema="sigma-v3-r15-harness-checkpoint-v1",
+        run_key=key.stable_id,
+        seed_hex=seed_hex,
+        next_step=next_step,
+        state_hex=state_hex,
+        total_steps=total_steps,
         checkpoint_sha256=_checkpoint_hash(payload),
     )
     path.parent.mkdir(parents=True, exist_ok=True)

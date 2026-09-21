@@ -59,9 +59,7 @@ def _mi_from_codes(
 
 
 def _rng(np: Any, seed: bytes, label: bytes) -> Any:
-    digest = hashlib.sha256(
-        b"sigma-v3-r15-mi-vectorized-v1\0" + seed + b"\0" + label
-    ).digest()
+    digest = hashlib.sha256(b"sigma-v3-r15-mi-vectorized-v1\0" + seed + b"\0" + label).digest()
     return np.random.Generator(np.random.PCG64(int.from_bytes(digest, "big")))
 
 
@@ -141,10 +139,7 @@ def parameter_mutual_information_profile_vectorized_v3(
         count=samples,
     )
     outcome_codes = np.fromiter(
-        (
-            (value.t - space.t_min) * k_cardinality + (value.k - space.k_min)
-            for value in values
-        ),
+        ((value.t - space.t_min) * k_cardinality + (value.k - space.k_min) for value in values),
         dtype=np.int64,
         count=samples,
     )

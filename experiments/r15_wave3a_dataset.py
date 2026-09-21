@@ -69,7 +69,7 @@ def _receipt_for_record(record_path: Path) -> Path:
     return root / "receipts" / relative
 
 
-def _load_record(record_path: Path) -> dict[str, Any]:
+def _load_record(record_path: Path) -> tuple[dict[str, Any], str]:
     data = record_path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
     value = json.loads(data)
@@ -81,9 +81,18 @@ def _load_record(record_path: Path) -> dict[str, Any]:
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     if receipt.get("record_sha256") != digest:
         raise ValueError(f"receipt digest mismatch for {record_path}")
-    if receipt.get("run_key") != value.get("run_key"):
+    try:
+        key = RunKeyV3(
+            str(value["freeze_id"]),
+            str(value["attack_id"]),
+            str(value["cell_id"]),
+            int(value["replicate_id"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"record identity is invalid for {record_path}") from exc
+    if receipt.get("run_key") != key.stable_id:
         raise ValueError(f"receipt RunKey mismatch for {record_path}")
-    return value
+    return value, key.stable_id
 
 
 def audit_and_merge_wave3a(
@@ -125,10 +134,7 @@ def audit_and_merge_wave3a(
     statuses: dict[str, Counter[str]] = {}
 
     for path in record_paths:
-        record = _load_record(path)
-        run_key = record.get("run_key")
-        if not isinstance(run_key, str):
-            raise ValueError(f"record lacks RunKey: {path}")
+        record, run_key = _load_record(path)
         if run_key in observed:
             raise RuntimeError(f"duplicate observed RunKey: {run_key}")
         if run_key not in expected_ids:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from collections import Counter
 from pathlib import Path
@@ -189,4 +190,37 @@ __all__ = [
     "WAVE1_SPECS",
     "audit_and_merge_wave1",
     "expected_wave1_runkeys",
+    "main",
 ]
+
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Audit and merge R15 internal Wave 1 shards.")
+    parser.add_argument("--shards", type=Path, required=True)
+    parser.add_argument("--configs", type=Path, required=True)
+    parser.add_argument("--execution-manifest", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--report", type=Path)
+    args = parser.parse_args()
+    try:
+        report = audit_and_merge_wave1(
+            shards_root=args.shards,
+            config_root=args.configs,
+            execution_manifest_path=args.execution_manifest,
+            output_root=args.output,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(str(exc))
+    if args.report is not None:
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    print(json.dumps(report, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

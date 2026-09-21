@@ -133,9 +133,7 @@ def execute_reduced_shadow_cell_v3(
     if attack_id == "RED-04":
         history_config = _config(cell)
         construction = str(factors["construction"])
-        policy: PersistentPolicyV3 = (
-            "same" if factors["policy"] == "same-persistent" else "any"
-        )
+        policy: PersistentPolicyV3 = "same" if factors["policy"] == "same-persistent" else "any"
         cap = min(int(factors["max_candidates"]), 1024)
         second_preimage = find_window_second_preimage_v3(
             oracle,

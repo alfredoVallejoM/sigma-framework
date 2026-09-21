@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from experiments.common import canonical_json
-from experiments.r141_protocol import R141_FREEZE_ID, R141_TAG, R12_5_BASELINE, R13_BASELINE
+from experiments.r141_protocol import R12_5_BASELINE, R13_BASELINE, R141_FREEZE_ID, R141_TAG
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -24,10 +24,7 @@ def check_r15_data_closure() -> dict[str, object]:
             maximum_bytes=2 * 1024 * 1024,
             minimum_free_bytes=0,
         )
-        keys = [
-            RunKeyV3("fixture-freeze", "HIST-01", "hist-01-000", index)
-            for index in range(3)
-        ]
+        keys = [RunKeyV3("fixture-freeze", "HIST-01", "hist-01-000", index) for index in range(3)]
         for key in keys:
             atomic_write_record_v3(
                 root,

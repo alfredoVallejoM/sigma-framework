@@ -207,7 +207,6 @@ def paired_bootstrap_ratio_interval_v3(
 
 
 
-
 def _linear_slope(xs: Sequence[float], ys: Sequence[float]) -> float:
     if len(xs) != len(ys) or len(xs) < 2:
         raise ValueError("slope inputs must be equal with at least two points")
@@ -216,9 +215,7 @@ def _linear_slope(xs: Sequence[float], ys: Sequence[float]) -> float:
     denominator = sum((x - x_mean) ** 2 for x in xs)
     if denominator == 0:
         raise ValueError("slope x-axis has zero variance")
-    return sum(
-        (x - x_mean) * (y - y_mean) for x, y in zip(xs, ys, strict=True)
-    ) / denominator
+    return sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, ys, strict=True)) / denominator
 
 
 def scaling_slope_v3(

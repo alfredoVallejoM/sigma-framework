@@ -176,10 +176,7 @@ def read_checkpoint_v3(path: Path, key: RunKeyV3) -> HarnessCheckpointV3:
 
 def _step(seed: bytes, state: bytes, index: int) -> bytes:
     return hashlib.sha256(
-        b"sigma-v3-r15-harness-step\0"
-        + seed
-        + index.to_bytes(8, "big")
-        + state
+        b"sigma-v3-r15-harness-step\0" + seed + index.to_bytes(8, "big") + state
     ).digest()
 
 
@@ -216,12 +213,8 @@ def run_synthetic_task_v3(
         start = checkpoint.next_step
         resumed = True
 
-    completed_this_attempt = 0
-    for index in range(start, total_steps):
-        if (
-            timeout_after_steps is not None
-            and completed_this_attempt >= timeout_after_steps
-        ):
+    for completed_this_attempt, index in enumerate(range(start, total_steps)):
+        if timeout_after_steps is not None and completed_this_attempt >= timeout_after_steps:
             if checkpoint_path is not None:
                 write_checkpoint_v3(
                     checkpoint_path,
@@ -234,7 +227,6 @@ def run_synthetic_task_v3(
             return HarnessOutcomeV3("timeout", index, state.hex(), resumed)
 
         state = _step(seed, state, index)
-        completed_this_attempt += 1
         next_step = index + 1
         if (
             checkpoint_path is not None

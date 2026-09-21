@@ -29,9 +29,7 @@ def check_r15_stat_shadow() -> dict[str, object]:
         raise RuntimeError("R15-F shadow result set is incomplete")
     observed = {(item["construction"], item["corpus"]) for item in results}
     expected_pairs = {
-        (construction, corpus)
-        for construction in STAT_CONSTRUCTIONS
-        for corpus in STAT_CORPORA
+        (construction, corpus) for construction in STAT_CONSTRUCTIONS for corpus in STAT_CORPORA
     }
     if observed != expected_pairs:
         raise RuntimeError("R15-F construction/corpus coverage mismatch")

@@ -71,16 +71,24 @@ def test_layout_values_only_separates_frames_without_changing_plan() -> None:
 
 
 def test_parameter_mi_permutation_is_deterministic() -> None:
-    kwargs = dict(
-        samples=96,
+    left = parameter_mutual_information_profile_v3(
+        ReducedOracle(b"r15-mi"),
+        96,
         permutations=17,
         seed=b"r15-mi-seed",
         persistent_bits=8,
         candidate_bucket_bits=4,
         persistent_bucket_bits=4,
     )
-    left = parameter_mutual_information_profile_v3(ReducedOracle(b"r15-mi"), **kwargs)
-    right = parameter_mutual_information_profile_v3(ReducedOracle(b"r15-mi"), **kwargs)
+    right = parameter_mutual_information_profile_v3(
+        ReducedOracle(b"r15-mi"),
+        96,
+        permutations=17,
+        seed=b"r15-mi-seed",
+        persistent_bits=8,
+        candidate_bucket_bits=4,
+        persistent_bucket_bits=4,
+    )
     assert left == right
     assert 0.0 < left.permutation_p_candidate <= 1.0
     assert 0.0 < left.permutation_p_persistent <= 1.0
@@ -184,7 +192,8 @@ def test_stream_hashing_and_identity_are_deterministic() -> None:
     result = hasher.finish()
     assert result["sha256"] == hashlib.sha256(b"abcdefgh").hexdigest()
     assert result["total_bytes"] == 8
-    assert len(result["chunk_sha256"]) == 2
+    chunk_hashes = result["chunk_sha256"]
+    assert isinstance(chunk_hashes, tuple) and len(chunk_hashes) == 2
 
 
 def test_every_frozen_attack_has_one_binding() -> None:

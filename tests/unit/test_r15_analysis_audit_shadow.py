@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from experiments.r15_analysis_shadow import ANALYSIS_SHADOW_NAMESPACE, run_analysis_shadow_v3
 from experiments.r15_audit_shadow import AUDIT_SHADOW_NAMESPACE, run_audit_shadow_v3
 from scripts.check_r15_analysis_shadow import check_r15_analysis_shadow
@@ -7,6 +9,7 @@ from scripts.check_r15_audit_shadow import check_r15_audit_shadow
 
 
 def test_r15_g_locked_analysis_shadow_is_deterministic() -> None:
+    pytest.importorskip("scipy")
     left = check_r15_analysis_shadow()
     right = check_r15_analysis_shadow()
     assert left == right
@@ -28,6 +31,7 @@ def test_r15_h_audit_shadow_detects_all_fixture_tampering() -> None:
 
 
 def test_analysis_shadow_hash_is_repeatable() -> None:
+    pytest.importorskip("scipy")
     assert (
         run_analysis_shadow_v3()["analysis_sha256"] == run_analysis_shadow_v3()["analysis_sha256"]
     )

@@ -112,9 +112,7 @@ def profile_history_game_v3(
                     history,
                 )
             first[output] = history
-        return HistoryGameResultV3(
-            game, config.history_bits, limit, False, pairs, 0, 0, 0
-        )
+        return HistoryGameResultV3(game, config.history_bits, limit, False, pairs, 0, 0, 0)
 
     if game == "second-preimage":
         if not 0 <= target_history < limit:
@@ -196,12 +194,8 @@ def conditional_crossing_trials_v3(
         if right_history == left_history:
             right_history = (right_history + 1) & mask_h
 
-        left_state = r125_successor(
-            oracle, config, persistent, left_history, state, round_index
-        )
-        right_state = r125_successor(
-            oracle, config, persistent, right_history, state, round_index
-        )
+        left_state = r125_successor(oracle, config, persistent, left_history, state, round_index)
+        right_state = r125_successor(oracle, config, persistent, right_history, state, round_index)
         left_next_history = history_successor(
             oracle, config, persistent, left_history, state, round_index
         )
@@ -209,9 +203,7 @@ def conditional_crossing_trials_v3(
             oracle, config, persistent, right_history, state, round_index
         )
         visible_matches += int(left_state == right_state)
-        full_matches += int(
-            (left_next_history, left_state) == (right_next_history, right_state)
-        )
+        full_matches += int((left_next_history, left_state) == (right_next_history, right_state))
 
     return ConditionalCrossingResultV3(trials, visible_matches, full_matches)
 

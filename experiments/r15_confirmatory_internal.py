@@ -7,7 +7,6 @@ import json
 import math
 import platform
 import signal
-import sys
 import time
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass

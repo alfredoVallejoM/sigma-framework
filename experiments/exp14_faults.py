@@ -4,7 +4,6 @@ from typing import Any
 from sigma.anchors import AnchorEvidence, CrossWideEvidence
 from sigma.outputs import SigmaDigestV2
 from sigma.presets import get_preset
-from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError
 from sigma.v2 import _anchor_engine, _round_engine, hash_bytes, verify_full
 
@@ -86,15 +85,14 @@ def _record(
 def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     rng = derived_random(str(config["master_seed"]), "EXP-14/faults")
     records: list[dict[str, Any]] = []
-    presets = [str(value) for value in config.get("presets", ["legacy-default"])]
-    revised = "presets" in config
+    presets = [str(value) for value in config["presets"]]
     configured_faults = config.get("faults")
     faults = (
         [str(value) for value in configured_faults]
         if configured_faults is not None
         else ["message-bit-flip", "anchor-root-bit-flip", "published-state-bit-flip"]
     )
-    if revised and configured_faults is None:
+    if configured_faults is None:
         faults.extend(
             [
                 "branch-omission",
@@ -106,17 +104,10 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
             ]
         )
     for preset in presets:
-        context = (
-            SigmaContextV2(
-                target_round=int(config.get("target_round", 2)),
-                state_count=int(config.get("state_count", 2)),
-            )
-            if preset == "legacy-default"
-            else get_preset(
-                preset,
-                target_round=int(config.get("target_round", 2)),
-                state_count=int(config.get("state_count", 2)),
-            )
+        context = get_preset(
+            preset,
+            target_round=int(config.get("target_round", 2)),
+            state_count=int(config.get("state_count", 2)),
         )
         for trial in range(int(config.get("trials", 128))):
             message = rng.randbytes(int(config.get("message_bytes", 64)))

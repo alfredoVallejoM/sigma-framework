@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "campaign": "pilot-v2-2",
   "candidates": 8,
   "experiment": "EXP-12",

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 from sigma.anchors.base import CrossWideEvidence
+from sigma.instrumentation import OracleInput, active_capture, extend_oracle_inputs
 from sigma.spec import SigmaContextV2
 from sigma.validation import require_int
 
@@ -13,6 +14,21 @@ from .deep_math import evaluate_deep_branch
 
 DeepBranchResult = tuple[int, bytes]
 MAX_DEEP_WORKERS = 256
+
+
+def _captured_deep_branch(
+    position: int,
+    algorithm,
+    context: SigmaContextV2,
+    anchor: CrossWideEvidence,
+    index: int,
+    state: bytes,
+) -> tuple[DeepBranchResult, list[OracleInput]]:
+    from sigma.instrumentation import capture_oracle_inputs
+
+    with capture_oracle_inputs() as records:
+        result = evaluate_deep_branch(position, algorithm, context, anchor, index, state)
+    return result, records
 
 
 class DeepBranchBackend(ABC):
@@ -75,14 +91,43 @@ class ThreadedDeepBranchBackend(DeepBranchBackend):
     ) -> list[DeepBranchResult]:
         if not context.branches:
             return []
+        capture = active_capture() is not None
         with ThreadPoolExecutor(max_workers=min(self.workers, len(context.branches))) as executor:
-            futures = [
+            if not capture:
+                futures = [
+                    executor.submit(
+                        evaluate_deep_branch,
+                        position,
+                        algorithm,
+                        context,
+                        anchor,
+                        index,
+                        state,
+                    )
+                    for position, algorithm in enumerate(context.branches)
+                ]
+                return [future.result() for future in as_completed(futures)]
+            captured_futures = [
                 executor.submit(
-                    evaluate_deep_branch, position, algorithm, context, anchor, index, state
+                    _captured_deep_branch,
+                    position,
+                    algorithm,
+                    context,
+                    anchor,
+                    index,
+                    state,
                 )
                 for position, algorithm in enumerate(context.branches)
             ]
-            return [future.result() for future in as_completed(futures)]
+            captured = sorted(
+                (future.result() for future in as_completed(captured_futures)),
+                key=lambda item: item[0][0],
+            )
+        results = []
+        for result, records in captured:
+            extend_oracle_inputs(records)
+            results.append(result)
+        return results
 
 
 SERIAL_DEEP_BRANCH_BACKEND = SerialDeepBranchBackend()

@@ -2,8 +2,7 @@ from dataclasses import replace
 from typing import Any
 
 from sigma.anchors import CrossWide, CrossWideEvidence
-from sigma.experimental import PsiKernel
-from sigma.presets import get_preset, paranoid_wide_v2
+from sigma.presets import get_preset, paranoid_wide_v2_2
 from sigma.rounds import Deep, DeepVector, WideOnce
 from sigma.spec.ids import RoundProfileId
 from sigma.suites import get_suite
@@ -67,7 +66,6 @@ def _outputs(
     result["initial-state"] = transcript.states[0]
     result["first-transition"] = transcript.states[1]
     result["digest"] = b"".join(digest.states)
-    result["psi-experimental"] = PsiKernel.compute_anchor(*evidence.roots)
     if include_round_components:
         for level, row in zip(
             transcript.branch_output_indices, transcript.branch_outputs, strict=True
@@ -86,7 +84,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     context = (
         get_preset(str(config["preset"]), **parameters)
         if "preset" in config
-        else paranoid_wide_v2(**parameters)
+        else paranoid_wide_v2_2(**parameters)
     )
     include_round_components = bool(config.get("include_round_components", False))
     rng = derived_random(str(config["master_seed"]), "EXP-05/messages")

@@ -1,0 +1,16 @@
+{
+  "path": "dist/f7-dataset-v2-2",
+  "size_bytes": 5383985608,
+  "tar_sha256": "4011ab870bfb4ff632ca66aa78afdbec6cd016b2052703dbee89f3d6b43d1b1a",
+  "tar_command": [
+    "tar",
+    "--sort=name",
+    "--mtime=@0",
+    "--owner=0",
+    "--group=0",
+    "--numeric-owner",
+    "-cf",
+    "-",
+    "dist/f7-dataset-v2-2"
+  ]
+}

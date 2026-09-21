@@ -6,6 +6,9 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
+from experiments.runner import _task_plan
 from scripts.estimate_campaign_budget import estimate
 
 
@@ -18,14 +21,38 @@ def _run(config: Path, output: Path, *extra: str) -> subprocess.CompletedProcess
     )
 
 
+@pytest.mark.parametrize(
+    "execution,match",
+    [
+        ([], "object"),
+        ({"tasks": []}, "non-empty"),
+        ({"tasks": [None]}, "object"),
+        ({"tasks": [{"unexpected": True}]}, "unknown"),
+        ({"tasks": [{"label": ""}]}, "non-empty"),
+        ({"tasks": [{"label": "ok", "overrides": []}]}, "object"),
+        ({"tasks": [{"label": "ok", "overrides": {"master_seed": "x"}}]}, "master_seed"),
+        ({"tasks": [{"label": "ok", "overrides": {"experiment": "EXP-02"}}]}, "experiment"),
+    ],
+)
+def test_task_planner_rejects_ambiguous_partition_contract(execution, match: str) -> None:
+    config = {
+        "execution": execution,
+        "experiment": "EXP-01",
+        "master_seed": "planner-test",
+    }
+    with pytest.raises(ValueError, match=match):
+        _task_plan(config)
+
+
 def test_exp01_runner_writes_raw_summary_and_manifest(tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     config.write_text(
         json.dumps(
             {
+                "schema_version": 1,
                 "experiment": "EXP-01",
                 "master_seed": "test-seed",
-                "presets": ["lightweight-v2", "simultaneous-v2"],
+                "presets": ["lightweight-v2-2", "simultaneous-v2-2"],
                 "sizes": [0, 65],
                 "workers": [1, 2],
             }
@@ -65,6 +92,7 @@ def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path)
     config.write_text(
         json.dumps(
             {
+                "schema_version": 1,
                 "experiment": "EXP-01",
                 "execution": {
                     "tasks": [
@@ -73,7 +101,7 @@ def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path)
                     ]
                 },
                 "master_seed": "partition-seed",
-                "presets": ["lightweight-v2"],
+                "presets": ["lightweight-v2-2"],
                 "sizes": [],
                 "workers": [1],
             }
@@ -117,15 +145,40 @@ def test_runner_partitions_tasks_and_resume_does_not_repeat_them(tmp_path: Path)
     assert "byte-identical canonical config.json" in rejected.stderr
 
 
-def test_runner_records_task_error_without_losing_a_successful_partition(tmp_path: Path) -> None:
+def test_resume_rejects_tampered_task_artifacts(tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     config.write_text(
         json.dumps(
             {
+                "schema_version": 1,
+                "experiment": "EXP-01",
+                "master_seed": "integrity-seed",
+                "presets": ["reference-v2-2"],
+                "sizes": [0],
+                "workers": [1],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "integrity"
+    assert _run(config, output).returncode == 0
+    result = next((output / "tasks").glob("*/result.json"))
+    result.write_text(result.read_text(encoding="utf-8") + " ", encoding="utf-8")
+    resumed = _run(config, output, "--resume")
+    assert resumed.returncode == 2
+    assert "hash mismatch" in resumed.stderr
+
+
+def test_runner_rejects_invalid_task_value_before_creating_output(tmp_path: Path) -> None:
+    config = tmp_path / "config.json"
+    config.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
                 "experiment": "EXP-01",
                 "execution": {
                     "tasks": [
-                        {"label": "valid", "overrides": {"presets": ["lightweight-v2"]}},
+                        {"label": "valid", "overrides": {"presets": ["lightweight-v2-2"]}},
                         {"label": "invalid", "overrides": {"presets": ["not-a-preset"]}},
                     ]
                 },
@@ -139,30 +192,21 @@ def test_runner_records_task_error_without_losing_a_successful_partition(tmp_pat
     )
     output = tmp_path / "errored"
     result = _run(config, output)
-    assert result.returncode == 1, result.stderr
-    summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
-    assert summary["execution_complete"] is False
-    assert summary["observations"] > 0
-    assert summary["tasks"]["success"] == 1
-    assert summary["tasks"]["error"] == 1
-    error_result = next(
-        json.loads(path.read_text(encoding="utf-8"))
-        for path in (output / "tasks").glob("*/result.json")
-        if '"status": "error"' in path.read_text(encoding="utf-8")
-    )
-    stderr = output / "tasks" / error_result["task_id"] / "stderr.log"
-    assert "not-a-preset" in stderr.read_text(encoding="utf-8")
+    assert result.returncode == 2, result.stderr
+    assert "unsupported v2.2 preset" in result.stderr
+    assert not output.exists()
 
 
 def test_runner_distinguishes_timeout_and_right_censoring(tmp_path: Path) -> None:
     base = {
+        "schema_version": 1,
         "experiment": "EXP-02",
         "master_seed": "state-seed",
         "widths": [8],
         "state_counts": [1],
         "target_rounds": [1],
         "anchor_multipliers": [1],
-        "constructions": ["simple-single"],
+        "constructions": ["stationary-single"],
         "repetitions": 1,
         "max_candidates": 1,
     }
@@ -193,16 +237,26 @@ def test_runner_distinguishes_timeout_and_right_censoring(tmp_path: Path) -> Non
     assert json.loads(attempts[0].read_text(encoding="utf-8"))["status"] == "timeout"
 
 
-def test_runner_blocks_unfrozen_confirmatory_config_before_execution(tmp_path: Path) -> None:
+def test_runner_blocks_invalid_confirmatory_binding_before_execution(tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     config.write_text(
         json.dumps(
             {
+                "artifact_path": "not-run.whl",
                 "campaign": "confirmatory-v2-2",
+                "schema_version": 1,
                 "experiment": "EXP-01",
+                "freeze_manifest": str(tmp_path / "freeze.json"),
                 "master_seed": "must-not-run",
+                "preregistration": {
+                    "path": str(tmp_path / "missing-preregistration.md"),
+                    "sha256": "0" * 64,
+                    "status": "frozen",
+                },
                 "presets": ["lightweight-v2-2"],
                 "sizes": [0],
+                "suite_family": "v2-2",
+                "workers": [1],
             }
         ),
         encoding="utf-8",
@@ -210,5 +264,5 @@ def test_runner_blocks_unfrozen_confirmatory_config_before_execution(tmp_path: P
     output = tmp_path / "blocked"
     result = _run(config, output)
     assert result.returncode == 2
-    assert "frozen preregistration" in result.stderr
+    assert "preregistration file/hash mismatch" in result.stderr
     assert not output.exists()

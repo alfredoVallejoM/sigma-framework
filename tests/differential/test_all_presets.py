@@ -5,21 +5,23 @@ import pytest
 
 from sigma.backends import SERIAL_BACKEND, MultiprocessingTreeBackend
 from sigma.presets import (
-    lightweight_v2,
-    paranoid_deep_v2,
-    paranoid_wide_v2,
-    realtime_v2,
-    simultaneous_v2,
+    lightweight_v2_2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
+    paranoid_wide_v2_2,
+    reference_v2_2,
+    simultaneous_v2_2,
 )
 from sigma.rounds import WideOnce
 from sigma.v2 import hash_bytes, hash_chunks, hash_file, hash_reader, trace_bytes
 
 PRESETS = (
-    lightweight_v2,
-    simultaneous_v2,
-    realtime_v2,
-    paranoid_wide_v2,
-    paranoid_deep_v2,
+    reference_v2_2,
+    lightweight_v2_2,
+    simultaneous_v2_2,
+    paranoid_wide_v2_2,
+    paranoid_deep_v2_2,
+    paranoid_deep_vector_v2_2,
 )
 
 
@@ -50,7 +52,7 @@ def test_adapter_and_partition_canonicality(preset, size: int, tmp_path) -> None
 
 
 def test_parallel_backend_matches_anchor_and_transcript() -> None:
-    context = simultaneous_v2(target_round=3, state_count=2)
+    context = simultaneous_v2_2(target_round=3, state_count=2)
     payload = b"parallel canonicality" * 10000
     serial_anchor = SERIAL_BACKEND.compute_anchor(payload, context)
     parallel_anchor = MultiprocessingTreeBackend(4).compute_anchor(payload, context)
@@ -74,5 +76,5 @@ def test_authenticated_parameters_change_digest(preset) -> None:
 
 
 def test_trace_is_reproducible() -> None:
-    context = paranoid_deep_v2(target_round=3)
+    context = paranoid_deep_v2_2(target_round=3)
     assert trace_bytes(b"trace", context) == trace_bytes(b"trace", context)

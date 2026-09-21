@@ -25,7 +25,8 @@ def test_r15_b_harness_gate_is_synthetic_and_complete() -> None:
     assert report["passed"] is True
     assert report["confirmatory"] is False
     assert report["namespace"] == HARNESS_NAMESPACE
-    assert report["check_count"] >= 10
+    check_count = report["check_count"]
+    assert isinstance(check_count, int) and check_count >= 10
     checks = report["checks"]
     assert isinstance(checks, dict)
     assert all(checks.values())

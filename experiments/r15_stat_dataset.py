@@ -55,7 +55,7 @@ def _receipt_for_record(record_path: Path) -> Path:
     return root / "receipts" / relative
 
 
-def _load_record(record_path: Path) -> dict[str, Any]:
+def _load_record(record_path: Path) -> tuple[dict[str, Any], str]:
     data = record_path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
     value = json.loads(data)

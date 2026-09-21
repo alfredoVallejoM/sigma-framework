@@ -151,9 +151,7 @@ def audit_and_merge_amendment(
         merged_keys.append(key)
 
     ledger = build_ledger_v3(output_root, merged_keys)
-    (output_root / "internal-amendment-ledger.json").write_bytes(
-        canonical_json(ledger) + b"\n"
-    )
+    (output_root / "internal-amendment-ledger.json").write_bytes(canonical_json(ledger) + b"\n")
     summary = {
         "schema": "sigma-v3-r15-internal-amendment-dataset-v1",
         "confirmatory": True,
@@ -171,9 +169,7 @@ def audit_and_merge_amendment(
         "ledger_root": ledger["root_sha256"],
         "passed": True,
     }
-    (output_root / "internal-amendment-summary.json").write_bytes(
-        canonical_json(summary) + b"\n"
-    )
+    (output_root / "internal-amendment-summary.json").write_bytes(canonical_json(summary) + b"\n")
     return summary
 
 

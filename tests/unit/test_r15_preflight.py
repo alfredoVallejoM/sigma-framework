@@ -46,12 +46,7 @@ def _host_manifest(path: Path) -> None:
 
 
 def _tool_manifest(path: Path) -> None:
-    battery_ids = (
-        "nist-sts",
-        "practrand",
-        "testu01-smallcrush",
-        "testu01-crush",
-    )
+    battery_ids = ("nist-sts", "practrand")
     path.write_text(
         json.dumps(
             {
@@ -166,7 +161,7 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
     batteries = result["external_batteries"]
     runkey_sha256 = result["expected_runkey_sha256"]
     assert host_ids == []
-    assert isinstance(batteries, list) and len(batteries) == 4
+    assert batteries == ["nist-sts", "practrand"]
     assert isinstance(runkey_sha256, str) and len(runkey_sha256) == 64
     assert json.loads(output.read_text(encoding="utf-8")) == result
 

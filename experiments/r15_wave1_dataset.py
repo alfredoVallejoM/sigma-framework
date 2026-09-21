@@ -190,6 +190,7 @@ __all__ = [
     "main",
 ]
 
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit and merge R15 internal Wave 1 shards.")
     parser.add_argument("--shards", type=Path, required=True)

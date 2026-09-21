@@ -130,9 +130,7 @@ def km_rmst_v3(
 
 
 def _bootstrap_rng(label: str) -> random.Random:
-    digest = hashlib.sha256(
-        b"sigma-v3-r15-analysis\0" + label.encode("utf-8")
-    ).digest()
+    digest = hashlib.sha256(b"sigma-v3-r15-analysis\0" + label.encode("utf-8")).digest()
     return random.Random(int.from_bytes(digest, "big"))
 
 

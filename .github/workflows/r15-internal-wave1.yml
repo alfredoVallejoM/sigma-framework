@@ -40,6 +40,13 @@ jobs:
           python -m pip install
           -c constraints/r14-v3-py313.txt
           ".[test,quality,analysis,kdf,signatures]"
+      - run: ruff check sigma scripts experiments tests
+      - run: ruff format --check sigma scripts experiments tests
+      - run: mypy sigma scripts experiments tests
+      - run: >-
+          python -m pytest -q
+          tests/unit/test_r15_preflight.py
+          tests/unit/test_r15_confirmatory_internal.py
       - run: >-
           python -m scripts.check_r141_freeze
           --source-commit "$SOURCE_COMMIT"

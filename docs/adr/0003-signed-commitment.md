@@ -1,6 +1,6 @@
 # ADR-0003: compromiso firmado Ed25519
 
-- Estado: aceptada
+- Estado: implementada
 - Fecha: 2026-09-02
 - Obligación: LIB-09
 

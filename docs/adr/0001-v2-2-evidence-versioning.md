@@ -1,6 +1,6 @@
 # ADR-0001: versionado de evidencias de ancla v2-2
 
-- Estado: aceptado para implementación
+- Estado: implementado
 - Fecha: 2026-09-02
 - Obligatoriedad: LIB-03, LIB-11, LIB-12 y LIB-15
 
@@ -25,8 +25,9 @@ parte de la entrada canónica de inicialización y de cada ronda.
    suite_id:u16 || body_length:u32 || canonical_TLV_body
    ```
 
-4. `evidence_type` distinguirá al menos `WIDE_ROOTS` y `CROSS_WIDE`; futuros
-   vectores DeepVector tendrán un tipo nuevo, nunca una interpretación implícita.
+4. `evidence_type` distingue `WIDE_ROOTS` y `CROSS_WIDE`. DeepVector reutiliza
+   de forma explícita evidencia `CROSS_WIDE`: el vector pertenece al estado de
+   rondas, no al ancla, por lo que no necesita ni permite un tipo implícito.
 5. El parser recibirá o recuperará la suite, comprobará que el `suite_id` del
    envelope coincide, y validará cantidad, orden, algoritmo y longitud de cada
    componente contra el descriptor registrado.
@@ -43,7 +44,7 @@ parte de la entrada canónica de inicialización y de cada ronda.
   para el formato interno histórico.
 - La migración exige nuevos vectores y no puede marcarse como parche compatible.
 
-## Gate de implementación
+## Evidencia de implementación
 
 - registro de IDs y tipos cerrado;
 - serializers/parsers estrictos para ambos tipos v2-2;
@@ -51,3 +52,6 @@ parte de la entrada canónica de inicialización y de cada ronda.
   algoritmos, truncado y trailing bytes;
 - fuzzing y prueba de round-trip para todas las suites v2-2;
 - KAT v2-1 sin cambios y KAT v2-2 publicados por separado.
+
+Todos estos puntos están implementados y cubiertos por tests; la revisión
+externa de la decisión sigue abierta.

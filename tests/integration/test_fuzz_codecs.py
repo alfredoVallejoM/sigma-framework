@@ -9,7 +9,12 @@ def test_codec_mutation_fuzz_harness_smoke() -> None:
         "evidence-cross",
         "evidence-wide",
         "kdf",
-        "kdf-result",
+        "kdf-record",
         "pow",
         "signed",
+        "v3-history",
+        "v3-history-context",
+        "v3-history-digest",
+        "v3-history-layout",
+        "v3-round-binding",
     }

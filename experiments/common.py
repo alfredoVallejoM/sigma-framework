@@ -6,12 +6,16 @@ import platform
 import random
 import subprocess
 import sys
+import zipfile
 from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from sigma.policy import DEFAULT_RESOURCE_POLICY
+from sigma.version import PACKAGE_VERSION
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def canonical_json(value: Any) -> bytes:
@@ -80,6 +84,62 @@ def _microcode_version() -> Optional[str]:
     return None
 
 
+def _wheel_metadata(path: Path) -> dict[str, object] | None:
+    if path.suffix != ".whl" or not path.is_file():
+        return None
+    try:
+        with zipfile.ZipFile(path) as archive:
+            metadata_names = [
+                name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
+            ]
+            if len(metadata_names) != 1:
+                return None
+            fields: dict[str, str] = {}
+            for line in archive.read(metadata_names[0]).decode("utf-8").splitlines():
+                if ": " in line:
+                    key, value = line.split(": ", 1)
+                    fields.setdefault(key, value)
+        return {
+            "filename": path.name,
+            "name": fields.get("Name"),
+            "path": str(path.resolve()),
+            "sha256": sha256_file(path),
+            "size": path.stat().st_size,
+            "version": fields.get("Version"),
+        }
+    except (OSError, UnicodeError, zipfile.BadZipFile):
+        return None
+
+
+def _installed_artifact_binding(
+    artifact: dict[str, object] | None, sigma_path: Path
+) -> tuple[bool, str | None, str | None]:
+    """Prove that the imported distribution was installed from the declared wheel."""
+
+    if artifact is None:
+        return False, None, None
+    try:
+        distribution = importlib.metadata.distribution("sigma-framework")
+        distribution_root = Path(str(distribution.locate_file(""))).resolve()
+        direct_url_text = distribution.read_text("direct_url.json")
+        direct_url = json.loads(direct_url_text) if direct_url_text else {}
+    except (importlib.metadata.PackageNotFoundError, json.JSONDecodeError, OSError, TypeError):
+        return False, None, None
+    archive_info = direct_url.get("archive_info") if isinstance(direct_url, dict) else None
+    hashes = archive_info.get("hashes") if isinstance(archive_info, dict) else None
+    installed_sha256 = hashes.get("sha256") if isinstance(hashes, dict) else None
+    bound = (
+        distribution_root in sigma_path.parents
+        and isinstance(installed_sha256, str)
+        and installed_sha256 == artifact.get("sha256")
+    )
+    return (
+        bound,
+        str(distribution_root),
+        installed_sha256 if isinstance(installed_sha256, str) else None,
+    )
+
+
 def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str, Any]:
     dependencies: dict[str, Optional[str]] = {}
     for name in ("argon2-cffi", "matplotlib", "numpy", "scipy"):
@@ -96,9 +156,21 @@ def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str
     git_tag = _git(["describe", "--tags", "--exact-match"])
     dirty = _git(["status", "--porcelain"]) != ""
     artifact_path = config.get("artifact_path")
-    artifact_sha256 = None
-    if isinstance(artifact_path, str) and Path(artifact_path).is_file():
-        artifact_sha256 = sha256_file(Path(artifact_path))
+    artifact = None
+    if isinstance(artifact_path, str):
+        artifact = _wheel_metadata(Path(artifact_path))
+    sigma_file = __import__("sigma").__file__
+    if sigma_file is None:
+        raise RuntimeError("sigma package has no filesystem origin")
+    sigma_path = Path(sigma_file).resolve()
+    artifact_matches_package = (
+        artifact is not None
+        and artifact["name"] == "sigma-framework"
+        and artifact["version"] == PACKAGE_VERSION
+    )
+    installed_artifact_bound, distribution_root, installed_artifact_sha256 = (
+        _installed_artifact_binding(artifact, sigma_path)
+    )
     return {
         "affinity": affinity,
         "command": command,
@@ -120,10 +192,18 @@ def environment_manifest(config: dict[str, Any], command: list[str]) -> dict[str
         "resource_policy": DEFAULT_RESOURCE_POLICY.as_dict(),
         "seed_derivation": "SHA-256('sigma-exp-v1\\0' || master_seed || '\\0' || label)",
         "host_measurement_state": host_measurement_state(),
-        "release_artifact_sha256": artifact_sha256,
+        "release_artifact": artifact,
+        "release_artifact_sha256": artifact["sha256"] if artifact else None,
+        "installed_distribution_root": distribution_root,
+        "installed_from_artifact_sha256": installed_artifact_sha256,
+        "runner_import_path": str(Path(__file__).resolve()),
+        "sigma_import_path": str(sigma_path),
+        "sigma_package_version": PACKAGE_VERSION,
+        "executing_installed_artifact": installed_artifact_bound and artifact_matches_package,
         "publishable_source": not dirty
         and git_tag != "unavailable"
-        and artifact_sha256 is not None,
+        and installed_artifact_bound
+        and artifact_matches_package,
         "schema": "sigma-experiment-manifest-v2",
         "started_utc": datetime.now(timezone.utc).isoformat(),
     }

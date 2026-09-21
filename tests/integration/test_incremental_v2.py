@@ -1,17 +1,13 @@
 import pytest
 
 from sigma.incremental import IncrementalSigmaV2
-from sigma.presets import lightweight_v2_2
+from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2, simultaneous_v2_2
 from sigma.spec import SigmaContextV2
-from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import hash_bytes, verify_full
 
 
 def cross_context() -> SigmaContextV2:
-    return SigmaContextV2(
-        suite_id=SuiteId.PARANOID_CROSS_WIDE_V2,
-        anchor_profile=AnchorProfileId.CROSS_WIDE,
-    )
+    return paranoid_wide_v2_2()
 
 
 @pytest.mark.parametrize("context", [SigmaContextV2(), cross_context()])
@@ -52,13 +48,7 @@ def test_finalization_is_unique() -> None:
 
 def test_tree_profile_rejects_incremental_checkpoint_api() -> None:
     with pytest.raises(ValueError, match="stream-based"):
-        IncrementalSigmaV2(
-            SigmaContextV2(
-                suite_id=SuiteId.SIMULTANEOUS_TREE_WIDE_V2,
-                anchor_profile=AnchorProfileId.TREE_WIDE,
-                chunk_size=65536,
-            )
-        )
+        IncrementalSigmaV2(simultaneous_v2_2())
 
 
 def test_realtime_policy_uses_the_same_v22_streamwide_suite() -> None:

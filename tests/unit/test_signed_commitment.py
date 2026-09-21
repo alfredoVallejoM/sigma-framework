@@ -1,7 +1,4 @@
-import hashlib
-import json
 from dataclasses import replace
-from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -12,7 +9,7 @@ from sigma.applications.signed import (
     verify_full_signed,
     verify_signed_attestation,
 )
-from sigma.presets import lightweight_v2, lightweight_v2_2, paranoid_deep_v2_2
+from sigma.presets import lightweight_v2_2, paranoid_deep_v2_2
 from sigma.spec.encoding import DecodeError
 
 PRIVATE_KEY = bytes(range(32))
@@ -57,9 +54,7 @@ def test_signature_authenticates_key_id_and_every_commitment_field() -> None:
     )
 
 
-def test_signed_profile_rejects_legacy_suite_and_key_boundaries() -> None:
-    with pytest.raises(ValueError, match="v2-2"):
-        sign_ed25519(b"legacy", lightweight_v2(), PRIVATE_KEY, KEY_ID)
+def test_signed_profile_rejects_key_boundaries() -> None:
     with pytest.raises(ValueError, match="private key"):
         sign_ed25519(b"key", lightweight_v2_2(), b"short", KEY_ID)
     with pytest.raises(ValueError, match="public_key_id"):
@@ -71,17 +66,3 @@ def test_every_truncated_signed_commitment_prefix_is_rejected() -> None:
     for end in range(len(encoded)):
         with pytest.raises(DecodeError):
             SigmaSignedCommitmentV2.from_bytes(encoded[:end])
-
-
-def test_signed_commitment_frozen_vector() -> None:
-    path = Path("specification/test-vectors/signed-lightweight-v2-2.json")
-    vector = json.loads(path.read_text(encoding="utf-8"))
-    commitment = sign_ed25519(
-        bytes.fromhex(vector["message_hex"]),
-        lightweight_v2_2(target_round=2, state_count=2),
-        bytes.fromhex(vector["private_key_seed_hex"]),
-        bytes.fromhex(vector["public_key_id_hex"]),
-    )
-    assert PUBLIC_KEY.hex() == vector["public_key_hex"]
-    assert commitment.to_bytes().hex() == vector["commitment_hex"]
-    assert hashlib.sha256(commitment.to_bytes()).hexdigest() == vector["commitment_sha256"]

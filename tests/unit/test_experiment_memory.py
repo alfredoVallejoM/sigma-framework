@@ -11,7 +11,7 @@ def test_memory_experiment_uses_fresh_process_and_records_scope() -> None:
     records = run(
         {
             "io_chunks": [1024],
-            "profiles": ["stream-wide", "tree-wide"],
+            "profiles": ["wide-v2-2", "tree-wide-v2-2"],
             "repetitions": 1,
             "sizes": [0, 2048],
             "timeout_seconds": 30,
@@ -29,7 +29,7 @@ def test_memory_experiment_models_depth_and_trace_policy_separately() -> None:
     records = run(
         {
             "io_chunks": [1024],
-            "profiles": ["stream-wide"],
+            "profiles": ["wide-v2-2"],
             "repetitions": 2,
             "sizes": [0],
             "state_counts": [3],

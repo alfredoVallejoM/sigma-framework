@@ -1,0 +1,43 @@
+{
+  "schema": "sigma-v3-r14-budget-decision-v1",
+  "freeze_id": "sigma-v3-r14-20260920-v1",
+  "confirmatory_evidence": false,
+  "source_policy": "R13 pilots establish feasibility/interfaces only; R14 budgets are frozen before R15 and are not effect estimates.",
+  "decisions": {
+    "history_crossing": {
+      "replicates": 256,
+      "rationale": "Central rare-event mechanism; exact-binomial endpoint and multiple reduced widths/rounds."
+    },
+    "collision_preimage": {
+      "replicates": 128,
+      "rationale": "First-hit/right-censored families need survival estimates across geometric widths."
+    },
+    "tmto": {
+      "replicates": 64,
+      "rationale": "Paired strategy/constructive frontier; primary object is Pareto geometry, not a small p-value."
+    },
+    "parameter_uniformity": {
+      "replicates": 32,
+      "samples_per_replicate": 93000,
+      "rationale": "93 joint (t,k) cells receive 1000 expected observations per cell under ideal uniformity."
+    },
+    "parameter_correlation": {
+      "replicates": 64,
+      "samples_per_replicate": 16384,
+      "permutations": 2000,
+      "rationale": "Permutation-controlled dependence estimate."
+    },
+    "kdf_pow_branch": {
+      "replicates": 64,
+      "rationale": "Paired designs with bootstrap intervals; identical workloads within replicate."
+    },
+    "external_statistics": {
+      "streams_per_cell": 32,
+      "aggregate_bytes_per_cell": 1073741824,
+      "rationale": "Secondary descriptive control with standard-hash and deliberately broken baselines."
+    }
+  },
+  "no_optional_stopping": true,
+  "negative_result_rule": "No success means only no success within the declared budget.",
+  "r15_may_change_sample_size": false
+}

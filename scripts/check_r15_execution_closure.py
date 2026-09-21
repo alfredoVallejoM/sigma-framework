@@ -34,15 +34,14 @@ def _resolve_bindings() -> None:
     actual = set(R15_EXECUTOR_BINDINGS)
     if actual != expected:
         raise RuntimeError(
-            f"R15 executor coverage mismatch: missing={sorted(expected-actual)}, "
-            f"extra={sorted(actual-expected)}"
+            f"R15 executor coverage mismatch: missing={sorted(expected - actual)}, "
+            f"extra={sorted(actual - expected)}"
         )
     for binding in R15_EXECUTOR_BINDINGS.values():
         module = importlib.import_module(binding.module)
         if not hasattr(module, binding.executor):
             raise RuntimeError(
-                f"{binding.attack_id} executor is missing: "
-                f"{binding.module}.{binding.executor}"
+                f"{binding.attack_id} executor is missing: {binding.module}.{binding.executor}"
             )
         if not binding.primary_metric:
             raise RuntimeError(f"{binding.attack_id} has no primary metric")

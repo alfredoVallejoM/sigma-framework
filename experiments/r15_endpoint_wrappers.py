@@ -154,13 +154,9 @@ def parameter_grinding_work_ratio_v3(
         )
         for candidate in range(selected.attempts)
     ]
-    screening_work = selected.attempts + sum(
-        value.parameter_queries for value in inspected
-    )
+    screening_work = selected.attempts + sum(value.parameter_queries for value in inspected)
     selected_work = screening_work + selected.transition_cost
-    baseline_work = sum(
-        1 + value.parameter_queries + value.transition_cost for value in inspected
-    )
+    baseline_work = sum(1 + value.parameter_queries + value.transition_cost for value in inspected)
     return GrindingWorkRatioResultV3(
         candidate_budget=candidates,
         attempts=selected.attempts,

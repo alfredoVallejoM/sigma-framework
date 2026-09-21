@@ -20,7 +20,9 @@ def check_r15_analysis_shadow() -> dict[str, object]:
     if left["figures"] != 15 or left["tables"] != 9:
         raise RuntimeError("R15-G frozen output coverage is incomplete")
     figure_ids = left["figure_ids"]
-    if not isinstance(figure_ids, list) or figure_ids != [f"F{index:02d}" for index in range(1, 16)]:
+    if not isinstance(figure_ids, list) or figure_ids != [
+        f"F{index:02d}" for index in range(1, 16)
+    ]:
         raise RuntimeError("R15-G figure registry is incomplete")
     return left
 

@@ -34,6 +34,7 @@ ALLOWED_AMENDMENT_PATHS = {
     ".github/workflows/r15-internal-amendment.yml",
     "experiments/r15_confirmatory_internal.py",
     "experiments/r15_internal_amendment.py",
+    "experiments/r15_internal_amendment_dataset.py",
     "experiments/r15_parameter_analysis_fast.py",
     "scripts/r15_internal_amendment_preflight.py",
     "tests/unit/test_r15_internal_amendment.py",

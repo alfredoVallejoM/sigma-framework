@@ -46,6 +46,8 @@ FROZEN_PATHS = (
     "experiments/r15_attack_bindings.py",
     "experiments/r15_endpoint_wrappers.py",
     "experiments/r15_data.py",
+    "experiments/r15_harness.py",
+    "scripts/check_r15_harness.py",
     "scripts/check_r15_plan.py",
     "scripts/check_r15_execution_closure.py",
     "scripts/check_r15_data_closure.py",

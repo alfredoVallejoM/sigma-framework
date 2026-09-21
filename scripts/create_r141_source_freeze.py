@@ -59,6 +59,7 @@ FROZEN_PATHS = (
     ".github/workflows/ci.yml",
     ".gitignore",
     "experiments/r15-host-manifest-template.json",
+    "experiments/r15-external-tools-template.json",
 )
 
 

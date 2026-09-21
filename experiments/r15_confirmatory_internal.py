@@ -415,9 +415,7 @@ def execute_internal_run(
             str(factors["construction"]),  # type: ignore[arg-type]
         )
         work = (
-            tmto_result.offline_queries
-            + tmto_result.online_queries
-            + tmto_result.history_queries
+            tmto_result.offline_queries + tmto_result.online_queries + tmto_result.history_queries
         )
         observed = ResourceBudget(
             min(declared.W, work),

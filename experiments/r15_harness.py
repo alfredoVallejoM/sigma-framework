@@ -73,10 +73,7 @@ class RetryPolicyV3:
     def may_retry(self, error_class: str, attempt: int) -> bool:
         if attempt < 0:
             raise ValueError("attempt must be non-negative")
-        return (
-            error_class == "transient-infrastructure"
-            and attempt < self.max_transient_retries
-        )
+        return error_class == "transient-infrastructure" and attempt < self.max_transient_retries
 
 
 def derive_harness_seed_v3(key: RunKeyV3) -> bytes:
@@ -128,9 +125,7 @@ def write_checkpoint_v3(
     total_steps: int,
 ) -> HarnessCheckpointV3:
     validate_harness_seed_v3(key, seed_hex)
-    payload = _checkpoint_payload(
-        key, seed_hex, next_step, state_hex, total_steps
-    )
+    payload = _checkpoint_payload(key, seed_hex, next_step, state_hex, total_steps)
     checkpoint = HarnessCheckpointV3(
         **payload,
         checkpoint_sha256=_checkpoint_hash(payload),
@@ -228,13 +223,10 @@ def run_synthetic_task_v3(
 
         state = _step(seed, state, index)
         next_step = index + 1
-        if (
-            checkpoint_path is not None
-            and (
-                next_step % checkpoint_interval == 0
-                or next_step == total_steps
-                or crash_after_step == next_step
-            )
+        if checkpoint_path is not None and (
+            next_step % checkpoint_interval == 0
+            or next_step == total_steps
+            or crash_after_step == next_step
         ):
             write_checkpoint_v3(
                 checkpoint_path,
@@ -269,9 +261,8 @@ def write_harness_record_v3(
     execution_manifest_sha256: str,
 ) -> str:
     validate_observed_budget_v3(declared, observed)
-    if (
-        len(execution_manifest_sha256) != 64
-        or any(ch not in "0123456789abcdef" for ch in execution_manifest_sha256)
+    if len(execution_manifest_sha256) != 64 or any(
+        ch not in "0123456789abcdef" for ch in execution_manifest_sha256
     ):
         raise ValueError("execution_manifest_sha256 must be lowercase SHA-256")
     seed_hex = derive_harness_seed_v3(key).hex()

@@ -240,8 +240,7 @@ def selected_reduced_shadow_cells_v3() -> tuple[tuple[str, R141Cell], ...]:
                 next(
                     cell
                     for cell in red03
-                    if cell.factors["construction"] == construction
-                    and cell.region == "estimable"
+                    if cell.factors["construction"] == construction and cell.region == "estimable"
                 ),
             )
         )
@@ -251,8 +250,7 @@ def selected_reduced_shadow_cells_v3() -> tuple[tuple[str, R141Cell], ...]:
                 next(
                     cell
                     for cell in red03
-                    if cell.factors["construction"] == construction
-                    and cell.region == "stress"
+                    if cell.factors["construction"] == construction and cell.region == "stress"
                 ),
             )
         )

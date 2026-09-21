@@ -318,9 +318,9 @@ def execute_internal_run(
                 candidates=cap,
                 persistent_policy="any",
             )
-            used = cap if second_preimage is None else second_preimage.evaluated_candidates
+            used = cap if collision is None else collision.evaluated_candidates
             return InternalOutcome(
-                "success" if second_preimage is not None else "censored",
+                "success" if collision is not None else "censored",
                 construction,
                 {
                     "queries_to_first_window_collision": used,
@@ -367,9 +367,9 @@ def execute_internal_run(
                 candidates=cap,
                 persistent_policy=policy,  # type: ignore[arg-type]
             )
-            used = cap if collision is None else collision.evaluated_candidates
+            used = cap if second_preimage is None else second_preimage.evaluated_candidates
             return InternalOutcome(
-                "success" if collision is not None else "censored",
+                "success" if second_preimage is not None else "censored",
                 construction,
                 {
                     "queries": used,

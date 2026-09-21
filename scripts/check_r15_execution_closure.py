@@ -18,6 +18,11 @@ from experiments.r15_history_games import (
 )
 from experiments.r15_layout_ablation import profile_layout_ablation_three_way_v3
 from experiments.r15_parameter_analysis import parameter_mutual_information_profile_v3
+from experiments.r15_endpoint_wrappers import (
+    find_first_full_state_collision_v3,
+    parameter_grinding_work_ratio_v3,
+    parameter_uniformity_profile_v3,
+)
 from experiments.r15_stat_adapters import BATTERIES_V3, StreamHasherV3
 from experiments.reduced_oracle import ReducedOracle
 
@@ -73,11 +78,27 @@ def check_r15_execution_closure() -> dict[str, object]:
         round_index=0,
         trials=32,
     )
+    full_state = find_first_full_state_collision_v3(
+        oracle,
+        config,
+        round_index=0,
+        candidates=32,
+    )
     layouts = profile_layout_ablation_three_way_v3(
         oracle,
         history_bits=4,
         field_count=5,
         slots=17,
+    )
+    uniformity = parameter_uniformity_profile_v3(
+        ReducedOracle(DEVELOPMENT_SEED + b"/uniformity"),
+        128,
+        persistent_bits=8,
+    )
+    grinding = parameter_grinding_work_ratio_v3(
+        ReducedOracle(DEVELOPMENT_SEED + b"/grinding"),
+        32,
+        persistent_bits=8,
     )
     mi = parameter_mutual_information_profile_v3(
         ReducedOracle(DEVELOPMENT_SEED + b"/mi"),
@@ -103,6 +124,12 @@ def check_r15_execution_closure() -> dict[str, object]:
         raise RuntimeError("three-way layout ablation is incomplete")
     if not 0.0 <= crossing.visible_match_rate <= 1.0:
         raise RuntimeError("conditional crossing endpoint is invalid")
+    if full_state.queries <= 0:
+        raise RuntimeError("full-state first-hit endpoint is invalid")
+    if uniformity.max_deviation < 0:
+        raise RuntimeError("parameter-uniformity endpoint is invalid")
+    if not 0.0 < grinding.net_work_ratio <= 1.0:
+        raise RuntimeError("parameter-grinding work ratio is invalid")
     if mi.permutations != 31:
         raise RuntimeError("MI permutation executor did not honor the requested budget")
     if branch.interventions != 64:
@@ -117,6 +144,9 @@ def check_r15_execution_closure() -> dict[str, object]:
         "executor_bindings": len(R15_EXECUTOR_BINDINGS),
         "history_games": sorted(games),
         "layout_variants": [item.variant for item in layouts],
+        "full_state_queries_fixture": full_state.queries,
+        "parameter_max_deviation_fixture": uniformity.max_deviation,
+        "grinding_work_ratio_fixture": grinding.net_work_ratio,
         "mi_permutations_fixture": mi.permutations,
         "branch_interventions_fixture": branch.interventions,
         "stat_batteries": [item.battery_id for item in BATTERIES_V3],

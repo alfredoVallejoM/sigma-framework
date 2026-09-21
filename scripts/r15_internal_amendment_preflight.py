@@ -80,9 +80,7 @@ def _expected_scope(config_root: Path) -> tuple[int, int, str]:
                 digest.update(len(encoded).to_bytes(4, "big"))
                 digest.update(encoded)
     if runs != EXPECTED_RUN_UNITS:
-        raise RuntimeError(
-            f"amendment RunKey cardinality drifted: {runs} != {EXPECTED_RUN_UNITS}"
-        )
+        raise RuntimeError(f"amendment RunKey cardinality drifted: {runs} != {EXPECTED_RUN_UNITS}")
     return cells, runs, digest.hexdigest()
 
 

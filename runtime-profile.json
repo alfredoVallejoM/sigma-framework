@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "project": "sigma-framework",
+  "toolchains": {
+    "python": true
+  },
+  "hydration": [
+    {
+      "id": "python-dev",
+      "command": "{python} -m pip install -e '.[test,quality]'",
+      "fingerprints": [
+        "pyproject.toml"
+      ],
+      "required": true
+    }
+  ],
+  "obligations": [
+    {
+      "id": "SRC-ARCH",
+      "level": "source",
+      "kind": "manual",
+      "required": true,
+      "description": "Review sigma-framework architecture, dependency boundaries, invariants and obligation-to-implementation mapping without delegating closure to scripts."
+    },
+    {
+      "id": "ADV-REVIEW",
+      "level": "adversarial",
+      "kind": "manual",
+      "required": true,
+      "description": "Perform an obligation-by-obligation adversarial review, including negative cases and accidental-complexity inspection."
+    },
+    {
+      "id": "PERF-LEDGER",
+      "level": "performance",
+      "kind": "manual",
+      "required": true,
+      "description": "Run representative scaling/resource measurements and record time, peak memory, allocations/copies and empirical scaling; compilation alone is not performance certification."
+    },
+    {
+      "id": "REL-CLOSURE",
+      "level": "release",
+      "kind": "manual",
+      "required": true,
+      "description": "Manually reconcile planned obligations against implementation and executable evidence before declaring a campaign or release closed."
+    },
+    {
+      "id": "EXE-RUFF",
+      "level": "execution",
+      "kind": "command",
+      "required": true,
+      "command": "{python} -m ruff check sigma tests",
+      "description": "Run Python lint and correctness checks."
+    },
+    {
+      "id": "EXE-MYPY",
+      "level": "execution",
+      "kind": "command",
+      "required": false,
+      "command": "{python} -m mypy sigma",
+      "description": "Run type checks."
+    },
+    {
+      "id": "REG-PY",
+      "level": "regression",
+      "kind": "command",
+      "required": true,
+      "command": "{python} -m pytest -q",
+      "description": "Run framework regressions."
+    },
+    {
+      "id": "ADV-HASH",
+      "level": "adversarial",
+      "kind": "manual",
+      "required": true,
+      "description": "Run property, mutation and hostile-input campaigns and inspect failures manually; do not infer cryptographic security from test success."
+    },
+    {
+      "id": "XCHK-REFERENCE",
+      "level": "crosscheck",
+      "kind": "manual",
+      "required": true,
+      "description": "Reconcile optimized and experimental implementations with frozen reference implementations and statistical protocols."
+    }
+  ]
+}

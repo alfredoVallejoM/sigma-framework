@@ -8,8 +8,9 @@ from experiments.common import sha256_file
 from experiments.r141_protocol import R141_FREEZE_ID, R141_TAG
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
 from scripts.r15_preflight import (
+    CORE_CONFIRMATORY_ATTACKS,
+    ENGINEERING_ATTACKS,
     INTERNAL_ATTACKS,
-    PHYSICAL_ATTACKS,
     STAT_ATTACKS,
     authorized_attacks_for_scope,
     unlock_r15,
@@ -133,9 +134,7 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
         encoding="utf-8",
     )
 
-    hosts = tmp_path / "hosts.json"
     tools = tmp_path / "tools.json"
-    _host_manifest(hosts)
     _tool_manifest(tools)
 
     monkeypatch.setattr(
@@ -156,33 +155,32 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
         source_freeze=source_freeze,
         config_root=config_root,
         artifact=wheel,
-        host_manifest=hosts,
         external_tools=tools,
         output=output,
     )
     assert result["confirmatory_unlocked"] is True
-    assert result["expected_run_units"] == 153_536
+    assert result["expected_run_units"] == 145_088
     expected_cells = result["expected_cells"]
     assert isinstance(expected_cells, int) and expected_cells > 200
     host_ids = result["host_ids"]
     batteries = result["external_batteries"]
     runkey_sha256 = result["expected_runkey_sha256"]
-    assert isinstance(host_ids, list) and len(host_ids) == 3
+    assert host_ids == []
     assert isinstance(batteries, list) and len(batteries) == 4
     assert isinstance(runkey_sha256, str) and len(runkey_sha256) == 64
     assert json.loads(output.read_text(encoding="utf-8")) == result
 
 
-def test_staged_unlock_scopes_partition_confirmatory_attacks() -> None:
+def test_staged_unlock_scopes_exclude_exploratory_engineering_attacks() -> None:
     internal = set(authorized_attacks_for_scope("internal"))
-    physical = set(authorized_attacks_for_scope("physical"))
     stat = set(authorized_attacks_for_scope("stat"))
     full = set(authorized_attacks_for_scope("full"))
+    engineering = set(ENGINEERING_ATTACKS)
     assert internal == set(INTERNAL_ATTACKS)
-    assert physical == set(PHYSICAL_ATTACKS) == {"PARAM-04", "PARAM-05", "PARAM-06"}
     assert stat == set(STAT_ATTACKS) == {"STAT-01"}
-    assert not (internal & physical)
+    assert full == set(CORE_CONFIRMATORY_ATTACKS) == internal | stat
+    assert engineering == {"PARAM-04", "PARAM-05", "PARAM-06"}
     assert not (internal & stat)
-    assert not (physical & stat)
-    assert internal | physical | stat == full
+    assert not (engineering & full)
     assert len(internal) == 17
+    assert len(full) == 18

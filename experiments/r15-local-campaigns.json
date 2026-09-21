@@ -1,0 +1,161 @@
+{
+  "schema": "sigma-v3-r15-local-campaign-plan-v1",
+  "purpose": "Execute the remaining R15 acquisition, audit, exploratory-engineering, and final-closure campaigns locally without GitHub Actions.",
+  "github_actions": {
+    "required": false,
+    "policy": "Do not create, restore, enable, or dispatch GitHub Actions workflows."
+  },
+  "sources": {
+    "base": {
+      "ref": "sigma-v3-r14-freeze-v1",
+      "commit": "80214afde29b3596af83265e18c1e2926e14dd2f"
+    },
+    "amendment": {
+      "ref": "sigma-v3-r15-internal-amendment-v1",
+      "commit": "108f0434a07d85fd6798b1bdb1d306a6cb3293cf"
+    },
+    "engineering": {
+      "ref": "3d69f74850a401f4d4f6738e2b397f7e6f3ee430",
+      "commit": "3d69f74850a401f4d4f6738e2b397f7e6f3ee430"
+    },
+    "stat": {
+      "ref": "dab2f6928288a753da68771f7b7084d15bf7fba6",
+      "commit": "dab2f6928288a753da68771f7b7084d15bf7fba6",
+      "local_only_tag": "sigma-v3-r15-stat-tooling-v1"
+    }
+  },
+  "expected_run_units": {
+    "wave1": 8256,
+    "wave2": 49664,
+    "wave3a": 74240,
+    "amendment": 11392,
+    "stat": 1536,
+    "mandatory_total": 145088,
+    "exploratory_engineering_records": 64
+  },
+  "campaigns": {
+    "wave1": {
+      "classification": "mandatory-confirmatory",
+      "dataset_module": "experiments.r15_wave1_dataset",
+      "expected_shard_jobs": 24,
+      "jobs": [
+        {"key": "param01", "config": "param-01.json", "shards": 8, "factors": []},
+        {"key": "param03", "config": "param-03.json", "shards": 8, "factors": []},
+        {"key": "hist01b", "config": "hist-01.json", "shards": 8, "factors": ["mode=conditional-crossing"]}
+      ],
+      "workflow_reference": {
+        "commit": "03bf6a54c0e94811a74618f9cdd18dffab467ebf",
+        "path": ".github/workflows/r15-internal-wave1.yml"
+      }
+    },
+    "wave2": {
+      "classification": "mandatory-confirmatory",
+      "dataset_module": "experiments.r15_wave2_dataset",
+      "expected_shard_jobs": 576,
+      "jobs": [
+        {"key": "hist01a", "config": "hist-01.json", "shards": 64, "factors": ["mode=natural-crossing"]},
+        {"key": "hist02", "config": "hist-02.json", "shards": 64, "factors": []},
+        {"key": "hist03", "config": "hist-03.json", "shards": 64, "factors": []},
+        {"key": "hist05", "config": "hist-05.json", "shards": 64, "factors": []},
+        {"key": "hist06", "config": "hist-06.json", "shards": 64, "factors": []},
+        {"key": "layout04", "config": "layout-04.json", "shards": 64, "factors": []},
+        {"key": "branch05", "config": "branch-05.json", "shards": 96, "factors": []},
+        {"key": "branch06", "config": "branch-06.json", "shards": 96, "factors": []}
+      ],
+      "workflow_reference": {
+        "commit": "733d41cd6404df9920c1c9444746260f52b58d2c",
+        "path": ".github/workflows/r15-internal-wave2.yml"
+      }
+    },
+    "wave3a": {
+      "classification": "mandatory-confirmatory",
+      "dataset_module": "experiments.r15_wave3a_dataset",
+      "expected_shard_jobs": 240,
+      "jobs": [
+        {"key": "red03", "config": "red-03.json", "shards": 32, "factors": []},
+        {"key": "tmto01", "config": "tmto-01.json", "shards": 64, "factors": []},
+        {"key": "tmto02", "config": "tmto-02.json", "shards": 64, "factors": []},
+        {"key": "red02", "config": "red-02.json", "shards": 40, "factors": []},
+        {"key": "red05", "config": "red-05.json", "shards": 40, "factors": []}
+      ],
+      "excluded_by_design": ["RED-04"],
+      "phases": [["red03"], ["tmto01", "tmto02"], ["red02"], ["red05"]],
+      "workflow_reference": {
+        "commit": "67e72b3475179389449ebc8cdf7d615d4f6e09f6",
+        "path": ".github/workflows/r15-internal-wave3a.yml"
+      }
+    },
+    "amendment": {
+      "classification": "mandatory-confirmatory-amendment",
+      "expected_shard_jobs": 384,
+      "jobs": [
+        {
+          "key": "red04",
+          "config": "red-04.json",
+          "shards": 64,
+          "factor_sets": [
+            ["construction=r12", "policy=same-persistent"],
+            ["construction=r12", "policy=any-persistent"],
+            ["construction=r125", "policy=same-persistent"],
+            ["construction=r125", "policy=any-persistent"]
+          ]
+        },
+        {
+          "key": "param02",
+          "config": "param-02.json",
+          "shards": 128,
+          "factor_sets": [[]]
+        }
+      ],
+      "phases": [["red04"], ["param02"]],
+      "workflow_reference": {
+        "commit": "108f0434a07d85fd6798b1bdb1d306a6cb3293cf",
+        "path": ".github/workflows/r15-internal-amendment.yml"
+      }
+    },
+    "stat": {
+      "classification": "mandatory-confirmatory",
+      "expected_shard_jobs": 512,
+      "shards_per_construction": 64,
+      "constructions": [
+        "SHA512",
+        "SHA3-512",
+        "BLAKE2b-512",
+        "SHAKE256-512",
+        "R12.5-wide",
+        "R12.5-deep",
+        "R12.5-vector",
+        "broken-control"
+      ],
+      "external_tools": {
+        "nist_sts": "2.1.2",
+        "practrand": "pre0.95"
+      },
+      "workflow_reference": {
+        "commit": "dab2f6928288a753da68771f7b7084d15bf7fba6",
+        "path": ".github/workflows/r15-stat-confirmatory.yml"
+      }
+    },
+    "engineering": {
+      "classification": "exploratory-engineering",
+      "counts_toward_r15_pass": false,
+      "expected_shard_jobs": 24,
+      "shards_per_attack": 8,
+      "attacks": ["PARAM-04", "PARAM-05", "PARAM-06"],
+      "workflow_reference": {
+        "commit": "3d69f74850a401f4d4f6738e2b397f7e6f3ee430",
+        "path": ".github/workflows/r15-exploratory-engineering-apps.yml"
+      }
+    }
+  },
+  "total_shard_jobs": 1760,
+  "final_closure": {
+    "required_datasets": ["wave1", "wave2", "wave3a", "amendment", "stat"],
+    "excluded_from_mandatory_closure": ["PARAM-04", "PARAM-05", "PARAM-06"],
+    "expected_mandatory_run_units": 145088,
+    "workflow_reference": {
+      "commit": "7eace7b0499b70bd02c5487320e34da82a91de18",
+      "path": ".github/workflows/r15-final-closure-autopilot.yml"
+    }
+  }
+}

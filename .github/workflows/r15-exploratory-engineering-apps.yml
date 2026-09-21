@@ -1,0 +1,179 @@
+name: R15 Exploratory Engineering Applications
+
+on:
+  push:
+    branches:
+      - r15-exploratory-engineering-apps
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r15-exploratory-engineering-apps
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate exploratory engineering controller
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      controller_commit: ${{ steps.identity.outputs.controller_commit }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "controller_commit=${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test,quality,kdf]"
+      - run: >-
+          ruff check
+          experiments/r15_application_engineering.py
+          scripts/r15_preflight.py
+          tests/unit/test_r15_application_engineering.py
+          tests/unit/test_r15_preflight.py
+      - run: >-
+          ruff format --check
+          experiments/r15_application_engineering.py
+          scripts/r15_preflight.py
+          tests/unit/test_r15_application_engineering.py
+          tests/unit/test_r15_preflight.py
+      - run: >-
+          mypy
+          experiments/r15_application_engineering.py
+          scripts/r15_preflight.py
+          tests/unit/test_r15_application_engineering.py
+          tests/unit/test_r15_preflight.py
+      - run: >-
+          python -m pytest -q
+          tests/unit/test_r15_application_engineering.py
+          tests/unit/test_r15_preflight.py
+          tests/unit/test_r15_application_shadow.py
+      - run: python -m build --outdir /tmp/r15-eng-dist
+      - run: mkdir -p /tmp/r15-eng-bundle/dist
+      - run: cp -a /tmp/r15-eng-dist/. /tmp/r15-eng-bundle/dist/
+      - run: cp experiments/r15-application-engineering-amendment.json /tmp/r15-eng-bundle/
+      - name: Write controller identity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib
+          plan = pathlib.Path("experiments/r15-application-engineering-amendment.json")
+          value = {
+              "schema": "sigma-v3-r15-exploratory-engineering-controller-v1",
+              "controller_commit": os.environ["GITHUB_SHA"],
+              "plan_sha256": hashlib.sha256(plan.read_bytes()).hexdigest(),
+              "confirmatory": False,
+              "classification": "exploratory-engineering",
+          }
+          pathlib.Path("/tmp/r15-eng-bundle/controller.json").write_text(
+              json.dumps(value, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-exploratory-engineering-bundle
+          path: /tmp/r15-eng-bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+  engineering:
+    name: R15 ENG ${{ matrix.attack }} shard ${{ matrix.shard }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        attack:
+          - PARAM-04
+          - PARAM-05
+          - PARAM-06
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: r15-exploratory-engineering-bundle
+          path: /tmp/eng
+      - name: Install exact engineering wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL="$(find /tmp/eng/dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python -m pip install --force-reinstall --no-deps "$WHEEL"
+          python -m pip install "argon2-cffi==25.1.0"
+      - name: Execute exploratory engineering shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/r15-eng-results
+          cd /tmp
+          python -I -m experiments.r15_application_engineering run \
+            --attack "${{ matrix.attack }}" \
+            --shard-index "${{ matrix.shard }}" \
+            --shard-count 8 \
+            --controller-commit "${{ needs.validate.outputs.controller_commit }}" \
+            --output /tmp/r15-eng-results \
+            --report /tmp/r15-eng-results/shard-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-eng-${{ matrix.attack }}-shard-${{ matrix.shard }}
+          path: /tmp/r15-eng-results/
+          if-no-files-found: error
+          retention-days: 90
+
+  audit:
+    name: R15 exploratory engineering merge and audit
+    needs:
+      - validate
+      - engineering
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: r15-exploratory-engineering-bundle
+          path: /tmp/eng
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r15-eng-*
+          path: /tmp/shards
+      - name: Install exact engineering wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL="$(find /tmp/eng/dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python -m pip install --force-reinstall --no-deps "$WHEEL"
+      - name: Merge exact exploratory dataset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/engineering-dataset
+          cd /tmp
+          python -I -m experiments.r15_application_engineering audit \
+            --shards /tmp/shards \
+            --output /tmp/engineering-dataset \
+            --report /tmp/engineering-dataset/audit-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-exploratory-engineering-dataset
+          path: /tmp/engineering-dataset/
+          if-no-files-found: error
+          retention-days: 90

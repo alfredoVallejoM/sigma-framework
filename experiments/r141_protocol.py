@@ -74,9 +74,7 @@ def publication_scale_plan() -> dict[str, Any]:
 
 def confirmatory_attack_ids_r141() -> tuple[str, ...]:
     return tuple(
-        item.attack_id
-        for item in ATTACK_DISPOSITIONS
-        if item.disposition == "confirmatory"
+        item.attack_id for item in ATTACK_DISPOSITIONS if item.disposition == "confirmatory"
     )
 
 
@@ -94,11 +92,7 @@ def _claims_for(attack_id: str) -> tuple[str, ...]:
 
 
 def _execution_kind(attack_id: str) -> str:
-    return next(
-        item.execution
-        for item in ATTACK_DISPOSITIONS
-        if item.attack_id == attack_id
-    )
+    return next(item.execution for item in ATTACK_DISPOSITIONS if item.attack_id == attack_id)
 
 
 def _budget(
@@ -414,11 +408,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
             family="preimage" if attack_id == "RED-03" else "second-preimage",
             secondary=("success_rate", "censored_fraction"),
         )
-        policies = (
-            ("fixed-target",)
-            if attack_id == "RED-03"
-            else tuple(spec["policies"])
-        )
+        policies = ("fixed-target",) if attack_id == "RED-03" else tuple(spec["policies"])
         for construction in ("r12", "r125"):
             for bits in spec["widths"]:
                 region: RegionRole = (
@@ -503,9 +493,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
     elif attack_id in ("TMTO-01", "TMTO-02"):
         spec = plan["TMTO"]
         strategies = (
-            ("direct", "distinguished", "rho")
-            if attack_id == "TMTO-01"
-            else ("hellman", "rainbow")
+            ("direct", "distinguished", "rho") if attack_id == "TMTO-01" else ("hellman", "rainbow")
         )
         analysis = _analysis(
             "online_queries",

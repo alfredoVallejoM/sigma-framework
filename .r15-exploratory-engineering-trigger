@@ -1,0 +1,12 @@
+R15 exploratory engineering applications trigger
+classification=exploratory-engineering
+confirmatory=false
+counts_toward_r15_pass=false
+controller_commit=02a524a744bd536027422ee42968e450b9c1a5eb
+expected_records=64
+param04_replicates=16
+param04_guesses=32
+param05_replicates_per_budget=16
+param05_nonce_budgets=128,512
+param06_replicates=16
+param06_samples=512

@@ -70,6 +70,7 @@ def run_audit_shadow_v3() -> dict[str, object]:
         record.write_bytes(original)
 
         receipt = receipt_path_v3(root, keys[2])
+        original_receipt = receipt.read_bytes()
         receipt_value = json.loads(receipt.read_text(encoding="utf-8"))
         receipt_value["record_sha256"] = "00" * 32
         receipt.write_text(json.dumps(receipt_value), encoding="utf-8")
@@ -79,6 +80,7 @@ def run_audit_shadow_v3() -> dict[str, object]:
             checks["receipt_tamper_rejected"] = True
         else:
             checks["receipt_tamper_rejected"] = False
+        receipt.write_bytes(original_receipt)
 
         missing = record_path_v3(root, keys[3])
         missing.unlink()

@@ -62,6 +62,7 @@ FROZEN_PATHS = (
     "experiments/r15_audit_shadow.py",
     "scripts/check_r15_audit_shadow.py",
     "experiments/r15_confirmatory_internal.py",
+    "experiments/r15_wave1_dataset.py",
     "scripts/run_r15_internal.py",
     ".github/workflows/r15-internal-wave1.yml",
     "scripts/check_r15_plan.py",

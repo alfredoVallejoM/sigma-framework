@@ -34,14 +34,10 @@ def check_r15_reduced_shadow() -> dict[str, object]:
         raise RuntimeError("R15-D shadow crossed the confirmatory boundary")
 
     red02_k = {
-        int(item["metrics"]["state_count"])
-        for item in results
-        if item["attack_id"] == "RED-02"
+        int(item["metrics"]["state_count"]) for item in results if item["attack_id"] == "RED-02"
     }
     red04_policies = {
-        item["metrics"]["policy"]
-        for item in results
-        if item["attack_id"] == "RED-04"
+        item["metrics"]["policy"] for item in results if item["attack_id"] == "RED-04"
     }
     tmto_strategies = {
         item["metrics"]["strategy"]

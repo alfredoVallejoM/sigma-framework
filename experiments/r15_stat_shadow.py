@@ -49,9 +49,8 @@ def run_stat_shadow_suite_v3(root: Path) -> dict[str, object]:
 
             generator = StatStreamGeneratorV3(identity)
             first_block = generator.output_block(0)
-            if (
-                construction == "broken-control"
-                and (len(first_block) != 64 or first_block[:32] != first_block[32:])
+            if construction == "broken-control" and (
+                len(first_block) != 64 or first_block[:32] != first_block[32:]
             ):
                 raise RuntimeError("broken control lost its repeated-half defect")
 

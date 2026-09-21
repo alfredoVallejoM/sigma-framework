@@ -206,6 +206,160 @@ def paired_bootstrap_ratio_interval_v3(
     )
 
 
+
+
+def _linear_slope(xs: Sequence[float], ys: Sequence[float]) -> float:
+    if len(xs) != len(ys) or len(xs) < 2:
+        raise ValueError("slope inputs must be equal with at least two points")
+    x_mean = sum(xs) / len(xs)
+    y_mean = sum(ys) / len(ys)
+    denominator = sum((x - x_mean) ** 2 for x in xs)
+    if denominator == 0:
+        raise ValueError("slope x-axis has zero variance")
+    return sum(
+        (x - x_mean) * (y - y_mean) for x, y in zip(xs, ys, strict=True)
+    ) / denominator
+
+
+def scaling_slope_v3(
+    xs: Sequence[float],
+    works: Sequence[float],
+) -> float:
+    if any(work <= 0 for work in works):
+        raise ValueError("work values must be positive")
+    return _linear_slope(xs, [math.log2(work) for work in works])
+
+
+def bootstrap_survival_statistic_v3(
+    times: Sequence[int],
+    events: Sequence[bool],
+    *,
+    statistic: str,
+    label: str,
+    tau: int | None = None,
+    replicates: int = BOOTSTRAP_REPLICATES,
+    level: float = 0.95,
+) -> IntervalV3:
+    if len(times) != len(events) or not times:
+        raise ValueError("times/events must be equal and non-empty")
+    if statistic not in ("q50", "rmst"):
+        raise ValueError("statistic must be q50 or rmst")
+    if statistic == "rmst" and tau is None:
+        raise ValueError("RMST bootstrap requires tau")
+    rng = _bootstrap_rng(label)
+    n = len(times)
+    estimates: list[float] = []
+    for _ in range(replicates):
+        indices = [rng.randrange(n) for _ in range(n)]
+        sample_times = [times[index] for index in indices]
+        sample_events = [events[index] for index in indices]
+        curve = kaplan_meier_v3(sample_times, sample_events)
+        if statistic == "q50":
+            estimate = km_q50_v3(curve)
+            if estimate is None:
+                continue
+            estimates.append(float(estimate))
+        else:
+            assert tau is not None
+            estimates.append(km_rmst_v3(curve, tau=tau))
+    if len(estimates) < max(100, int(0.8 * replicates)):
+        raise ValueError("too many bootstrap samples have a non-estimable survival statistic")
+    alpha = 1.0 - level
+    return IntervalV3(
+        _percentile(estimates, alpha / 2),
+        _percentile(estimates, 1 - alpha / 2),
+        level,
+    )
+
+
+@dataclass(frozen=True)
+class ScalingCellV3:
+    x: float
+    times: tuple[int, ...]
+    events: tuple[bool, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.times) != len(self.events) or not self.times:
+            raise ValueError("scaling cell survival data must be equal and non-empty")
+
+
+def bootstrap_scaling_slope_interval_v3(
+    cells: Sequence[ScalingCellV3],
+    *,
+    label: str,
+    replicates: int = BOOTSTRAP_REPLICATES,
+    level: float = 0.95,
+) -> IntervalV3:
+    if len(cells) < 2:
+        raise ValueError("scaling bootstrap requires at least two cells")
+    observed_x = [cell.x for cell in cells]
+    if len(set(observed_x)) != len(observed_x):
+        raise ValueError("scaling x coordinates must be unique")
+    rng = _bootstrap_rng(label)
+    slopes: list[float] = []
+    for _ in range(replicates):
+        q50s: list[float] = []
+        xs: list[float] = []
+        for cell in cells:
+            n = len(cell.times)
+            indices = [rng.randrange(n) for _ in range(n)]
+            curve = kaplan_meier_v3(
+                [cell.times[index] for index in indices],
+                [cell.events[index] for index in indices],
+            )
+            q50 = km_q50_v3(curve)
+            if q50 is None:
+                break
+            xs.append(cell.x)
+            q50s.append(float(q50))
+        if len(q50s) == len(cells):
+            slopes.append(scaling_slope_v3(xs, q50s))
+    if len(slopes) < max(100, int(0.8 * replicates)):
+        raise ValueError("too many bootstrap slope samples are non-estimable")
+    alpha = 1.0 - level
+    return IntervalV3(
+        _percentile(slopes, alpha / 2),
+        _percentile(slopes, 1 - alpha / 2),
+        level,
+    )
+
+
+@dataclass(frozen=True)
+class SimultaneousBandPointV3:
+    x: float
+    estimate: float
+    lower: float
+    upper: float
+
+
+def simultaneous_mean_band_v3(
+    groups: Sequence[tuple[float, Sequence[float]]],
+    *,
+    label: str,
+    replicates: int = BOOTSTRAP_REPLICATES,
+    level: float = 0.95,
+) -> tuple[SimultaneousBandPointV3, ...]:
+    if len(groups) < 2:
+        raise ValueError("simultaneous band requires at least two groups")
+    if any(not values for _x, values in groups):
+        raise ValueError("simultaneous band groups must be non-empty")
+    estimates = [sum(values) / len(values) for _x, values in groups]
+    rng = _bootstrap_rng(label)
+    max_deviations: list[float] = []
+    for _ in range(replicates):
+        deviations: list[float] = []
+        for estimate, (_x, values) in zip(estimates, groups, strict=True):
+            n = len(values)
+            sample_mean = sum(values[rng.randrange(n)] for _ in range(n)) / n
+            deviations.append(abs(sample_mean - estimate))
+        max_deviations.append(max(deviations))
+    radius = _percentile(max_deviations, level)
+    return tuple(
+        SimultaneousBandPointV3(x, estimate, estimate - radius, estimate + radius)
+        for estimate, (x, _values) in zip(estimates, groups, strict=True)
+    )
+
+
 def holm_adjust_v3(p_values: Sequence[float]) -> tuple[float, ...]:
     if any(not 0.0 <= value <= 1.0 for value in p_values):
         raise ValueError("p-values must be in [0,1]")
@@ -244,8 +398,12 @@ __all__ = [
     "PRIMARY_ALPHA",
     "RARE_EVENT_ALPHA",
     "IntervalV3",
+    "ScalingCellV3",
+    "SimultaneousBandPointV3",
     "SurvivalPointV3",
     "bootstrap_mean_interval_v3",
+    "bootstrap_scaling_slope_interval_v3",
+    "bootstrap_survival_statistic_v3",
     "clopper_pearson_interval_v3",
     "holm_adjust_v3",
     "kaplan_meier_v3",
@@ -253,5 +411,7 @@ __all__ = [
     "km_rmst_v3",
     "paired_bootstrap_ratio_interval_v3",
     "pareto_frontier_v3",
+    "scaling_slope_v3",
+    "simultaneous_mean_band_v3",
     "zero_event_upper_bound_v3",
 ]

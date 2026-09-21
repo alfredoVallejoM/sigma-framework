@@ -35,7 +35,7 @@ from .r15_history_games import (
     profile_history_game_v3,
 )
 from .r15_layout_ablation import profile_layout_ablation_three_way_v3
-from .r15_parameter_analysis import parameter_mutual_information_profile_v3
+from .r15_parameter_analysis_fast import parameter_mutual_information_profile_vectorized_v3
 from .r141_schema import (
     ConfirmatoryRecordR141,
     config_from_dict_r141,
@@ -318,9 +318,9 @@ def execute_internal_run(
                 candidates=cap,
                 persistent_policy="any",
             )
-            used = cap if collision is None else collision.evaluated_candidates
+            used = cap if second_preimage is None else second_preimage.evaluated_candidates
             return InternalOutcome(
-                "success" if collision is not None else "censored",
+                "success" if second_preimage is not None else "censored",
                 construction,
                 {
                     "queries_to_first_window_collision": used,
@@ -459,7 +459,7 @@ def execute_internal_run(
         )
 
     if attack_id == "PARAM-02":
-        mi_profile = parameter_mutual_information_profile_v3(
+        mi_profile = parameter_mutual_information_profile_vectorized_v3(
             oracle,
             int(factors["samples"]),
             permutations=int(factors["permutations"]),

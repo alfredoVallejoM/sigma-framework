@@ -55,11 +55,7 @@ def _validate_host_manifest(path: Path) -> tuple[str, ...]:
             raise ValueError("physical host_id must be concrete")
         for field in ("platform", "architecture", "cpu", "operator"):
             value_field = host[field]
-            if (
-                not isinstance(value_field, str)
-                or not value_field
-                or "FILL-ME" in value_field
-            ):
+            if not isinstance(value_field, str) or not value_field or "FILL-ME" in value_field:
                 raise ValueError(f"host {host_id} field {field} is not concrete")
         memory = host["memory_bytes"]
         if isinstance(memory, bool) or not isinstance(memory, int) or memory <= 0:
@@ -92,8 +88,8 @@ def _validate_external_tools(path: Path) -> tuple[str, ...]:
         observed.add(battery_id)
     if observed != expected:
         raise ValueError(
-            f"external battery coverage mismatch: missing={sorted(expected-observed)}, "
-            f"extra={sorted(observed-expected)}"
+            f"external battery coverage mismatch: missing={sorted(expected - observed)}, "
+            f"extra={sorted(observed - expected)}"
         )
     return tuple(sorted(observed))
 

@@ -208,30 +208,30 @@ def execute_internal_run(
         return _execute_hist01(oracle, seed, factors, declared)
 
     if attack_id == "HIST-02":
-        config = _history_config(factors)
+        hist02_config = _history_config(factors)
         cap = int(factors["candidate_budget"])
-        result = find_first_full_state_collision_v3(
+        full_state = find_first_full_state_collision_v3(
             oracle,
-            config,
+            hist02_config,
             round_index=int(factors["round_index"]),
             candidates=cap,
         )
         return InternalOutcome(
-            "success" if result.success else "censored",
+            "success" if full_state.success else "censored",
             "r125-history",
             {
-                "queries_to_first_full_state_collision": result.queries,
-                "collision_pairs": result.collision_pairs_at_stop,
-                "censored": result.censored,
+                "queries_to_first_full_state_collision": full_state.queries,
+                "collision_pairs": full_state.collision_pairs_at_stop,
+                "censored": full_state.censored,
             },
-            _scaled_observed(declared, used_work=result.queries, declared_work=cap),
-            None if result.success else "no-full-state-collision-at-candidate-budget",
+            _scaled_observed(declared, used_work=full_state.queries, declared_work=cap),
+            None if full_state.success else "no-full-state-collision-at-candidate-budget",
         )
 
     if attack_id == "HIST-03":
         bits = int(factors["history_bits"])
         budget = int(factors["input_budget"])
-        result = profile_history_game_v3(
+        history_game = profile_history_game_v3(
             oracle,
             _history_config(factors),
             persistent=3,
@@ -241,15 +241,15 @@ def execute_internal_run(
             input_budget=budget,
         )
         return InternalOutcome(
-            "success" if result.success else "no-success",
+            "success" if history_game.success else "no-success",
             "history-step",
             {
-                "queries": result.queries,
-                "game": result.game,
-                "collision_pairs": result.collision_pairs,
-                "cycles": result.cycles,
-                "max_cycle_length": result.max_cycle_length,
-                "max_tail_length": result.max_tail_length,
+                "queries": history_game.queries,
+                "game": history_game.game,
+                "collision_pairs": history_game.collision_pairs,
+                "cycles": history_game.cycles,
+                "max_cycle_length": history_game.max_cycle_length,
+                "max_tail_length": history_game.max_tail_length,
                 "history_bits": bits,
             },
             _full_observed(declared),
@@ -257,7 +257,7 @@ def execute_internal_run(
 
     if attack_id == "HIST-05":
         bits = int(factors["history_bits"])
-        result = profile_history_truncation_v3(
+        truncation = profile_history_truncation_v3(
             seed,
             (bits,),
             state_bits=int(factors["state_bits"]),
@@ -270,10 +270,10 @@ def execute_internal_run(
             "success",
             "r125-history",
             {
-                "full_collision_pairs": result.full_collision_pairs,
-                "visible_collision_pairs": result.visible_collision_pairs,
-                "visible_image_size": result.visible_image_size,
-                "full_image_size": result.full_image_size,
+                "full_collision_pairs": truncation.full_collision_pairs,
+                "visible_collision_pairs": truncation.visible_collision_pairs,
+                "visible_image_size": truncation.visible_image_size,
+                "full_image_size": truncation.full_image_size,
             },
             _full_observed(declared),
         )
@@ -307,89 +307,91 @@ def execute_internal_run(
         )
 
     if attack_id in ("RED-02", "RED-03", "RED-04", "RED-05"):
-        config = _history_config(factors, state_count_default=2)
+        history_config = _history_config(factors, state_count_default=2)
         construction = str(factors["construction"])
         cap = int(factors["max_candidates"])
         if attack_id == "RED-02":
-            found = find_window_collision_v3(
+            collision = find_window_collision_v3(
                 oracle,
-                config,
+                history_config,
                 construction=construction,  # type: ignore[arg-type]
                 candidates=cap,
                 persistent_policy="any",
             )
-            used = cap if found is None else found.evaluated_candidates
+            used = cap if collision is None else collision.evaluated_candidates
             return InternalOutcome(
-                "success" if found is not None else "censored",
+                "success" if collision is not None else "censored",
                 construction,
                 {
                     "queries_to_first_window_collision": used,
-                    "censored": found is None,
-                    "state_count": config.state_count,
+                    "censored": collision is None,
+                    "state_count": history_config.state_count,
                 },
                 _scaled_observed(declared, used_work=used, declared_work=cap),
-                None if found is not None else "no-window-collision-at-candidate-budget",
+                None if collision is not None else "no-window-collision-at-candidate-budget",
             )
         if attack_id == "RED-03":
             target_candidate = (1 << 120) + 17
             target = evaluate_reduced_history(
                 oracle,
-                config,
+                history_config,
                 target_candidate,
                 construction,  # type: ignore[arg-type]
             ).window
-            found = find_window_preimage_v3(
+            preimage = find_window_preimage_v3(
                 oracle,
-                config,
+                history_config,
                 construction=construction,  # type: ignore[arg-type]
                 target_window=target,
                 candidates=cap,
             )
-            used = cap if found is None else int(found["evaluated_candidates"])
+            used = cap if preimage is None else int(preimage["evaluated_candidates"])
             return InternalOutcome(
-                "success" if found is not None else "censored",
+                "success" if preimage is not None else "censored",
                 construction,
                 {
                     "queries": used,
                     "target_candidate": target_candidate,
-                    "censored": found is None,
+                    "censored": preimage is None,
                 },
                 _scaled_observed(declared, used_work=used, declared_work=cap),
-                None if found is not None else "no-preimage-at-candidate-budget",
+                None if preimage is not None else "no-preimage-at-candidate-budget",
             )
         if attack_id == "RED-04":
             policy = "same" if factors["policy"] == "same-persistent" else "any"
-            found = find_window_second_preimage_v3(
+            second_preimage = find_window_second_preimage_v3(
                 oracle,
-                config,
+                history_config,
                 construction=construction,  # type: ignore[arg-type]
                 target_candidate=17,
                 candidates=cap,
                 persistent_policy=policy,  # type: ignore[arg-type]
             )
-            used = cap if found is None else found.evaluated_candidates
+            used = cap if collision is None else collision.evaluated_candidates
             return InternalOutcome(
-                "success" if found is not None else "censored",
+                "success" if collision is not None else "censored",
                 construction,
                 {
                     "queries": used,
                     "policy": str(factors["policy"]),
-                    "persistent_equal": False if found is None else found.persistent_equal,
-                    "censored": found is None,
+                    "persistent_equal": (
+                        False if second_preimage is None else second_preimage.persistent_equal
+                    ),
+                    "censored": second_preimage is None,
                 },
                 _scaled_observed(declared, used_work=used, declared_work=cap),
-                None if found is not None else "no-second-preimage-at-candidate-budget",
+                None if second_preimage is not None else "no-second-preimage-at-candidate-budget",
             )
         targets = int(factors["targets"])
-        result = multi_target_window_attack_v3(
+        multi_target = multi_target_window_attack_v3(
             oracle,
             config,
             construction=construction,  # type: ignore[arg-type]
             targets=targets,
             search_candidates=cap,
         )
-        used = int(result["evaluated"])
-        success = bool(result["success"])
+        used = int(multi_target["evaluated"])
+        success = bool(multi_target["success"])
         return InternalOutcome(
             "success" if success else "censored",
             construction,
@@ -399,7 +401,7 @@ def execute_internal_run(
         )
 
     if attack_id in ("TMTO-01", "TMTO-02"):
-        result = measure_tmto_v3(
+        tmto_result = measure_tmto_v3(
             oracle,
             TMTOConfigV3(
                 bits=int(factors["state_bits"]),
@@ -412,50 +414,54 @@ def execute_internal_run(
             str(factors["strategy"]),  # type: ignore[arg-type]
             str(factors["construction"]),  # type: ignore[arg-type]
         )
-        work = result.offline_queries + result.online_queries + result.history_queries
+        work = (
+            tmto_result.offline_queries
+            + tmto_result.online_queries
+            + tmto_result.history_queries
+        )
         observed = ResourceBudget(
             min(declared.W, work),
             0,
             0,
-            min(declared.Q_H, result.history_queries),
-            min(declared.Q_R, result.offline_queries + result.online_queries),
-            min(declared.d, result.parallel_depth),
+            min(declared.Q_H, tmto_result.history_queries),
+            min(declared.Q_R, tmto_result.offline_queries + tmto_result.online_queries),
+            min(declared.d, tmto_result.parallel_depth),
             declared.p,
-            min(declared.mu, result.memory_entries),
+            min(declared.mu, tmto_result.memory_entries),
             declared.u,
         )
         return InternalOutcome(
             "success",
-            result.construction,
+            tmto_result.construction,
             {
-                "online_queries": result.online_queries,
-                "offline_queries": result.offline_queries,
-                "memory_entries": result.memory_entries,
-                "history_queries": result.history_queries,
-                "parallel_depth": result.parallel_depth,
-                "reuse_rate": result.reuse_rate,
-                "strategy": result.strategy,
+                "online_queries": tmto_result.online_queries,
+                "offline_queries": tmto_result.offline_queries,
+                "memory_entries": tmto_result.memory_entries,
+                "history_queries": tmto_result.history_queries,
+                "parallel_depth": tmto_result.parallel_depth,
+                "reuse_rate": tmto_result.reuse_rate,
+                "strategy": tmto_result.strategy,
             },
             observed,
         )
 
     if attack_id == "PARAM-01":
-        result = parameter_uniformity_profile_v3(oracle, int(factors["samples"]))
+        uniformity = parameter_uniformity_profile_v3(oracle, int(factors["samples"]))
         return InternalOutcome(
             "success",
             "parameter-derivation",
             {
-                "max_deviation": result.max_deviation,
-                "relative_max_deviation": result.relative_max_deviation,
-                "chi_square": result.chi_square,
-                "observed_pairs": result.observed_pairs,
-                "samples": result.samples,
+                "max_deviation": uniformity.max_deviation,
+                "relative_max_deviation": uniformity.relative_max_deviation,
+                "chi_square": uniformity.chi_square,
+                "observed_pairs": uniformity.observed_pairs,
+                "samples": uniformity.samples,
             },
             _full_observed(declared),
         )
 
     if attack_id == "PARAM-02":
-        result = parameter_mutual_information_profile_v3(
+        mi_profile = parameter_mutual_information_profile_v3(
             oracle,
             int(factors["samples"]),
             permutations=int(factors["permutations"]),
@@ -467,24 +473,24 @@ def execute_internal_run(
             "success",
             "parameter-derivation",
             {
-                "mutual_information": max(result.mi_candidate, result.mi_persistent),
-                "mi_candidate": result.mi_candidate,
-                "mi_persistent": result.mi_persistent,
-                "permutation_p_candidate": result.permutation_p_candidate,
-                "permutation_p_persistent": result.permutation_p_persistent,
-                "permutations": result.permutations,
-                "samples": result.samples,
+                "mutual_information": max(mi_profile.mi_candidate, mi_profile.mi_persistent),
+                "mi_candidate": mi_profile.mi_candidate,
+                "mi_persistent": mi_profile.mi_persistent,
+                "permutation_p_candidate": mi_profile.permutation_p_candidate,
+                "permutation_p_persistent": mi_profile.permutation_p_persistent,
+                "permutations": mi_profile.permutations,
+                "samples": mi_profile.samples,
             },
             _full_observed(declared),
         )
 
     if attack_id == "PARAM-03":
         budget = int(factors["candidate_budget"])
-        result = parameter_grinding_work_ratio_v3(oracle, budget)
+        grinding = parameter_grinding_work_ratio_v3(oracle, budget)
         observed = ResourceBudget(
-            min(declared.W, result.selected_work),
-            min(declared.Q_A, result.attempts),
-            min(declared.Q_J, result.attempts),
+            min(declared.W, grinding.selected_work),
+            min(declared.Q_A, grinding.attempts),
+            min(declared.Q_J, grinding.attempts),
             0,
             0,
             declared.d,
@@ -496,25 +502,25 @@ def execute_internal_run(
             "success",
             "parameter-derivation",
             {
-                "net_work_ratio": result.net_work_ratio,
-                "candidate_budget": result.candidate_budget,
-                "attempts": result.attempts,
-                "selected_cost": result.selected_cost,
-                "selected_work": result.selected_work,
-                "full_evaluation_baseline_work": result.full_evaluation_baseline_work,
+                "net_work_ratio": grinding.net_work_ratio,
+                "candidate_budget": grinding.candidate_budget,
+                "attempts": grinding.attempts,
+                "selected_cost": grinding.selected_cost,
+                "selected_work": grinding.selected_work,
+                "full_evaluation_baseline_work": grinding.full_evaluation_baseline_work,
             },
             observed,
         )
 
     if attack_id == "BRANCH-05":
-        config = BranchFailureConfigV3(
+        branch_config = BranchFailureConfigV3(
             bits=int(factors["state_bits"]),
             branch_count=int(factors["branch_count"]),
             candidates=int(factors["candidates"]),
         )
-        result = profile_branch_failure_v3(
+        branch_failure = profile_branch_failure_v3(
             oracle,
-            config,
+            branch_config,
             "deep",
             str(factors["fault"]),  # type: ignore[arg-type]
         )
@@ -522,17 +528,17 @@ def execute_internal_run(
             "success",
             "deep",
             {
-                "collision_pairs": result.collision_pairs,
-                "image_size": result.image_size,
-                "conservative_bits": result.conservative_bits,
-                "physical_bits": result.physical_bits,
+                "collision_pairs": branch_failure.collision_pairs,
+                "image_size": branch_failure.image_size,
+                "conservative_bits": branch_failure.conservative_bits,
+                "physical_bits": branch_failure.physical_bits,
                 "fault": str(factors["fault"]),
             },
             _full_observed(declared),
         )
 
     if attack_id == "BRANCH-06":
-        result = profile_deep_vector_dependency_v3(
+        branch_dependency = profile_deep_vector_dependency_v3(
             oracle,
             bits=int(factors["state_bits"]),
             branch_count=int(factors["branch_count"]),
@@ -543,11 +549,11 @@ def execute_internal_run(
             "success",
             "deep-vector",
             {
-                "affected_branches": result.mean_affected_branches,
-                "all_branches_affected_rate": result.all_branches_affected_rate,
-                "hamming_distance_sum": result.hamming_distance_sum,
-                "first_divergence_sum": result.first_divergence_sum,
-                "interventions": result.interventions,
+                "affected_branches": branch_dependency.mean_affected_branches,
+                "all_branches_affected_rate": branch_dependency.all_branches_affected_rate,
+                "hamming_distance_sum": branch_dependency.hamming_distance_sum,
+                "first_divergence_sum": branch_dependency.first_divergence_sum,
+                "interventions": branch_dependency.interventions,
                 "fault": str(factors["fault"]),
             },
             _full_observed(declared),

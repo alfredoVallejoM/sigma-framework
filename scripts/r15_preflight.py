@@ -28,6 +28,7 @@ UnlockScope = Literal["internal", "stat", "full"]
 
 ENGINEERING_ATTACKS = ("PARAM-04", "PARAM-05", "PARAM-06")
 STAT_ATTACKS = ("STAT-01",)
+MANDATORY_STAT_BATTERIES = ("nist-sts", "practrand")
 INTERNAL_ATTACKS = tuple(
     attack_id
     for attack_id in confirmatory_attack_ids_r141()
@@ -97,7 +98,7 @@ def _validate_external_tools(path: Path) -> tuple[str, ...]:
     entries = value.get("batteries")
     if not isinstance(entries, list):
         raise ValueError("external-tool batteries must be a list")
-    expected = {spec.battery_id for spec in BATTERIES_V3}
+    expected = set(MANDATORY_STAT_BATTERIES)
     observed: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):

@@ -19,8 +19,8 @@
       "commit": "3d69f74850a401f4d4f6738e2b397f7e6f3ee430"
     },
     "stat": {
-      "ref": "dab2f6928288a753da68771f7b7084d15bf7fba6",
-      "commit": "dab2f6928288a753da68771f7b7084d15bf7fba6",
+      "ref": "sigma-v3-r15-stat-tooling-v1",
+      "commit": "16f363004284d7d2e50bb86b4c63e6d63db78694",
       "local_only_tag": "sigma-v3-r15-stat-tooling-v1"
     }
   },

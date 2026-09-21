@@ -45,7 +45,9 @@ Build a local resumable orchestrator that reproduces those workflow bodies with 
 - base confirmatory source: 80214afde29b3596af83265e18c1e2926e14dd2f
 - amendment source: 108f0434a07d85fd6798b1bdb1d306a6cb3293cf
 - exploratory engineering controller: 3d69f74850a401f4d4f6738e2b397f7e6f3ee430
-- STAT tooling source: dab2f6928288a753da68771f7b7084d15bf7fba6
+- STAT tooling source: 16f363004284d7d2e50bb86b4c63e6d63db78694
+  (pre-data implementation amendment: accept NIST STS 2.1.2's documented
+  successful exit 1 only when both completion output and final report exist)
 
 Use Python 3.13. Build exact wheels and manifests exactly as the historical workflows did. For the STAT tooling tag sigma-v3-r15-stat-tooling-v1, create it LOCALLY only if the preflight requires it; do not push that tag to GitHub.
 

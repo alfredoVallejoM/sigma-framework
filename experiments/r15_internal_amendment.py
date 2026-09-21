@@ -1,4 +1,8 @@
-"""Constants and invariants for the pre-execution R15 internal amendment."""
+"""Constants and invariants for the pre-execution R15 internal amendment.
+
+Source-isolation note: this amendment is intentionally independent of the
+post-freeze Wave 2/Wave 3A controllers and application-engineering tooling.
+"""
 
 from __future__ import annotations
 

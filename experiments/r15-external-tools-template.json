@@ -1,0 +1,42 @@
+{
+  "schema": "sigma-v3-r15-external-tools-v1",
+  "status": "template-not-ready",
+  "batteries": [
+    {
+      "battery_id": "nist-sts",
+      "version": "FILL-ME",
+      "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "command": [
+        "FILL-ME"
+      ],
+      "transport": "single-temporary-file-or-adapter"
+    },
+    {
+      "battery_id": "practrand",
+      "version": "FILL-ME",
+      "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "command": [
+        "FILL-ME"
+      ],
+      "transport": "stdin-pipe"
+    },
+    {
+      "battery_id": "testu01-smallcrush",
+      "version": "FILL-ME",
+      "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "command": [
+        "FILL-ME"
+      ],
+      "transport": "stdin-callback-wrapper"
+    },
+    {
+      "battery_id": "testu01-crush",
+      "version": "FILL-ME",
+      "binary_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "command": [
+        "FILL-ME"
+      ],
+      "transport": "stdin-callback-wrapper"
+    }
+  ]
+}

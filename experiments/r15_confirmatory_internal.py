@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import platform
@@ -694,5 +695,58 @@ __all__ = [
     "INTERNAL_CAMPAIGN_ID",
     "InternalOutcome",
     "execute_internal_run",
+    "main",
     "run_internal_shard",
 ]
+
+
+
+def _parse_factor_filters(values: list[str]) -> dict[str, str]:
+    filters: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError("--factor must use KEY=VALUE")
+        key, item = value.split("=", 1)
+        if not key or not item:
+            raise ValueError("--factor KEY and VALUE must be non-empty")
+        if key in filters:
+            raise ValueError(f"duplicate factor filter: {key}")
+        filters[key] = item
+    return filters
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Execute one sharded R15 internal confirmatory campaign."
+    )
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--execution-manifest", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--shard-index", type=int, required=True)
+    parser.add_argument("--shard-count", type=int, required=True)
+    parser.add_argument("--factor", action="append", default=[])
+    parser.add_argument("--report", type=Path)
+    args = parser.parse_args()
+    try:
+        report = run_internal_shard(
+            config_path=args.config,
+            execution_manifest_path=args.execution_manifest,
+            output_root=args.output,
+            shard_index=args.shard_index,
+            shard_count=args.shard_count,
+            factor_filters=_parse_factor_filters(args.factor),
+        )
+    except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(str(exc))
+    if args.report is not None:
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    print(json.dumps(report, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

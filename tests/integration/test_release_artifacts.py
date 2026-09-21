@@ -4,10 +4,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from sigma.version import PACKAGE_VERSION
+
 
 def test_release_artifacts_contain_auditable_hashes(tmp_path: Path) -> None:
-    wheel = tmp_path / "sigma_framework-2.2.0a1-py3-none-any.whl"
-    source = tmp_path / "sigma_framework-2.2.0a1.tar.gz"
+    wheel = tmp_path / f"sigma_framework-{PACKAGE_VERSION}-py3-none-any.whl"
+    source = tmp_path / f"sigma_framework-{PACKAGE_VERSION}.tar.gz"
     wheel.write_bytes(b"wheel")
     source.write_bytes(b"source")
     result = subprocess.run(
@@ -23,13 +25,18 @@ def test_release_artifacts_contain_auditable_hashes(tmp_path: Path) -> None:
     assert hashlib.sha256(b"source").hexdigest() in checksums
     sbom = json.loads((tmp_path / "sigma-framework.cdx.json").read_text(encoding="utf-8"))
     assert sbom["bomFormat"] == "CycloneDX"
-    assert sbom["metadata"]["component"]["version"] == "2.2.0a1"
+    assert sbom["metadata"]["component"]["version"] == PACKAGE_VERSION
     assert len(sbom["components"]) == 2
     properties = {item["name"]: item["value"] for item in sbom["metadata"]["properties"]}
     assert properties["sigma:context-wire-version"] == "2"
     assert properties["sigma:evidence-wire-version"] == "2"
+    assert properties["sigma:kdf-parameter-wire-version"] == "2"
+    assert properties["sigma:kdf-record-wire-version"] == "2"
+    assert properties["sigma:pow-wire-version"] == "3"
     assert properties["sigma:signed-commitment-wire-version"] == "2"
-    assert properties["sigma:suite-families"] == "v2-1,v2-2"
+    assert properties["sigma:active-suite-families"] == "v3-r12.5"
+    assert properties["sigma:suite-families"] == "v3-r12.5,v2-2,v3-r12"
+    assert properties["sigma:transitional-suite-families"] == "v2-2,v3-r12"
     assert len(properties["sigma:git-commit"]) == 40
 
 

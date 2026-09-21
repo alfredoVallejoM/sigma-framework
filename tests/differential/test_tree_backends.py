@@ -3,20 +3,15 @@ import os
 import pytest
 
 from sigma.backends import SERIAL_BACKEND, MultiprocessingTreeBackend
+from sigma.presets import simultaneous_v2_2
 from sigma.spec import SigmaContextV2
-from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import hash_bytes, hash_file
 
 LEAF_SIZE = 65536
 
 
 def tree_context() -> SigmaContextV2:
-    return SigmaContextV2(
-        suite_id=SuiteId.SIMULTANEOUS_TREE_WIDE_V2,
-        anchor_profile=AnchorProfileId.TREE_WIDE,
-        chunk_size=LEAF_SIZE,
-        target_round=2,
-    )
+    return simultaneous_v2_2(target_round=2)
 
 
 @pytest.mark.parametrize("size", [0, 1, LEAF_SIZE, LEAF_SIZE + 1, 3 * LEAF_SIZE + 17])
@@ -55,6 +50,11 @@ def test_multiprocessing_backend_rejects_non_tree_suite() -> None:
 
 
 def test_file_serial_and_mmap_workers_are_identical(tmp_path) -> None:
+    if os.name == "nt":
+        pytest.skip(
+            "frozen v2.2 file_snapshot path/fd identity is not portable on Windows; "
+            "R12.5 v3 file/process equivalence is tested separately"
+        )
     payload = bytes((index * 11) % 256 for index in range(4 * LEAF_SIZE + 19))
     path = tmp_path / "tree-input.bin"
     path.write_bytes(payload)

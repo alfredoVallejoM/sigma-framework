@@ -208,9 +208,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             else {}
         )
         for summary, _ in cells:
-            summary["model_best_rmse"] = (
-                min(rmse, key=lambda name: rmse[name]) if rmse else None
-            )
+            summary["model_best_rmse"] = min(rmse, key=lambda name: rmse[name]) if rmse else None
             summary["model_rmse"] = rmse
             summary["slope_log2_work_per_effective_bit"] = observed_slope
             summary["slope_bootstrap_95"] = (

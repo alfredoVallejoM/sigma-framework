@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "campaign": "pilot-v2-2",
   "constructions": ["sha512", "blake2b-512", "concat-branches", "sigma-wide", "sigma-cross", "sigma-deep", "sigma-deep-vector"],
   "experiment": "EXP-09",

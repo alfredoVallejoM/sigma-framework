@@ -13,14 +13,8 @@ from sigma.outputs import SigmaDigestV2
 from sigma.policy import DEFAULT_RESOURCE_POLICY
 from sigma.presets import get_preset
 from sigma.v2 import hash_bytes, hash_file, verify_full, verify_full_file
-from sigma.vectors import ALL_VECTORS
 
 PRESETS = (
-    "lightweight-v2",
-    "simultaneous-v2",
-    "realtime-v2",
-    "paranoid-wide-v2",
-    "paranoid-deep-v2",
     "reference-v2-2",
     "lightweight-v2-2",
     "simultaneous-v2-2",
@@ -114,7 +108,7 @@ def _hash_command(args) -> int:
     context = _context(args)
     backend = None
     if args.workers is not None:
-        if args.preset not in ("simultaneous-v2", "simultaneous-v2-2"):
+        if args.preset != "simultaneous-v2-2":
             raise ValueError("--workers is only valid with a simultaneous preset")
         backend = MultiprocessingTreeBackend(args.workers)
     digest = _hash_input(args, context, backend)
@@ -139,11 +133,6 @@ def _verify_command(args) -> int:
     )
     print("valid" if valid else "invalid")
     return 0 if valid else 1
-
-
-def _vectors_command(_args) -> int:
-    print(json.dumps(ALL_VECTORS, indent=2, sort_keys=True))
-    return 0
 
 
 def _benchmark_command(args) -> int:
@@ -188,9 +177,6 @@ def build_parser() -> argparse.ArgumentParser:
     _add_digest_input(verify_parser)
     _add_input(verify_parser)
     verify_parser.set_defaults(handler=_verify_command)
-
-    vectors_parser = commands.add_parser("vectors")
-    vectors_parser.set_defaults(handler=_vectors_command)
 
     benchmark_parser = commands.add_parser("benchmark")
     _add_input(benchmark_parser)

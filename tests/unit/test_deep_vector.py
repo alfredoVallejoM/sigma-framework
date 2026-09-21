@@ -1,5 +1,4 @@
 import gc
-import hashlib
 import json
 import statistics
 import tracemalloc
@@ -96,24 +95,20 @@ def test_deep_vector_rejects_wrong_anchor_and_vector_width() -> None:
 
 
 def test_deep_vector_frozen_intermediate_vector() -> None:
-    vector = json.loads(
-        Path("specification/test-vectors/paranoid-deep-vector-v2-2.json").read_text(
-            encoding="utf-8"
-        )
+    corpus = json.loads(
+        Path("specification/test-vectors/conformance-v2-2.json").read_text(encoding="utf-8")
     )
-    context = paranoid_deep_vector_v2_2(target_round=2, state_count=2)
+    vector = next(item for item in corpus["suites"] if item["name"] == "paranoid-deep-vector-v2-2")
+    context = paranoid_deep_vector_v2_2(target_round=2, state_count=3)
     anchor = CrossWide.compute(context, (bytes.fromhex(vector["message_hex"]),))
     digest, transcript = DeepVector(context).evaluate(anchor)
 
-    def sha256(value: bytes) -> str:
-        return hashlib.sha256(value).hexdigest()
-
     assert context.to_bytes().hex() == vector["context_hex"]
-    assert sha256(anchor.to_bytes()) == vector["evidence_sha256"]
-    assert [sha256(root) for root in anchor.roots] == vector["root_sha256"]
-    assert [sha256(root) for root in anchor.cross_roots] == vector["cross_root_sha256"]
-    assert [sha256(state) for state in transcript.states] == vector["vector_sha256"]
-    assert [[sha256(item) for item in row] for row in transcript.branch_outputs] == vector[
-        "component_sha256"
+    assert anchor.to_bytes().hex() == vector["anchor_evidence_hex"]
+    assert [root.hex() for root in anchor.roots] == vector["roots_hex"]
+    assert [root.hex() for root in anchor.cross_roots] == vector["cross_roots_hex"]
+    assert [state.hex() for state in transcript.states] == vector["states_hex"]
+    assert [[item.hex() for item in row] for row in transcript.branch_outputs] == vector[
+        "branch_outputs_hex"
     ]
-    assert sha256(digest.to_bytes()) == vector["digest_sha256"]
+    assert digest.to_bytes().hex() == vector["digest_hex"]

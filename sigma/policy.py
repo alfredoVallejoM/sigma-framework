@@ -26,7 +26,7 @@ class ValidationStatus:
 
 @dataclass(frozen=True)
 class ResourcePolicy:
-    name: str = "sigma-default-v1"
+    name: str = "sigma-default-v2-2"
     min_target_round: int = 0
     max_target_round: int = 65_536
     min_state_count: int = 1

@@ -1,8 +1,0 @@
-{
-  "experiment": "EXP-19",
-  "master_seed": "sigma-exp19-smoke-v1",
-  "widths": [4],
-  "state_counts": [1, 2],
-  "max_candidates": 1024,
-  "repetitions": 2
-}

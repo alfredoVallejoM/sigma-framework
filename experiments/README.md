@@ -1,140 +1,165 @@
 # Reproducible experiment harness
 
-Experiments are simulations or measurements, never proofs. Every configuration
-contains a public master seed. The runner derives independent labelled PRNG
-streams, writes one CSV row per observation, derives a JSON summary, and records
-the source/environment metadata and SHA-256 artifact hashes in a manifest.
+## Sigma v3 R13 design harness
 
-Run a configuration into a new, empty directory:
+R13 adds a separate, disposable attack-design layer for Sigma v3/R12.5:
+
+- `history_reduced.py` and `history_attackers_v3.py`: HIST state-cross,
+  full-state, HistoryStep, truncation and layout ablations;
+- `trajectory_attacks_v3.py`: reduced collision, preimage, second-preimage and
+  multi-target window attackers;
+- `parameter_grinding_v3.py`: PARAM-01..06, including KDF early rejection,
+  PoW nonce grinding and fixed-cost mitigation controls;
+- `tmto_v3.py`: direct, distinguished, rho, Hellman and rainbow models;
+- `branch_failures_v3.py`: Deep/DeepVector broken-branch and broken-fold
+  controls;
+- `r13_registry.py`: closed claim/resource/success/censoring/output registry;
+- `r13_pilots.py`: deterministic interface-validation pilots.
+
+Run the R13 design gate with:
 
 ```console
-python -m experiments.reproduce \
-  --config experiments/configs/exp01-smoke.json \
-  --output experiments/results/my-exp01-run
+python -m scripts.check_r13_design
 ```
 
-The v2 scheduler executes every atomic task in a separate Python process. A
-task owns `tasks/<sha256>/config.json`, `result.json`, `stdout.log` and
-`stderr.log`; the deterministic identifier commits to the effective config,
-label and ordinal. Explicit tasks receive independent SHA-256-derived child
-seeds, recorded in their effective configs; overriding `master_seed` inside a
-task is forbidden. Results are written atomically. An interrupted run can be
-continued without repeating or duplicating completed partitions:
+Every R13 design record has `confirmatory=false`. These pilots exist only to
+validate attacker interfaces, resource accounting, schemas and feasibility
+before R14 freezes budgets/configs. They **must not** be used as article
+results. R15 will be the first phase allowed to create confirmatory v3 evidence.
+
+The v2.2 campaign below remains a historical, separately frozen experimental
+line and is not reinterpreted as v3 evidence.
+
+This directory contains only the active Sigma v2.2 experimental runners,
+their final development-pilot configurations and the frozen
+preregistration. Pilot raw data are transient and cannot feed the paper. The
+only retained pilot evidence is
+[`pilot-decision-record-v2-2.json`](pilot-decision-record-v2-2.json); the
+confirmatory campaign will produce the sole article dataset.
+
+Experiments are measurements or reduced-model simulations, never proofs. The
+allowed interpretation of every endpoint is fixed in
+[`preregistration-v2-2.md`](preregistration-v2-2.md) and
+[`../specification/security-analysis.md`](../specification/security-analysis.md).
+
+## Local pilot campaign
+
+Run all 20 current configurations into a disposable directory:
 
 ```console
+python -m experiments.reproduce_all \
+  --campaign pilot \
+  --output-root /tmp/sigma-v2-2-pilots
+python -m scripts.summarize_pilots /tmp/sigma-v2-2-pilots \
+  --output experiments/pilot-decision-record-v2-2.json
+```
+
+Resume an interrupted campaign without duplicating completed tasks:
+
+```console
+python -m experiments.reproduce_all \
+  --campaign pilot \
+  --output-root /tmp/sigma-v2-2-pilots \
+  --resume
+```
+
+The retained 2026-09-03 decision record covers EXP-01R–12R, EXP-14R and
+EXP-17–21R: 20 runs, 36,731 observations and zero failed run-level quality
+controls. These values demonstrate runner feasibility only. EXP-07 measured a
+confirmatory requirement of 566–677 samples per input bit, so the frozen design
+must use at least 677. EXP-12 verified that every compared mode receives the
+same Argon2id budget. Timing/memory cells still require controlled multihost
+execution.
+
+## Transactional scheduler
+
+Every configuration is validated against a closed, versioned per-experiment
+schema before an output directory is created. `execution.tasks` partitions a
+configuration into deterministic child seeds. Each task owns an immutable
+directory containing its effective config, result, integrity record and
+stdout/stderr. States distinguish `success`, `censored`, `error` and `timeout`;
+right-censoring is a completed scientific result. A retry archives its failed
+attempt instead of overwriting it, and resume rejects tampered artifacts.
+
+Run or resume one configuration with:
+
+```console
+python -m experiments.runner CONFIG OUTPUT
 python -m experiments.runner CONFIG OUTPUT --resume
 ```
 
-Legacy configurations remain one atomic `complete-config` task. New campaigns
-can partition cells without overloading an experiment's scientific
-`repetitions` parameter:
+Summaries separate execution completeness, deterministic invariants,
+hypothesis outcome and quality controls. A result contrary to a hypothesis is
+not an execution failure.
 
-```json
-{
-  "experiment": "EXP-01",
-  "master_seed": "public-seed",
-  "presets": ["reference-v2-2"],
-  "sizes": [],
-  "execution": {
-    "timeout_seconds": 3600,
-    "tasks": [
-      {"label": "empty", "overrides": {"sizes": [0]}},
-      {"label": "boundary-65", "overrides": {"sizes": [65]}}
-    ]
-  }
-}
+## Current experiment catalogue
+
+- EXP-01: six-suite adapter/backend/worker conformance against the independent
+  consumer.
+- EXP-02–04: reduced collision, persistence, anchor and combiner models with
+  censored survival analysis and explicit controls.
+- EXP-05–08: structural dependency, work/span, SAC/BIC and independently framed
+  distribution streams.
+- EXP-09–10: operation-level performance and aggregate memory/trace policy.
+- EXP-11–12: bounded PoW behavior and equal-budget Argon2id+Sigma composition.
+- EXP-14: fault detection/propagation, explicitly not a DFA claim.
+- EXP-17–20: reduced attacker frontiers, Fold/Vector comparison, signed
+  commitment reuse and distinct preimage-family games.
+- EXP-21: primitive-input domain, canonical-framing and downgrade audit.
+
+EXP-13 is not applicable without a specified native core and valid leakage
+acquisition. EXP-16 is not applicable without RTL, testbench, toolchain,
+technology/corner and reproducible synthesis. EXP-15/Psi is not part of the
+active product or campaign.
+
+## Confirmatory freeze and execution
+
+The preregistration was human-approved and frozen on 2026-09-03. Its binding
+record covers the protocol plus 20 final configurations and 5,289 effective
+tasks. The reproducible preparation commands are:
+
+```console
+python -m scripts.prepare_confirmatory \
+  --preregistration experiments/preregistration-v2-2.md \
+  --output experiments/configs/confirmatory-frozen \
+  --artifact-path dist/sigma_framework-2.2.0a2-py3-none-any.whl
+python -m experiments.freeze \
+  --preregistration experiments/preregistration-v2-2.md \
+  --config experiments/configs/confirmatory-frozen/EXP_CONFIG.json \
+  --output experiments/configs/confirmatory-frozen/freeze.json \
+  --reviewed-by "alfredoVallejoM (repository owner)" \
+  --reviewed-at "2026-09-03T14:27:27+02:00"
 ```
 
-`success`, `censored`, `error` and `timeout` are distinct task states.
-Right-censoring is a completed scientific observation. Summary v2 reports
-`execution_complete`, `invariants_passed`, `hypothesis_outcome` and
-`quality_controls_passed`; an unsupported statistical hypothesis does not turn
-an otherwise valid run into an execution failure.
-On resume, `success` and `censored` partitions are immutable. Failed or timed
-out attempts are moved to `tasks/<id>/attempts/` with their logs before a new
-attempt; this retains the failure history while permitting operational
-recovery with a different CLI timeout.
+Repeat `--config` for every frozen file. The freeze record hashes the protocol
+and complete config set. Confirmatory configs must bind that protocol hash,
+select the freeze manifest, the v2.2 suite family and the installed wheel.
 
-Committed `*-smoke-*` results only validate the pipeline at modest cost. They
-must not be described as the full experiment or as evidence at production
-width. Full paper datasets belong in a versioned archival release/DOI and must
-retain their compressed raw observations, configuration and manifest together.
+Only a clean checkout at an exact tag may run the campaign:
 
-Current runners:
+```console
+python -m experiments.reproduce_all \
+  --campaign confirmatory \
+  --output-root /ARCHIVE/sigma-v2-2-confirmatory
+```
 
-- `EXP-01`: exact adapter/chunk/backend/worker determinism.
-- `EXP-02`: deterministic reduced-oracle collision simulations.
-- `EXP-03`: conditional collision persistence with exact binomial checks.
-- `EXP-04`: reduced-width anchor bottlenecks under broken/correlated branches.
-- `EXP-05`: exact bit-difference masks across real v2 roots, connections and states.
-- `EXP-06`: exact work/depth accounting and measured candidate-level concurrency.
-- `EXP-07`: layer-separated SAC masks with exact binomial/Bonferroni analysis.
-- `EXP-08`: canonical output streams with frequency, runs and serial-dependence tests.
-- `EXP-09`: randomized multi-process timings with raw observations and bootstrap intervals.
-- `EXP-10`: fresh-process Python allocation/RSS measurements and explicit model selection.
-- `EXP-11`: reduced-difficulty, canonically specified multi-state PoW predicates.
-- `EXP-12`: Argon2id versus Argon2id-plus-Sigma dictionary cost (optional `kdf` extra).
-- `EXP-13`: gated; requires a specified native implementation and leakage evidence.
-- `EXP-14`: fault propagation/detection, explicitly not DFA.
-- `EXP-15`: structural and reduced-width legacy `Psi` analysis.
-- `EXP-16`: gated; requires RTL, toolchain, constraints and actual synthesis.
-- `EXP-17`: six reduced precomputation/TM/multicollision attackers across anchors.
-- `EXP-18`: consecutive reduced Deep fold versus DeepVector trajectories.
-- `EXP-19`: reduced commitment-reuse events with Ed25519 explicitly unreduced.
-- `EXP-20`: separate preimage, second-preimage and multi-target games/attackers.
-- `EXP-21`: real primitive-input, registered-domain, TLV and downgrade audit.
+The runner records the exact commit/tag, canonical config, wheel metadata/hash,
+real import path, command, interpreter, dependencies, host/hardware and hashes
+of every non-self artifact. Confirmatory raw data, logs, wheel, checksums and
+SBOM belong in the versioned external archive; Git retains the configs, freeze,
+index, hashes and summaries.
 
-The EXP-17..21 smoke configurations are historical implementation pilots. The
-revised pilot configs under `configs/pilots` add rho/Hellman/rainbow/
-multicollision attackers, consecutive Fold/Vector segments, explicit signed
-components, three preimage attackers and opt-in capture of actual primitive
-inputs. They are still reduced pilots, not confirmatory evidence.
+## External distribution batteries
 
-Prepare independent EXP-08 streams for external batteries without changing
-their byte or bit order:
+EXP-08 stream export preserves byte order and records the transformation:
 
 ```console
 python -m scripts.export_distribution_streams EXP08_RUN BATTERY_EXPORT
 ```
 
-The export manifest commits to the source config/observations and every binary
-stream, records the exact transform, and reports NIST SP 800-22, PractRand and
-TestU01 executables as available or unavailable. It does not claim a battery
-was executed; full commands, versions and stdout/stderr belong in the archived
-external campaign.
+NIST SP 800-22, PractRand and TestU01 must be run externally with versions,
+commands and complete outputs archived. Availability detection is not evidence
+that a battery ran, and passing a battery is not a cryptographic security claim.
 
-Each new run embeds a canonical `config.json`. To execute all ten smoke
-configurations and regenerate the complete figure set in one operation, use:
-
-```console
-python -m experiments.reproduce_all \
-  --output-root /tmp/sigma-reproduction \
-  --figure-output /tmp/sigma-reproduction-figures
-```
-
-The files under `experiments/configs/confirmatory` are retained historical
-`confirmatory-v1` drafts. They predate the revised R designs and are deliberately
-blocked by both the runner and `reproduce_all`. A future confirmatory config
-must name a frozen preregistration and its SHA-256; the runner also automatically
-requires a clean exact tag and hashed installed artifact. The current
-`preregistration-v2-2.md` is explicitly a draft and cannot satisfy that gate.
-
-The manifest records exact commit/tag state, microcode, dependencies, command,
-seed derivation and artifact hashes. Each task records start/end temperature,
-CPU frequency and governor samples. Missing or inaccessible measurements are
-represented as `null`; they are never inferred. Use `--require-clean-tag` for
-a publishable run: it refuses execution unless the tree is clean, `HEAD` has an
-exact tag and `artifact_path` identifies the installed wheel/executable whose
-SHA-256 is recorded. Two endpoint samples expose drift but do not replace
-external host stabilization or a higher-frequency hardware logger.
-
-After a pilot, derive a measured planning envelope with:
-
-```console
-python -m scripts.estimate_campaign_budget PILOT_RUN --planned-tasks 1000
-```
-
-The report extrapolates serial wall time, disk and observations from completed
-partitions and reports worker CPU/RSS data where the platform exposes it. RSS is
-kept in the operating system's native `getrusage` units (KiB on Linux, bytes on
-macOS), so cross-platform conversion must be explicit in the frozen protocol.
+The project-wide order and gates are defined in
+[`../docs/final-development-plan-v2-2.md`](../docs/final-development-plan-v2-2.md).

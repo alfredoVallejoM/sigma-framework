@@ -371,6 +371,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r15-harness-gate",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_harness",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

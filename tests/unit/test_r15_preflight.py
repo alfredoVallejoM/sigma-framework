@@ -7,7 +7,13 @@ from pathlib import Path
 from experiments.common import sha256_file
 from experiments.r141_protocol import R141_FREEZE_ID, R141_TAG
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
-from scripts.r15_preflight import unlock_r15
+from scripts.r15_preflight import (
+    INTERNAL_ATTACKS,
+    PHYSICAL_ATTACKS,
+    STAT_ATTACKS,
+    authorized_attacks_for_scope,
+    unlock_r15,
+)
 
 
 def _host_manifest(path: Path) -> None:
@@ -165,3 +171,19 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
     assert isinstance(batteries, list) and len(batteries) == 4
     assert isinstance(runkey_sha256, str) and len(runkey_sha256) == 64
     assert json.loads(output.read_text(encoding="utf-8")) == result
+
+
+
+def test_staged_unlock_scopes_partition_confirmatory_attacks() -> None:
+    internal = set(authorized_attacks_for_scope("internal"))
+    physical = set(authorized_attacks_for_scope("physical"))
+    stat = set(authorized_attacks_for_scope("stat"))
+    full = set(authorized_attacks_for_scope("full"))
+    assert internal == set(INTERNAL_ATTACKS)
+    assert physical == set(PHYSICAL_ATTACKS) == {"PARAM-04", "PARAM-05", "PARAM-06"}
+    assert stat == set(STAT_ATTACKS) == {"STAT-01"}
+    assert not (internal & physical)
+    assert not (internal & stat)
+    assert not (physical & stat)
+    assert internal | physical | stat == full
+    assert len(internal) == 17

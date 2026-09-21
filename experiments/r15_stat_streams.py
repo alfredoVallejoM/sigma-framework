@@ -60,7 +60,7 @@ def stat_message_v3(seed: bytes, corpus: str, counter: int) -> bytes:
     elif corpus == "ff-tail":
         suffix = bytes(24) + bytes([0xFF]) * 64
     else:
-        suffix = (b"\xaa\x55" * 44)
+        suffix = b"\xaa\x55" * 44
     message = prefix + suffix
     if len(message) != MESSAGE_BYTES:
         raise RuntimeError("STAT corpus message width drifted")

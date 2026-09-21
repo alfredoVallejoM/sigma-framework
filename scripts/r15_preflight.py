@@ -9,12 +9,12 @@ import json
 from pathlib import Path
 
 from experiments.common import canonical_json, sha256_file
-from experiments.r141_protocol import R141_FREEZE_ID
 from experiments.r15_data import RunKeyV3
 from experiments.r15_stat_adapters import (
     BATTERIES_V3,
     validate_battery_manifest_entry_v3,
 )
+from experiments.r141_protocol import R141_FREEZE_ID
 from scripts.check_r141_freeze import check_r141_freeze
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
 from scripts.verify_r141_tag import verify_r141_tag

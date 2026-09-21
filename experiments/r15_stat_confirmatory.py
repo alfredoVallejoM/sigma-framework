@@ -54,14 +54,7 @@ def _run_nist(
     report_path = tool_root / "experiments" / "AlgorithmTesting" / "finalAnalysisReport.txt"
     if report_path.exists():
         report_path.unlink()
-    prompt = (
-        "0\n"
-        f"{stream_file}\n"
-        "1\n"
-        "0\n"
-        f"{NIST_BITSTREAMS}\n"
-        "1\n"
-    )
+    prompt = f"0\n{stream_file}\n1\n0\n{NIST_BITSTREAMS}\n1\n"
     completed = subprocess.run(
         [str(binary), str(NIST_SEQUENCE_BITS)],
         cwd=tool_root,
@@ -72,7 +65,9 @@ def _run_nist(
         check=False,
     )
     console = completed.stdout + "\n" + completed.stderr
-    report = report_path.read_text(encoding="utf-8", errors="replace") if report_path.is_file() else ""
+    report = (
+        report_path.read_text(encoding="utf-8", errors="replace") if report_path.is_file() else ""
+    )
     return completed.returncode, console, report
 
 

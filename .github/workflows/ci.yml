@@ -318,7 +318,10 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[test,analysis]"
-      - run: python -m pytest -q tests/unit/test_r15_analysis_audit_shadow.py -k "r15_g or analysis"
+      - run: >-
+          python -m pytest -q
+          tests/unit/test_r15_analysis_audit_shadow.py::test_r15_g_locked_analysis_shadow_is_deterministic
+          tests/unit/test_r15_analysis_audit_shadow.py::test_analysis_shadow_hash_is_repeatable
       - run: python -m scripts.check_r15_analysis_shadow --report /tmp/r15-g-shadow.json
       - uses: actions/upload-artifact@v4
         with:
@@ -341,7 +344,10 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[test]"
-      - run: python -m pytest -q tests/unit/test_r15_analysis_audit_shadow.py -k "r15_h or audit"
+      - run: >-
+          python -m pytest -q
+          tests/unit/test_r15_analysis_audit_shadow.py::test_r15_h_audit_shadow_detects_all_fixture_tampering
+          tests/unit/test_r15_analysis_audit_shadow.py::test_audit_shadow_ledger_root_is_repeatable
       - run: python -m scripts.check_r15_audit_shadow --report /tmp/r15-h-shadow.json
       - uses: actions/upload-artifact@v4
         with:

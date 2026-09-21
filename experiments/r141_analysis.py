@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from experiments.r14_analysis import FIGURES_V3, TABLES_V3
-from experiments.r141_protocol import confirmatory_attack_ids_r141
 from experiments.r15_estimators import BOOTSTRAP_REPLICATES
+from experiments.r141_protocol import confirmatory_attack_ids_r141
 
 
 def validate_r141_analysis() -> dict[str, object]:

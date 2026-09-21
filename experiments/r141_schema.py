@@ -15,9 +15,6 @@ from .r141_protocol import (
     confirmatory_attack_ids_r141,
 )
 
-
-
-
 TerminalStatusR141 = Literal["success", "no-success", "censored", "timeout", "error"]
 
 
@@ -147,7 +144,6 @@ def config_from_dict_r141(data: dict[str, Any]) -> ConfirmatoryConfigR141:
         claims=tuple(data["claims"]),
         cells=tuple(data["cells"]),
     )
-
 
 
 @dataclass(frozen=True)

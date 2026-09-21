@@ -235,6 +235,43 @@ The batteries are:
 The same logical stream identity is reused/regenerated for external tools.
 BigCrush is not part of this freeze.
 
+### Exact stream semantics
+
+The normative generator is `experiments/r15_stat_streams.py`.
+
+Each logical stream uses a 32-byte seed derived from
+`(freeze_id, construction, corpus, stream_id)`. Messages are exactly 128
+bytes:
+
+- `counter`: seed || uint64(counter) || zero padding;
+- `ff-tail`: seed || uint64(counter) || 24 zero bytes || 64 0xFF bytes;
+- `alternating`: seed || uint64(counter) || 88 bytes of 0xAA,0x55 alternation.
+
+Standard controls emit exactly 64 raw digest bytes per message:
+
+- SHA-512;
+- SHA3-512;
+- BLAKE2b-512;
+- SHAKE256 with 64-byte extraction.
+
+The deliberately broken control emits the first 32 bytes of SHA-512 twice,
+preserving marginal hash-like bytes while introducing an explicit repeated-half
+dependency.
+
+Sigma constructions use fixed per-stream context derived from the stream seed
+and emit only raw trajectory window state bytes, concatenated in canonical
+state order:
+
+- R12.5 WideOnce history suite;
+- R12.5 Deep history suite;
+- R12.5 DeepVector history suite.
+
+No context/frame/digest-envelope bytes are mixed into the pseudo-random stream.
+The generator continues message counters until exactly the declared stream byte
+length has been emitted, truncating only the final output block if necessary.
+Chunking/pipe boundaries are operational only and must not change stream bytes
+or SHA-256.
+
 ## 13. Storage/provenance policy
 
 Normative policy:

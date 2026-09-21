@@ -251,6 +251,24 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                 _run("lint", ["ruff", "check", "."]),
                 _run("types", ["mypy", "sigma", "scripts", "experiments", "reference"]),
                 _run(
+                    "analysis-dependencies",
+                    [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        *(
+                            [
+                                "-c",
+                                str(PROJECT_ROOT / "constraints" / "r14-v3-py313.txt"),
+                            ]
+                            if sys.version_info[:2] == (3, 13)
+                            else []
+                        ),
+                        "scipy",
+                    ],
+                ),
+                _run(
                     "compileall",
                     [
                         sys.executable,

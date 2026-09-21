@@ -1,0 +1,10 @@
+R15 internal Wave 3A trigger
+source_commit=80214afde29b3596af83265e18c1e2926e14dd2f
+controller_commit=de7c8ab4cfc40aec3fa3f336b0d196061fce7dbb
+expected_run_units=74240
+red03_shards=32
+tmto_shards=64
+red02_shards=40
+red05_shards=40
+excluded_attack=RED-04
+excluded_reason=pre-execution-confirmatory-runner-defect

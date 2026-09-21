@@ -132,9 +132,7 @@ def profile_history_game_v3(
                     target_history,
                     history,
                 )
-        return HistoryGameResultV3(
-            game, config.history_bits, limit, False, pairs, 0, 0, 0
-        )
+        return HistoryGameResultV3(game, config.history_bits, limit, False, pairs, 0, 0, 0)
 
     if game == "fixed-point":
         for history, output in enumerate(outputs):

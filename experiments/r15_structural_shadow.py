@@ -8,7 +8,6 @@ to CI-safe budgets. It produces no confirmatory evidence.
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +20,6 @@ from .history_attackers_v3 import (
     profile_history_truncation_v3,
 )
 from .history_reduced import ReducedHistoryConfig
-from .r141_protocol import R141Cell, cells_for_attack_r141
 from .r15_branch_dependency import profile_deep_vector_dependency_v3
 from .r15_data import RunKeyV3, atomic_write_record_v3, build_ledger_v3
 from .r15_endpoint_wrappers import (
@@ -35,6 +33,7 @@ from .r15_history_games import (
 )
 from .r15_layout_ablation import profile_layout_ablation_three_way_v3
 from .r15_parameter_analysis import parameter_mutual_information_profile_v3
+from .r141_protocol import R141Cell, cells_for_attack_r141
 from .reduced_oracle import ReducedOracle
 
 SHADOW_NAMESPACE = "sigma-v3-r15-shadow-c-v1"

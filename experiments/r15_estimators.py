@@ -206,7 +206,6 @@ def paired_bootstrap_ratio_interval_v3(
     )
 
 
-
 def _linear_slope(xs: Sequence[float], ys: Sequence[float]) -> float:
     if len(xs) != len(ys) or len(xs) < 2:
         raise ValueError("slope inputs must be equal with at least two points")

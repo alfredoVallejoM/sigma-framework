@@ -671,7 +671,9 @@ def run_internal_shard(
         statuses[record.status] = statuses.get(record.status, 0) + 1
 
     ledger = build_ledger_v3(output_root, keys)
-    ledger_path = output_root / "ledgers" / f"{config.attack_id.lower()}-shard-{shard_index:03d}.json"
+    ledger_path = (
+        output_root / "ledgers" / f"{config.attack_id.lower()}-shard-{shard_index:03d}.json"
+    )
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     ledger_path.write_bytes(canonical_json(ledger) + b"\n")
 

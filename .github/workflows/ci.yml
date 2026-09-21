@@ -58,10 +58,11 @@ jobs:
           python-version: "3.13"
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[test,quality,kdf,analysis]"
+      - run: python -m pip install -e ".[test,quality,kdf]"
       - run: ruff check sigma scripts experiments tests
       - run: ruff format --check sigma scripts experiments tests
       - run: mypy sigma scripts experiments tests
+      - run: python -m pip install -c constraints/r14-v3-py313.txt scipy
       - run: python -m pytest -q tests/unit/test_kdf_argon2id.py
       - run: python -m scripts.generate_v3_r12_corpus --check
       - run: python -m scripts.generate_v3_r125_corpus --check
@@ -105,7 +106,7 @@ jobs:
       - run: >-
           python -m pip install
           pytest hypothesis "coverage[toml]" argon2-cffi cryptography
-          scipy numpy mypy ruff build
+          mypy ruff build
       - run: python -m scripts.validate_project --fuzz-iterations 200 --report /tmp/sigma-r14-gate.json
       - uses: actions/upload-artifact@v4
         with:

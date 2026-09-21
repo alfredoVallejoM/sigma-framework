@@ -1,0 +1,182 @@
+R15 LOCAL CLOSURE — CODEX HANDOFF
+
+You are operating inside the sigma-framework repository.
+
+Hard constraints:
+1. Work on branch r15-local-closure.
+2. GitHub Actions must remain disabled. Do not create, restore, enable, dispatch, or push any file under .github/workflows.
+3. Do not use GitHub-hosted runners.
+4. Do not change frozen scientific semantics, seed namespaces, config contents, RunKey definitions, preregistration, source identities, or expected cardinalities to make a campaign pass.
+5. Do not reinterpret exploratory engineering as confirmatory evidence. PARAM-04/PARAM-05/PARAM-06 remain exploratory-engineering and are excluded from R15 PASS.
+6. Store large data outside the git working tree. Default workspace: ../sigma-framework-r15-local-data.
+7. Every completed shard must have its own shard-report.json plus raw/receipts output. Resume by skipping only shards with a completed report; delete and rerun incomplete shard directories.
+8. If a runner/auditor exposes a real defect, stop that campaign, preserve logs, fix only the orchestration/implementation defect, add a regression test, and do not silently alter the frozen experiment design.
+
+Authoritative local plan:
+  experiments/r15-local-campaigns.json
+
+Before doing anything:
+  git fetch origin --tags --force
+  git switch r15-local-closure
+  git pull --ff-only
+  test ! -d .github/workflows || test -z "$(find .github/workflows -type f -print -quit)"
+  python3.13 --version
+  nproc
+  free -h
+  df -h .
+
+Read the complete plan and verify:
+- base source tag sigma-v3-r14-freeze-v1 resolves to 80214afde29b3596af83265e18c1e2926e14dd2f
+- amendment tag sigma-v3-r15-internal-amendment-v1 resolves to 108f0434a07d85fd6798b1bdb1d306a6cb3293cf
+- mandatory expected RunKeys = 145088
+- total local shard jobs = 1760
+- W1 = 8256 RunKeys
+- W2 = 49664 RunKeys
+- W3A = 74240 RunKeys
+- amendment = 11392 RunKeys
+- STAT = 1536 RunKeys
+- exploratory engineering = 64 records
+
+Use the workflow_reference entries in experiments/r15-local-campaigns.json only as historical executable specifications. Inspect them with:
+  git show <commit>:<path>
+Do NOT restore those workflow files.
+
+Build a local resumable orchestrator that reproduces those workflow bodies with subprocesses/worktrees/venvs. The orchestrator itself must live outside .github/workflows and must not call gh workflow commands. Prefer detached worktrees pinned to the source commits below:
+- base confirmatory source: 80214afde29b3596af83265e18c1e2926e14dd2f
+- amendment source: 108f0434a07d85fd6798b1bdb1d306a6cb3293cf
+- exploratory engineering controller: 3d69f74850a401f4d4f6738e2b397f7e6f3ee430
+- STAT tooling source: dab2f6928288a753da68771f7b7084d15bf7fba6
+
+Use Python 3.13. Build exact wheels and manifests exactly as the historical workflows did. For the STAT tooling tag sigma-v3-r15-stat-tooling-v1, create it LOCALLY only if the preflight requires it; do not push that tag to GitHub.
+
+Execution order:
+
+PHASE 0 — local preflight
+- Verify no GitHub workflows exist in the checked-out branch.
+- Validate the frozen source/tag identities.
+- Create detached worktrees and isolated venvs.
+- Build the frozen base bundle: configs, source-freeze, wheel, release artifacts, runtime manifest, and internal execution manifest.
+- Run targeted regression tests for RED-02/RED-04 isolation before consuming new confirmatory data.
+
+PHASE 1 — Wave 1
+Reproduce the W1 matrix from the plan:
+- PARAM-01: 8 shards
+- PARAM-03: 8 shards
+- HIST-01 conditional-crossing: 8 shards
+Merge with experiments.r15_wave1_dataset.
+Acceptance: wave1-summary.json exists, passed=true, observed_run_units=8256.
+
+PHASE 2 — Wave 2
+Reproduce exactly:
+- HIST-01 natural-crossing: 64 shards
+- HIST-02: 64
+- HIST-03: 64
+- HIST-05: 64
+- HIST-06: 64
+- LAYOUT-04: 64
+- BRANCH-05: 96
+- BRANCH-06: 96
+Merge with experiments.r15_wave2_dataset using the current r15-local-closure commit as controller_commit.
+Acceptance: wave2-summary.json exists, passed=true, observed_run_units=49664.
+
+PHASE 3 — Wave 3A, preserving phase order
+3.1 RED-03: 32 shards
+3.2 TMTO-01 and TMTO-02: 64 shards each
+3.3 RED-02: 40 shards
+3.4 RED-05: 40 shards
+RED-04 must not be run in W3A.
+Merge with experiments.r15_wave3a_dataset.
+Acceptance: wave3a-summary.json exists, passed=true, observed_run_units=74240.
+
+PHASE 4 — internal amendment, preserving phase order
+Use the immutable amendment source/tag.
+4.1 RED-04:
+- r12 + same-persistent: 64 shards
+- r12 + any-persistent: 64
+- r125 + same-persistent: 64
+- r125 + any-persistent: 64
+4.2 PARAM-02: 128 shards
+PARAM-02 must use the vectorized implementation from the amendment source, with the frozen publication-scale configuration (32768 observations, 5000 permutations, 128 replicates).
+Merge with experiments.r15_internal_amendment_dataset.
+Acceptance: internal-amendment-summary.json exists, passed=true, observed_run_units=11392, attacks exactly RED-04 and PARAM-02.
+
+PHASE 5 — STAT-01
+Reproduce the historical STAT tooling workflow locally:
+- build and hash NIST STS 2.1.2
+- build and hash PractRand pre0.95
+- run both smoke tests
+- create the exact tools manifest
+- run r15_stat_tooling_preflight in pretag mode
+- create sigma-v3-r15-stat-tooling-v1 as a local-only annotated tag to the exact STAT source commit if required
+- build the final STAT execution manifest
+Run 64 shards for each construction:
+  SHA512
+  SHA3-512
+  BLAKE2b-512
+  SHAKE256-512
+  R12.5-wide
+  R12.5-deep
+  R12.5-vector
+  broken-control
+Start conservatively with one STAT worker. Increase only after checking RAM, I/O, and system load.
+Merge with experiments.r15_stat_dataset.
+Acceptance: stat-summary.json exists, passed=true, observed_run_units=1536.
+
+PHASE 6 — exploratory engineering
+Run separately from mandatory closure:
+- PARAM-04: 8 shards
+- PARAM-05: 8 shards
+- PARAM-06: 8 shards
+Merge with experiments.r15_application_engineering audit.
+Acceptance: engineering-summary.json exists, passed=true, confirmatory=false, counts_toward_r15_pass=false, observed_records=64.
+
+PHASE 7 — mandatory final closure
+Run experiments.r15_final_closure with exactly these five audited datasets:
+  wave1
+  wave2
+  wave3a
+  amendment
+  stat
+Do not pass the engineering dataset into mandatory closure.
+Acceptance:
+- r15-final-summary.json exists
+- integrity_passed=true
+- mandatory_expected_run_units=145088
+- mandatory_observed_run_units=145088
+- mandatory attacks = 18
+- excluded exploratory attacks = PARAM-04, PARAM-05, PARAM-06
+- r15-final-ledger.json exists
+- r15-locked-analysis-surface.json exists
+
+RESUME / FAILURE POLICY
+- Never restart a completed campaign from zero merely because one shard failed.
+- A shard is resumably complete only if its shard-report.json exists and the expected raw/receipt material is present.
+- Preserve each failing shard's stdout/stderr in a dedicated driver.log.
+- Rerun only failed/incomplete shards.
+- After any interruption, reconstruct status from disk before launching work.
+- Never lower sample sizes, permutation counts, widths, candidate budgets, replicate counts, or external-tool workloads to make the run finish.
+
+CONCURRENCY POLICY
+- Determine a conservative worker count from actual CPU/RAM.
+- Default internal/amendment/engineering parallelism should be conservative (for example 2-4 workers initially).
+- STAT starts at 1 worker because its external batteries and stream processing are I/O/CPU heavy.
+- Concurrency may change; experiment semantics may not.
+
+FINAL DATA EXTRACTION
+When all acceptance gates pass, produce a concise terminal report and save a machine-readable extraction JSON outside git containing:
+- every dataset summary path
+- every ledger root
+- expected vs observed RunKeys/records
+- per-attack status counts
+- final integrity flag
+- final locked-analysis-surface path
+- exploratory engineering classification and its key PARAM-04/05/06 metrics
+- any censored/error/timeout counts by attack
+- controller/source commits and manifest hashes
+
+Also print the paths to:
+  ../sigma-framework-r15-local-data/datasets/final/r15-final-summary.json
+  ../sigma-framework-r15-local-data/datasets/final/r15-locked-analysis-surface.json
+  ../sigma-framework-r15-local-data/datasets/engineering/engineering-summary.json
+
+Do not stop after preparing the commands. Continue executing, resuming and auditing until either all acceptance gates pass or a concrete scientific/implementation blocker is demonstrated with its exact failing command and log path.

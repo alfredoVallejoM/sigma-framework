@@ -140,9 +140,7 @@ def audit_and_merge_stat(
     missing = expected_ids - observed_ids
     extra = observed_ids - expected_ids
     if missing or extra:
-        raise RuntimeError(
-            f"STAT coverage mismatch: missing={len(missing)}, extra={len(extra)}"
-        )
+        raise RuntimeError(f"STAT coverage mismatch: missing={len(missing)}, extra={len(extra)}")
 
     output_root.mkdir(parents=True, exist_ok=True)
     merged: list[RunKeyV3] = []
@@ -153,8 +151,7 @@ def audit_and_merge_stat(
     ledger = build_ledger_v3(output_root, merged)
     (output_root / "stat-ledger.json").write_bytes(canonical_json(ledger) + b"\n")
     raw_rates = {
-        cell_id: sum(values) / len(values)
-        for cell_id, values in sorted(anomaly_by_cell.items())
+        cell_id: sum(values) / len(values) for cell_id, values in sorted(anomaly_by_cell.items())
     }
     summary = {
         "schema": "sigma-v3-r15-stat-dataset-v1",

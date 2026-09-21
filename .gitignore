@@ -6,3 +6,10 @@ build/
 dist/
 *.egg-info/
 mutants/
+
+# R15 confirmatory acquisition outputs are external/archive data, not source.
+results/r15/
+results/v3-confirmatory/
+experiments/v3-confirmatory-results/
+scratch/
+streams/

@@ -338,6 +338,39 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r15-execution-closure",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_execution_closure",
+                    ],
+                ),
+                _run(
+                    "r15-data-closure",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_data_closure",
+                    ],
+                ),
+                _run(
+                    "r141-freeze-gate",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r141_freeze",
+                    ],
+                ),
+                _run(
+                    "r15-preflight-static",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.r15_preflight",
+                        "--static",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

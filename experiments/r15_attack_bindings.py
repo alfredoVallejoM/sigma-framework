@@ -24,8 +24,8 @@ _BINDINGS = (
     ),
     R15ExecutorBinding(
         "HIST-02",
-        "experiments.history_reduced",
-        "find_full_state_collisions",
+        "experiments.r15_endpoint_wrappers",
+        "find_first_full_state_collision_v3",
         "queries_to_first_full_state_collision",
     ),
     R15ExecutorBinding(
@@ -84,8 +84,8 @@ _BINDINGS = (
     ),
     R15ExecutorBinding(
         "PARAM-01",
-        "experiments.parameter_grinding_v3",
-        "parameter_distribution",
+        "experiments.r15_endpoint_wrappers",
+        "parameter_uniformity_profile_v3",
         "max_deviation",
     ),
     R15ExecutorBinding(
@@ -96,8 +96,8 @@ _BINDINGS = (
     ),
     R15ExecutorBinding(
         "PARAM-03",
-        "experiments.parameter_grinding_v3",
-        "find_cheapest_stratum",
+        "experiments.r15_endpoint_wrappers",
+        "parameter_grinding_work_ratio_v3",
         "net_work_ratio",
     ),
     R15ExecutorBinding(

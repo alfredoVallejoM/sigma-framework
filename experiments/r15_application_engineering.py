@@ -343,6 +343,37 @@ def run_engineering_shard(
     }
 
 
+
+
+
+def _receipt_for_record(record_path: Path) -> Path:
+    parts = record_path.parts
+    try:
+        raw_index = parts.index("raw")
+    except ValueError as exc:
+        raise ValueError("engineering record path is not below raw/") from exc
+    root = Path(*parts[:raw_index])
+    relative = Path(*parts[raw_index + 1 :])
+    return root / "receipts" / relative
+
+
+def _load_engineering_record(record_path: Path) -> dict[str, Any]:
+    data = record_path.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    value = json.loads(data)
+    if not isinstance(value, dict):
+        raise ValueError("engineering record must be an object")
+    receipt_path = _receipt_for_record(record_path)
+    if not receipt_path.is_file():
+        raise ValueError(f"missing engineering receipt for {record_path}")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    if receipt.get("record_sha256") != digest:
+        raise ValueError(f"engineering receipt digest mismatch for {record_path}")
+    if receipt.get("run_key") != value.get("run_key"):
+        raise ValueError(f"engineering receipt RunKey mismatch for {record_path}")
+    return value
+
+
 def audit_engineering_dataset(
     *,
     shards_root: Path,
@@ -352,7 +383,7 @@ def audit_engineering_dataset(
     expected_ids = {key.stable_id for key in expected}
     records: dict[str, dict[str, Any]] = {}
     for path in sorted(shards_root.glob("**/raw/**/*.json")):
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = _load_engineering_record(path)
         run_key = value.get("run_key")
         if not isinstance(run_key, str):
             raise ValueError("engineering record lacks RunKey")

@@ -1,7 +1,7 @@
 # Sigma v3 R15 — traceability
 
 Fecha: 2026-09-21.  
-Estado: **R15 PLAN ACTIVO; confirmatory acquisition BLOCKED**.
+Estado: **R15 CONFIRMATORY ACQUISITION ACTIVA; application benchmarks reclasificados como exploratory engineering**.
 
 R15 queda dividido en ejecución secuencial. Antes de cualquier dato
 confirmatorio debe cerrarse R14.1 porque el candidato R14 técnico original no
@@ -13,16 +13,16 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 | R15-0B | publication-scale volume/interval freeze | **PASS** — 406 cells / 153,536 run units |
 | R15-0C | streaming/storage/provenance freeze | **PASS** |
 | R14.1 | regenerate/refreeze/re-audit | **TECHNICAL PASS** — CI/bundle green |
-| TAG-01 | exact final freeze tag | **PENDING external action** |
-| R15-A | confirmatory unlock/preflight | **STATIC PASS; full unlock blocked by tag + real host/tool manifests** |
+| TAG-01 | exact final freeze tag | **PASS** — `sigma-v3-r14-freeze-v1` -> `80214af...` |
+| R15-A | staged unlock/preflight | **INTERNAL ACTIVE; mandatory full now = internal + STAT only** |
 | R15-B | harness validation | **PASS** — 7 tests / 11 adversarial checks |
 | R15-C | structural acquisition | **REAL ACQUISITION BLOCKED; 33-cell shadow battery launched** |
 | R15-D | reduced cryptanalysis | **REAL ACQUISITION BLOCKED; 32-cell shadow battery launched** |
-| R15-E | KDF/PoW/mitigation | **REAL ACQUISITION BLOCKED; production-primitive shadow battery launched** |
+| R15-E | KDF/PoW/mitigation | **EXPLORATORY ENGINEERING LAUNCHED; excluded from R15 PASS/core claims** |
 | R15-F | external STAT | **REAL BATTERIES BLOCKED; 24-cell exact-stream shadow launched** |
 | R15-G | locked analysis | **REAL ANALYSIS BLOCKED; 15-figure/9-table synthetic rehearsal launched** |
 | R15-H | adversarial data audit | **REAL AUDIT BLOCKED; synthetic complete-dataset audit launched** |
-| R15 closure | dataset + review + handoff R16 | blocked |
+| R15 closure | dataset + review + handoff R16 | **not blocked by physical hosts; STAT remains external requirement** |
 
 ## Publication-scale doctrine
 
@@ -113,3 +113,28 @@ SHA-256. R15-H shadow builds an append-only synthetic dataset and verifies
 RunKey completeness, duplicate rejection, record/receipt tamper detection,
 missing-record rejection and deterministic ledger ordering. Neither rehearsal
 derives or consumes confirmatory R15 seeds.
+
+
+## Application engineering reclassification
+
+Before any PARAM-04/05/06 engineering acquisition, these three families were
+removed from the mandatory confirmatory closure path and reclassified as
+`exploratory-engineering`.
+
+Normative machine-readable amendment:
+`experiments/r15-application-engineering-amendment.json`.
+
+Consequences:
+
+- PARAM-04/05/06 never consume the `sigma-v3-r15` confirmatory namespace;
+- they do not count toward R15 PASS or core security claims;
+- no three-host physical manifest is required for R15 closure;
+- C15 remains a boundary statement;
+- C16/C17 become exploratory application observations only;
+- mandatory confirmatory volume is 145,088 units:
+  143,552 internal + 1,536 STAT;
+- exploratory application acquisition uses 64 hosted-runner records with its
+  own namespace and integrity ledger.
+
+The hosted-runner measurements are environment-specific engineering evidence,
+not hardware-generalizable benchmarks.

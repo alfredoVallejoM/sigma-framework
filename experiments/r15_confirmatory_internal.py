@@ -35,7 +35,7 @@ from .r15_history_games import (
     profile_history_game_v3,
 )
 from .r15_layout_ablation import profile_layout_ablation_three_way_v3
-from .r15_parameter_analysis import parameter_mutual_information_profile_v3
+from .r15_parameter_analysis_fast import parameter_mutual_information_profile_vectorized_v3
 from .r141_schema import (
     ConfirmatoryRecordR141,
     config_from_dict_r141,
@@ -367,9 +367,9 @@ def execute_internal_run(
                 candidates=cap,
                 persistent_policy=policy,  # type: ignore[arg-type]
             )
-            used = cap if collision is None else collision.evaluated_candidates
+            used = cap if second_preimage is None else second_preimage.evaluated_candidates
             return InternalOutcome(
-                "success" if collision is not None else "censored",
+                "success" if second_preimage is not None else "censored",
                 construction,
                 {
                     "queries": used,
@@ -459,7 +459,7 @@ def execute_internal_run(
         )
 
     if attack_id == "PARAM-02":
-        mi_profile = parameter_mutual_information_profile_v3(
+        mi_profile = parameter_mutual_information_profile_vectorized_v3(
             oracle,
             int(factors["samples"]),
             permutations=int(factors["permutations"]),
@@ -577,10 +577,15 @@ def run_internal_shard(
         raise ValueError("invalid shard index/count")
     filters = factor_filters or {}
     execution = json.loads(execution_manifest_path.read_text(encoding="utf-8"))
-    if execution.get("schema") != "sigma-v3-r15-execution-manifest-v2":
+    schema = execution.get("schema")
+    if schema == "sigma-v3-r15-execution-manifest-v2":
+        if execution.get("scope") not in ("internal", "full"):
+            raise ValueError("execution manifest does not authorize internal campaigns")
+    elif schema == "sigma-v3-r15-internal-amendment-manifest-v1":
+        if execution.get("scope") != "internal-amendment":
+            raise ValueError("invalid R15 internal amendment scope")
+    else:
         raise ValueError("unexpected R15 execution manifest schema")
-    if execution.get("scope") not in ("internal", "full"):
-        raise ValueError("execution manifest does not authorize internal campaigns")
     if execution.get("confirmatory_unlocked") is not True:
         raise ValueError("confirmatory execution manifest is not unlocked")
 

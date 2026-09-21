@@ -149,9 +149,7 @@ def profile_history_game_v3(
                     history,
                     history,
                 )
-        return HistoryGameResultV3(
-            game, config.history_bits, limit, False, pairs, 0, 0, 0
-        )
+        return HistoryGameResultV3(game, config.history_bits, limit, False, pairs, 0, 0, 0)
 
     cycles, max_cycle, max_tail = _functional_graph_stats(outputs)
     return HistoryGameResultV3(

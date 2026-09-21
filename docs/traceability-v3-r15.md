@@ -9,13 +9,13 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 
 | Etapa | Objetivo | Estado |
 |---|---|---|
-| R15-0A | execution closure | **NEXT** |
-| R15-0B | publication-scale volume/interval freeze | planned |
-| R15-0C | streaming/storage/provenance freeze | planned |
-| R14.1 | regenerate/refreeze/re-audit | blocked by R15-0A/B/C |
-| TAG-01 | exact final freeze tag | blocked by R14.1 |
-| R15-A | confirmatory unlock/preflight | blocked |
-| R15-B | harness validation | blocked |
+| R15-0A | execution closure | **PASS** — 21/21 executors |
+| R15-0B | publication-scale volume/interval freeze | **PASS** — 406 cells / 153,536 run units |
+| R15-0C | streaming/storage/provenance freeze | **PASS** |
+| R14.1 | regenerate/refreeze/re-audit | **TECHNICAL PASS** — CI/bundle green |
+| TAG-01 | exact final freeze tag | **PENDING external action** |
+| R15-A | confirmatory unlock/preflight | **STATIC PASS; full unlock blocked by tag + real host/tool manifests** |
+| R15-B | harness validation | **SYNTHETIC BATTERY LAUNCHED; no confirmatory seeds** |
 | R15-C | structural acquisition | blocked |
 | R15-D | reduced cryptanalysis | blocked |
 | R15-E | KDF/PoW/mitigation | blocked |
@@ -57,3 +57,24 @@ Until R14.1 PASS + exact TAG-01:
 - no publication-scale config may be altered based on observed R15 outcomes.
 
 Governing plan: `docs/r15-confirmatory-campaign-plan.md`.
+
+
+## Estado técnico observado antes de R15-B
+
+Último baseline verde antes de la batería R15-B:
+
+- HEAD `00c2e172b81fb9c45df4cd9ab70fe72f3606a39b`;
+- CI run `35548277304`: PASS;
+- 1033 tests passed, 1 skipped;
+- R14.1 protocol: 21 attacks, 406 cells, 153,536 run units;
+- regions: 240 estimable, 92 exhaustive, 32 stress, 18 paired, 24 descriptive;
+- R15-0A execution closure: PASS;
+- R15-0C data closure: PASS;
+- R14.1 source/runtime freeze bundle: PASS;
+- R15-A static preflight: PASS;
+- confirmatory_unlocked=false.
+
+R15-B usa exclusivamente el namespace `sigma-v3-r15-harness-v1` y valida
+crash/resume, timeout, duplicate RunKey, wrong seed, record/checkpoint tampering,
+budget overflow, execution-manifest mismatch y retry policy. No consume el
+namespace `sigma-v3-r15`.

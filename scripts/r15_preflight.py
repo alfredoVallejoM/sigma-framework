@@ -11,7 +11,7 @@ from typing import Literal
 
 from experiments.common import canonical_json, sha256_file
 from experiments.r15_data import RunKeyV3
-from experiments.r15_stat_adapters import BATTERIES_V3, validate_battery_manifest_entry_v3
+from experiments.r15_stat_adapters import validate_battery_manifest_entry_v3
 from experiments.r141_protocol import (
     R141_FREEZE_ID,
     confirmatory_attack_ids_r141,

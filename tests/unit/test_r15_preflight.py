@@ -54,9 +54,7 @@ def _tool_manifest(path: Path) -> None:
                     {
                         "battery_id": battery_id,
                         "version": "fixture-1",
-                        "binary_sha256": hashlib.sha256(
-                            battery_id.encode("ascii")
-                        ).hexdigest(),
+                        "binary_sha256": hashlib.sha256(battery_id.encode("ascii")).hexdigest(),
                         "command": [battery_id, "--fixture"],
                         "transport": "fixture",
                     }
@@ -97,9 +95,7 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
 
     wheel = tmp_path / "sigma_framework-3.0.0a1-py3-none-any.whl"
     wheel.write_bytes(b"fixture-wheel")
-    config_files = {
-        path.name: sha256_file(path) for path in sorted(config_root.glob("*.json"))
-    }
+    config_files = {path.name: sha256_file(path) for path in sorted(config_root.glob("*.json"))}
 
     from scripts import r15_preflight
 
@@ -116,9 +112,7 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
                 "source_freeze_sha256": sha256_file(source_freeze),
                 "preregistration_sha256": prereg_hash,
                 "dependency_lock_sha256": lock_hash,
-                "config_manifest_sha256": sha256_file(
-                    config_root / "config-manifest.json"
-                ),
+                "config_manifest_sha256": sha256_file(config_root / "config-manifest.json"),
                 "config_files": config_files,
                 "artifacts": {
                     wheel.name: {

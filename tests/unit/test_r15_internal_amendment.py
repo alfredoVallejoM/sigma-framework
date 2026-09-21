@@ -43,21 +43,23 @@ def test_red04_corrective_path_executes_without_runner_defect() -> None:
 
 def test_vectorized_param02_matches_original_observed_mi() -> None:
     pytest.importorskip("numpy")
-    kwargs = dict(
-        samples=256,
+    slow = parameter_mutual_information_profile_v3(
+        ReducedOracle(b"r15-amendment-mi"),
+        256,
         permutations=17,
         seed=b"synthetic-r15-amendment-param02",
         persistent_bits=12,
         candidate_bucket_bits=4,
         persistent_bucket_bits=4,
     )
-    slow = parameter_mutual_information_profile_v3(
-        ReducedOracle(b"r15-amendment-mi"),
-        **kwargs,
-    )
     fast = parameter_mutual_information_profile_vectorized_v3(
         ReducedOracle(b"r15-amendment-mi"),
-        **kwargs,
+        256,
+        permutations=17,
+        seed=b"synthetic-r15-amendment-param02",
+        persistent_bits=12,
+        candidate_bucket_bits=4,
+        persistent_bucket_bits=4,
     )
     assert fast.mi_candidate == pytest.approx(slow.mi_candidate, abs=1e-12)
     assert fast.mi_persistent == pytest.approx(slow.mi_persistent, abs=1e-12)
@@ -65,24 +67,26 @@ def test_vectorized_param02_matches_original_observed_mi() -> None:
 
 def test_vectorized_param02_is_deterministic_and_uses_add_one_pvalue() -> None:
     pytest.importorskip("numpy")
-    kwargs = dict(
-        samples=256,
+    left = parameter_mutual_information_profile_vectorized_v3(
+        ReducedOracle(b"r15-amendment-mi-determinism"),
+        256,
         permutations=31,
         seed=b"synthetic-r15-amendment-param02-determinism",
         persistent_bits=12,
         candidate_bucket_bits=4,
         persistent_bucket_bits=4,
     )
-    left = parameter_mutual_information_profile_vectorized_v3(
-        ReducedOracle(b"r15-amendment-mi-determinism"),
-        **kwargs,
-    )
     right = parameter_mutual_information_profile_vectorized_v3(
         ReducedOracle(b"r15-amendment-mi-determinism"),
-        **kwargs,
+        256,
+        permutations=31,
+        seed=b"synthetic-r15-amendment-param02-determinism",
+        persistent_bits=12,
+        candidate_bucket_bits=4,
+        persistent_bucket_bits=4,
     )
     assert left == right
-    denominator = kwargs["permutations"] + 1
+    denominator = 32
     for p_value in (left.permutation_p_candidate, left.permutation_p_persistent):
         assert 0.0 < p_value <= 1.0
         assert p_value * denominator == pytest.approx(round(p_value * denominator))

@@ -29,6 +29,7 @@ FROZEN_PATHS = (
     "reference/independent_v3.py",
     "experiments/r13_attack_registry.py",
     "experiments/r13_schema.py",
+    "experiments/r14_protocol.py",
     "experiments/preregistration-v3-r141.md",
     "experiments/r15-publication-scale-plan.json",
     "experiments/r15-data-policy.json",

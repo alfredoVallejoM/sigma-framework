@@ -36,9 +36,7 @@ def _initial_vector(
     )
 
 
-def _next_vector(
-    oracle: ReducedOracle, vector: tuple[int, ...], bits: int
-) -> tuple[int, ...]:
+def _next_vector(oracle: ReducedOracle, vector: tuple[int, ...], bits: int) -> tuple[int, ...]:
     encoded = b"".join(encode_integer(value, bits) for value in vector)
     return tuple(
         oracle.query("r15-vector-next", bits, encoded, branch.to_bytes(2, "big"))
@@ -75,17 +73,13 @@ def profile_deep_vector_dependency_v3(
             mutated[source_branch] = (mutated[source_branch] ^ 1) & mask
             changed = _next_vector(oracle, tuple(mutated), bits)
             affected = [
-                index
-                for index, (a, b) in enumerate(zip(baseline, changed, strict=True))
-                if a != b
+                index for index, (a, b) in enumerate(zip(baseline, changed, strict=True)) if a != b
             ]
             interventions += 1
             affected_total += len(affected)
             all_affected += int(len(affected) == branch_count)
             first_divergence_sum += affected[0] if affected else branch_count
-            hamming_sum += sum(
-                (a ^ b).bit_count() for a, b in zip(baseline, changed, strict=True)
-            )
+            hamming_sum += sum((a ^ b).bit_count() for a, b in zip(baseline, changed, strict=True))
 
     return BranchDependencyResultV3(
         candidates=candidates,

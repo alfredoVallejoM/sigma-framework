@@ -241,9 +241,9 @@ def pareto_frontier_v3(
 
 __all__ = [
     "BOOTSTRAP_REPLICATES",
-    "IntervalV3",
     "PRIMARY_ALPHA",
     "RARE_EVENT_ALPHA",
+    "IntervalV3",
     "SurvivalPointV3",
     "bootstrap_mean_interval_v3",
     "clopper_pearson_interval_v3",

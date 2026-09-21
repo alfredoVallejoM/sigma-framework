@@ -1,8 +1,0 @@
-{
-  "campaign": "confirmatory-v1",
-  "experiment": "EXP-03",
-  "master_seed": "sigma-v2-confirmatory-seed-2026-09-02",
-  "segments": [1, 2, 3, 4],
-  "trials": 65536,
-  "widths": [4, 6, 8]
-}

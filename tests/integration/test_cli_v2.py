@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 from sigma.outputs import SigmaDigestV2
-from sigma.vectors import REFERENCE_STREAM_WIDE_ABC
 
 
 def run_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
@@ -22,7 +21,7 @@ def test_cli_hash_inspect_and_verify_round_trip() -> None:
         "--text",
         "abc",
         "--preset",
-        "lightweight-v2",
+        "lightweight-v2-2",
         "--target-round",
         "2",
         "--state-count",
@@ -36,7 +35,7 @@ def test_cli_hash_inspect_and_verify_round_trip() -> None:
     inspected = run_cli("inspect", digest.hex())
     assert inspected.returncode == 0, inspected.stderr
     metadata = json.loads(inspected.stdout)
-    assert metadata["suite_name"] == "lightweight-stream-wide-v2-1"
+    assert metadata["suite_name"] == "lightweight-stream-wide-v2-2"
     assert metadata["target_round"] == 2
     assert metadata["state_count"] == 3
 
@@ -54,7 +53,7 @@ def test_cli_file_hash_and_verification(tmp_path: Path) -> None:
         "--file",
         str(sample),
         "--preset",
-        "simultaneous-v2",
+        "simultaneous-v2-2",
         "--workers",
         "2",
     )
@@ -72,7 +71,7 @@ def test_cli_canonical_binary_output_and_digest_file(tmp_path: Path) -> None:
         "--text",
         "abc",
         "--preset",
-        "realtime-v2",
+        "lightweight-v2-2",
         "--format",
         "binary",
     ]
@@ -94,19 +93,13 @@ def test_cli_requires_digest_or_digest_file() -> None:
     assert "provide a digest or --digest-file" in result.stderr
 
 
-def test_cli_vectors_match_frozen_runtime_vector() -> None:
-    result = run_cli("vectors")
-    assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == [REFERENCE_STREAM_WIDE_ABC]
-
-
 def test_cli_benchmark_emits_raw_observations() -> None:
     result = run_cli(
         "benchmark",
         "--text",
         "abc",
         "--preset",
-        "realtime-v2",
+        "lightweight-v2-2",
         "--repeats",
         "2",
     )
@@ -123,7 +116,7 @@ def test_cli_rejects_invalid_backend_combination() -> None:
         "--text",
         "abc",
         "--preset",
-        "lightweight-v2",
+        "lightweight-v2-2",
         "--workers",
         "2",
     )

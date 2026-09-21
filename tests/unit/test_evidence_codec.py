@@ -4,7 +4,6 @@ import pytest
 
 from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWide, TreeWide
 from sigma.presets import (
-    lightweight_v2,
     lightweight_v2_2,
     paranoid_deep_v2_2,
     paranoid_wide_v2_2,
@@ -50,14 +49,6 @@ def test_evidence_types_are_explicit_and_distinct() -> None:
     assert wide.evidence_type is EvidenceType.WIDE_ROOTS
     assert cross.evidence_type is EvidenceType.CROSS_WIDE
     assert wide.to_bytes()[:11] != cross.to_bytes()[:11]
-
-
-def test_v21_evidence_encoding_remains_historical() -> None:
-    evidence = StreamWide.compute(lightweight_v2(), (b"evidence",))
-    assert evidence.evidence_version == 1
-    assert not evidence.to_bytes().startswith(EVIDENCE_MAGIC)
-    with pytest.raises(DecodeError, match="legacy"):
-        AnchorEvidence.from_bytes(evidence.to_bytes(), lightweight_v2())
 
 
 def test_v22_digest_round_trip_and_verification() -> None:

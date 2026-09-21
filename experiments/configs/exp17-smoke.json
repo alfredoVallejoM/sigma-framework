@@ -1,8 +1,0 @@
-{
-  "experiment": "EXP-17",
-  "master_seed": "sigma-exp17-smoke-v1",
-  "widths": [8],
-  "table_entries": 128,
-  "distinguished_bits": 2,
-  "repetitions": 2
-}

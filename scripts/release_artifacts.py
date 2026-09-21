@@ -55,6 +55,8 @@ def generate(directory: Path, *, require_clean_tag: bool = False) -> tuple[Path,
     version = _project_version()
     axes = _version_axes()
     suite_families = cast(tuple[str, ...], axes["SUPPORTED_SUITE_FAMILIES"])
+    active_suite_families = cast(tuple[str, ...], axes["ACTIVE_SUITE_FAMILIES"])
+    transitional_suite_families = cast(tuple[str, ...], axes["TRANSITIONAL_SUITE_FAMILIES"])
     commit = _git("rev-parse", "HEAD")
     dirty = _git("status", "--porcelain") != ""
     tag = _git("describe", "--tags", "--exact-match")
@@ -110,12 +112,32 @@ def generate(directory: Path, *, require_clean_tag: bool = False) -> tuple[Path,
                     "value": str(axes["EVIDENCE_WIRE_VERSION"]),
                 },
                 {
+                    "name": "sigma:kdf-parameter-wire-version",
+                    "value": str(axes["KDF_PARAMETER_WIRE_VERSION"]),
+                },
+                {
+                    "name": "sigma:kdf-record-wire-version",
+                    "value": str(axes["KDF_RECORD_WIRE_VERSION"]),
+                },
+                {
+                    "name": "sigma:pow-wire-version",
+                    "value": str(axes["POW_WIRE_VERSION"]),
+                },
+                {
                     "name": "sigma:signed-commitment-wire-version",
                     "value": str(axes["SIGNED_COMMITMENT_WIRE_VERSION"]),
                 },
                 {
+                    "name": "sigma:active-suite-families",
+                    "value": ",".join(active_suite_families),
+                },
+                {
                     "name": "sigma:suite-families",
                     "value": ",".join(suite_families),
+                },
+                {
+                    "name": "sigma:transitional-suite-families",
+                    "value": ",".join(transitional_suite_families),
                 },
             ],
             "tools": {

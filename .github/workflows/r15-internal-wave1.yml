@@ -167,3 +167,48 @@ jobs:
           path: /tmp/r15-results/
           if-no-files-found: error
           retention-days: 90
+
+  wave1-audit:
+    name: R15 Wave 1 merge and adversarial coverage audit
+    needs:
+      - unlock-internal
+      - wave1
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: r15-internal-unlock-bundle
+          path: /tmp/unlock
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r15-w1-*
+          path: /tmp/shards
+      - name: Install exact frozen wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL="$(find /tmp/unlock/dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python -m pip install --force-reinstall --no-deps "$WHEEL"
+      - name: Merge and audit Wave 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/wave1-dataset
+          cd /tmp
+          python -I -m experiments.r15_wave1_dataset \
+            --shards /tmp/shards \
+            --configs /tmp/unlock/configs \
+            --execution-manifest /tmp/unlock/execution-manifest.json \
+            --output /tmp/wave1-dataset \
+            --report /tmp/wave1-dataset/audit-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-wave1-confirmatory-dataset
+          path: /tmp/wave1-dataset/
+          if-no-files-found: error
+          retention-days: 90
+

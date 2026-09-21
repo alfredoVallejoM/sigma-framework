@@ -15,9 +15,9 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 | R14.1 | regenerate/refreeze/re-audit | **TECHNICAL PASS** — CI/bundle green |
 | TAG-01 | exact final freeze tag | **PENDING external action** |
 | R15-A | confirmatory unlock/preflight | **STATIC PASS; full unlock blocked by tag + real host/tool manifests** |
-| R15-B | harness validation | **SYNTHETIC BATTERY LAUNCHED; no confirmatory seeds** |
-| R15-C | structural acquisition | blocked |
-| R15-D | reduced cryptanalysis | blocked |
+| R15-B | harness validation | **PASS** — 7 tests / 11 adversarial checks |
+| R15-C | structural acquisition | **REAL ACQUISITION BLOCKED; 33-cell shadow battery launched** |
+| R15-D | reduced cryptanalysis | **REAL ACQUISITION BLOCKED; 32-cell shadow battery launched** |
 | R15-E | KDF/PoW/mitigation | blocked |
 | R15-F | external STAT | blocked |
 | R15-G | locked analysis | blocked |
@@ -78,3 +78,17 @@ R15-B usa exclusivamente el namespace `sigma-v3-r15-harness-v1` y valida
 crash/resume, timeout, duplicate RunKey, wrong seed, record/checkpoint tampering,
 budget overflow, execution-manifest mismatch y retry policy. No consume el
 namespace `sigma-v3-r15`.
+
+
+## Shadow acquisition doctrine
+
+R15-C/D shadow rehearsals are pre-data integration tests, not scientific
+observations. They use dedicated namespaces:
+
+- `sigma-v3-r15-shadow-c-v1`;
+- `sigma-v3-r15-shadow-d-v1`.
+
+They consume real R14.1 cell factors but clamp work to CI-safe limits, write
+canonical records/receipts, build deterministic ledgers and assert mode/fault/
+strategy coverage. They never call `derive_confirmatory_seed_r141` and cannot
+enter R15 figures/tables.

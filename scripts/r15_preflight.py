@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R15-A preflight and confirmatory unlock gate."""
+"""R15-A staged preflight and confirmatory unlock gate."""
 
 from __future__ import annotations
 
@@ -7,14 +7,15 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from typing import Literal
 
 from experiments.common import canonical_json, sha256_file
 from experiments.r15_data import RunKeyV3
-from experiments.r15_stat_adapters import (
-    BATTERIES_V3,
-    validate_battery_manifest_entry_v3,
+from experiments.r15_stat_adapters import BATTERIES_V3, validate_battery_manifest_entry_v3
+from experiments.r141_protocol import (
+    R141_FREEZE_ID,
+    confirmatory_attack_ids_r141,
 )
-from experiments.r141_protocol import R141_FREEZE_ID
 from scripts.check_r141_freeze import check_r141_freeze
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
 from scripts.verify_r141_tag import verify_r141_tag
@@ -22,6 +23,28 @@ from scripts.verify_r141_tag import verify_r141_tag
 ROOT = Path(__file__).resolve().parents[1]
 PREREG = ROOT / "experiments" / "preregistration-v3-r141.md"
 LOCK = ROOT / "constraints" / "r14-v3-py313.txt"
+
+UnlockScope = Literal["internal", "physical", "stat", "full"]
+
+PHYSICAL_ATTACKS = ("PARAM-04", "PARAM-05", "PARAM-06")
+STAT_ATTACKS = ("STAT-01",)
+INTERNAL_ATTACKS = tuple(
+    attack_id
+    for attack_id in confirmatory_attack_ids_r141()
+    if attack_id not in {*PHYSICAL_ATTACKS, *STAT_ATTACKS}
+)
+
+
+def authorized_attacks_for_scope(scope: UnlockScope) -> tuple[str, ...]:
+    if scope == "internal":
+        return INTERNAL_ATTACKS
+    if scope == "physical":
+        return PHYSICAL_ATTACKS
+    if scope == "stat":
+        return STAT_ATTACKS
+    if scope == "full":
+        return confirmatory_attack_ids_r141()
+    raise ValueError("unknown R15 unlock scope")
 
 
 def _validate_host_manifest(path: Path) -> tuple[str, ...]:
@@ -114,7 +137,7 @@ def _verify_artifact(runtime: dict[str, object], artifact: Path) -> str:
     return digest
 
 
-def _verify_configs(runtime: dict[str, object], root: Path) -> tuple[str, int, int]:
+def _verify_configs(runtime: dict[str, object], root: Path) -> str:
     prepare_r141_configs(root, check=True)
     manifest = root / "config-manifest.json"
     digest = sha256_file(manifest)
@@ -127,11 +150,26 @@ def _verify_configs(runtime: dict[str, object], root: Path) -> tuple[str, int, i
         candidate = root / relative
         if not candidate.is_file() or sha256_file(candidate) != expected:
             raise ValueError(f"generated config hash mismatch: {relative}")
-    index = json.loads((root / "campaign-index.json").read_text(encoding="utf-8"))
-    return digest, int(index["total_cells"]), int(index["total_run_units"])
+    return digest
 
 
-def _runkey_root(config_root: Path) -> str:
+def _scope_counts(config_root: Path, attack_ids: tuple[str, ...]) -> tuple[int, int]:
+    allowed = set(attack_ids)
+    cells = 0
+    runs = 0
+    for path in sorted(config_root.glob("*.json")):
+        if path.name in {"campaign-index.json", "config-manifest.json"}:
+            continue
+        config = json.loads(path.read_text(encoding="utf-8"))
+        if config["attack_id"] not in allowed:
+            continue
+        cells += len(config["cells"])
+        runs += sum(int(cell["replicates"]) for cell in config["cells"])
+    return cells, runs
+
+
+def _runkey_root(config_root: Path, attack_ids: tuple[str, ...]) -> str:
+    allowed = set(attack_ids)
     digest = hashlib.sha256(b"sigma-v3-r15-expected-runkeys-v1")
     config_paths = sorted(
         path
@@ -141,14 +179,11 @@ def _runkey_root(config_root: Path) -> str:
     for path in config_paths:
         config = json.loads(path.read_text(encoding="utf-8"))
         attack_id = config["attack_id"]
+        if attack_id not in allowed:
+            continue
         for cell in config["cells"]:
             for replicate_id in range(cell["replicates"]):
-                key = RunKeyV3(
-                    R141_FREEZE_ID,
-                    attack_id,
-                    cell["cell_id"],
-                    replicate_id,
-                )
+                key = RunKeyV3(R141_FREEZE_ID, attack_id, cell["cell_id"], replicate_id)
                 encoded = key.stable_id.encode("utf-8")
                 digest.update(len(encoded).to_bytes(4, "big"))
                 digest.update(encoded)
@@ -158,10 +193,14 @@ def _runkey_root(config_root: Path) -> str:
 def static_r15_preflight() -> dict[str, object]:
     freeze = check_r141_freeze()
     return {
-        "schema": "sigma-v3-r15-preflight-static-v1",
+        "schema": "sigma-v3-r15-preflight-static-v2",
         "freeze_id": R141_FREEZE_ID,
         "passed": True,
         "confirmatory_unlocked": False,
+        "staged_unlock": True,
+        "internal_attacks": list(INTERNAL_ATTACKS),
+        "physical_attacks": list(PHYSICAL_ATTACKS),
+        "stat_attacks": list(STAT_ATTACKS),
         "r141_freeze": freeze,
     }
 
@@ -182,36 +221,58 @@ def unlock_r15(
     source_freeze: Path,
     config_root: Path,
     artifact: Path,
-    host_manifest: Path,
-    external_tools: Path,
     output: Path,
+    scope: UnlockScope = "full",
+    host_manifest: Path | None = None,
+    external_tools: Path | None = None,
 ) -> dict[str, object]:
     runtime = json.loads(runtime_manifest.read_text(encoding="utf-8"))
     if runtime.get("schema") != "sigma-v3-r14-1-runtime-manifest-v1":
         raise ValueError("unexpected R14.1 runtime manifest")
     if runtime.get("freeze_id") != R141_FREEZE_ID:
         raise ValueError("runtime manifest freeze id mismatch")
-
     if runtime.get("source_freeze_sha256") != sha256_file(source_freeze):
         raise ValueError("source-freeze SHA-256 mismatch")
+
     source = json.loads(source_freeze.read_text(encoding="utf-8"))
     if source.get("source_commit") != runtime.get("source_commit"):
         raise ValueError("source-freeze commit differs from runtime manifest")
+
     _reject_preexisting_confirmatory_data()
     tag = verify_r141_tag(runtime_manifest)
     artifact_sha256 = _verify_artifact(runtime, artifact)
-    config_sha256, cells, runs = _verify_configs(runtime, config_root)
+    config_sha256 = _verify_configs(runtime, config_root)
+
     if runtime.get("preregistration_sha256") != sha256_file(PREREG):
         raise ValueError("preregistration SHA-256 mismatch")
     if runtime.get("dependency_lock_sha256") != sha256_file(LOCK):
         raise ValueError("dependency lock SHA-256 mismatch")
-    hosts = _validate_host_manifest(host_manifest)
-    batteries = _validate_external_tools(external_tools)
-    runkey_root = _runkey_root(config_root)
+
+    authorized = authorized_attacks_for_scope(scope)
+    hosts: tuple[str, ...] = ()
+    batteries: tuple[str, ...] = ()
+    host_sha256: str | None = None
+    tools_sha256: str | None = None
+
+    if scope in ("physical", "full"):
+        if host_manifest is None:
+            raise ValueError(f"R15 scope={scope} requires --host-manifest")
+        hosts = _validate_host_manifest(host_manifest)
+        host_sha256 = sha256_file(host_manifest)
+
+    if scope in ("stat", "full"):
+        if external_tools is None:
+            raise ValueError(f"R15 scope={scope} requires --external-tools")
+        batteries = _validate_external_tools(external_tools)
+        tools_sha256 = sha256_file(external_tools)
+
+    cells, runs = _scope_counts(config_root, authorized)
+    runkey_root = _runkey_root(config_root, authorized)
 
     result = {
-        "schema": "sigma-v3-r15-execution-manifest-v1",
+        "schema": "sigma-v3-r15-execution-manifest-v2",
         "freeze_id": R141_FREEZE_ID,
+        "scope": scope,
         "source_commit": runtime["source_commit"],
         "source_tree": runtime["source_tree"],
         "tag": tag["tag"],
@@ -219,9 +280,11 @@ def unlock_r15(
         "config_manifest_sha256": config_sha256,
         "preregistration_sha256": runtime["preregistration_sha256"],
         "dependency_lock_sha256": runtime["dependency_lock_sha256"],
+        "authorized_attacks": list(authorized),
         "host_ids": list(hosts),
+        "host_manifest_sha256": host_sha256,
         "external_batteries": list(batteries),
-        "external_tools_sha256": sha256_file(external_tools),
+        "external_tools_sha256": tools_sha256,
         "expected_cells": cells,
         "expected_run_units": runs,
         "expected_runkey_sha256": runkey_root,
@@ -235,6 +298,11 @@ def unlock_r15(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--static", action="store_true")
+    parser.add_argument(
+        "--scope",
+        choices=("internal", "physical", "stat", "full"),
+        default="full",
+    )
     parser.add_argument("--runtime-manifest", type=Path)
     parser.add_argument("--source-freeze", type=Path)
     parser.add_argument("--configs", type=Path)
@@ -252,30 +320,27 @@ def main() -> int:
                 args.source_freeze,
                 args.configs,
                 args.artifact,
-                args.host_manifest,
-                args.external_tools,
                 args.output,
             )
             if any(value is None for value in required):
                 parser.error(
-                    "full unlock requires --runtime-manifest --source-freeze "
-                    "--configs --artifact --host-manifest --external-tools --output"
+                    "unlock requires --runtime-manifest --source-freeze "
+                    "--configs --artifact --output"
                 )
             assert args.runtime_manifest is not None
             assert args.source_freeze is not None
             assert args.configs is not None
             assert args.artifact is not None
-            assert args.host_manifest is not None
-            assert args.external_tools is not None
             assert args.output is not None
             result = unlock_r15(
                 runtime_manifest=args.runtime_manifest,
                 source_freeze=args.source_freeze,
                 config_root=args.configs,
                 artifact=args.artifact,
+                output=args.output,
+                scope=args.scope,
                 host_manifest=args.host_manifest,
                 external_tools=args.external_tools,
-                output=args.output,
             )
     except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(exc))

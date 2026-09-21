@@ -66,9 +66,7 @@ def check_r15_harness() -> dict[str, object]:
             checkpoint_path=root / "timeout-checkpoint.json",
             timeout_after_steps=7,
         )
-        checks["timeout_distinct"] = (
-            timeout.status == "timeout" and timeout.steps_completed == 7
-        )
+        checks["timeout_distinct"] = timeout.status == "timeout" and timeout.steps_completed == 7
 
         seed = derive_harness_seed_v3(key).hex()
         try:

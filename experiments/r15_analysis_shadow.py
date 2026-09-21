@@ -70,9 +70,7 @@ def _figure_result(figure_id: str) -> dict[str, int | float | str | bool | None]
         )
         return {"rmst_ci_lower": interval.lower, "rmst_ci_upper": interval.upper}
     if figure_id in ("F06", "F11"):
-        frontier = pareto_frontier_v3(
-            ((100, 20, 64), (80, 30, 64), (120, 15, 96), (110, 25, 80))
-        )
+        frontier = pareto_frontier_v3(((100, 20, 64), (80, 30, 64), (120, 15, 96), (110, 25, 80)))
         return {"pareto_points": len(frontier)}
     if figure_id == "F07":
         band = simultaneous_mean_band_v3(

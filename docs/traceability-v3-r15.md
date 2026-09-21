@@ -18,7 +18,7 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 | R15-B | harness validation | **PASS** — 7 tests / 11 adversarial checks |
 | R15-C | structural acquisition | **REAL ACQUISITION BLOCKED; 33-cell shadow battery launched** |
 | R15-D | reduced cryptanalysis | **REAL ACQUISITION BLOCKED; 32-cell shadow battery launched** |
-| R15-E | KDF/PoW/mitigation | blocked |
+| R15-E | KDF/PoW/mitigation | **REAL ACQUISITION BLOCKED; production-primitive shadow battery launched** |
 | R15-F | external STAT | blocked |
 | R15-G | locked analysis | blocked |
 | R15-H | adversarial data audit | blocked |
@@ -92,3 +92,9 @@ They consume real R14.1 cell factors but clamp work to CI-safe limits, write
 canonical records/receipts, build deterministic ledgers and assert mode/fault/
 strategy coverage. They never call `derive_confirmatory_seed_r141` and cannot
 enter R15 figures/tables.
+
+
+R15-E shadow uses production Argon2id, history-feedback Sigma v3 and PoW
+primitives at tiny non-confirmatory scale. It validates the three frozen KDF
+treatments, nonce preparation/selection accounting and the three mitigation
+modes without using physical-host measurements or confirmatory seeds.

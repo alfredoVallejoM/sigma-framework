@@ -46,6 +46,14 @@ FROZEN_PATHS = (
     "scripts/prepare_r141_confirmatory.py",
     "scripts/check_r141_protocol.py",
     "scripts/create_r141_source_freeze.py",
+    "scripts/build_r141_runtime_manifest.py",
+    "scripts/check_r141_freeze.py",
+    "scripts/verify_r141_tag.py",
+    "scripts/r15_preflight.py",
+    "scripts/validate_project.py",
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "experiments/r15-host-manifest-template.json",
 )
 
 

@@ -698,7 +698,9 @@ __all__ = [
     "execute_internal_run",
     "main",
     "run_internal_shard",
-]\n\ndef _parse_factor_filters(values: list[str]) -> dict[str, str]:
+]
+
+def _parse_factor_filters(values: list[str]) -> dict[str, str]:
     filters: dict[str, str] = {}
     for value in values:
         if "=" not in value:

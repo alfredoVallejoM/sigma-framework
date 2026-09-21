@@ -49,8 +49,7 @@ def expected_wave1_runkeys(config_root: Path) -> tuple[RunKeyV3, ...]:
                 )
     if len(keys) != WAVE1_EXPECTED_RUN_UNITS:
         raise RuntimeError(
-            f"Wave 1 expected-run cardinality drifted: {len(keys)} "
-            f"!= {WAVE1_EXPECTED_RUN_UNITS}"
+            f"Wave 1 expected-run cardinality drifted: {len(keys)} != {WAVE1_EXPECTED_RUN_UNITS}"
         )
     if len(keys) != len(set(keys)):
         raise RuntimeError("Wave 1 expected RunKeys contain duplicates")
@@ -152,9 +151,7 @@ def audit_and_merge_wave1(
     missing = sorted(expected_ids - observed_ids)
     extra = sorted(observed_ids - expected_ids)
     if missing or extra:
-        raise RuntimeError(
-            f"Wave 1 coverage mismatch: missing={len(missing)}, extra={len(extra)}"
-        )
+        raise RuntimeError(f"Wave 1 coverage mismatch: missing={len(missing)}, extra={len(extra)}")
 
     output_root.mkdir(parents=True, exist_ok=True)
     merged_keys: list[RunKeyV3] = []

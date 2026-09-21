@@ -23,11 +23,6 @@ from .history_attackers_v3 import (
 )
 from .history_reduced import ReducedHistoryConfig, evaluate_reduced_history
 from .r13_schema import ResourceBudget
-from .r141_schema import (
-    ConfirmatoryRecordR141,
-    config_from_dict_r141,
-    derive_confirmatory_seed_r141,
-)
 from .r15_branch_dependency import profile_deep_vector_dependency_v3
 from .r15_data import RunKeyV3, atomic_write_record_v3, build_ledger_v3
 from .r15_endpoint_wrappers import (
@@ -41,6 +36,11 @@ from .r15_history_games import (
 )
 from .r15_layout_ablation import profile_layout_ablation_three_way_v3
 from .r15_parameter_analysis import parameter_mutual_information_profile_v3
+from .r141_schema import (
+    ConfirmatoryRecordR141,
+    config_from_dict_r141,
+    derive_confirmatory_seed_r141,
+)
 from .reduced_oracle import ReducedOracle
 from .tmto_v3 import TMTOConfigV3, measure_tmto_v3
 from .trajectory_attacks_v3 import (

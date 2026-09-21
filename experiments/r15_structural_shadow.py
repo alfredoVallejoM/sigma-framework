@@ -116,9 +116,7 @@ def _natural_crossing(cell: R141Cell, seed: bytes) -> ShadowExecutionResultV3:
         candidates=min(int(factors["candidate_budget"]), 512),
         limit=min(int(factors["crossing_target"]), 8),
     )
-    outcomes = [
-        profile_crossing_outcome_v3(oracle, config, crossing) for crossing in crossings
-    ]
+    outcomes = [profile_crossing_outcome_v3(oracle, config, crossing) for crossing in crossings]
     matches = sum(item.r125_successors_equal for item in outcomes)
     rate = matches / len(outcomes) if outcomes else 0.0
     return ShadowExecutionResultV3(
@@ -397,8 +395,12 @@ def selected_shadow_cells_v3() -> tuple[tuple[str, R141Cell], ...]:
     selected: list[tuple[str, R141Cell]] = []
 
     hist01 = cells_for_attack_r141("HIST-01")
-    selected.append(("HIST-01", next(cell for cell in hist01 if cell.factors["mode"] == "natural-crossing")))
-    selected.append(("HIST-01", next(cell for cell in hist01 if cell.factors["mode"] == "conditional-crossing")))
+    selected.append(
+        ("HIST-01", next(cell for cell in hist01 if cell.factors["mode"] == "natural-crossing"))
+    )
+    selected.append(
+        ("HIST-01", next(cell for cell in hist01 if cell.factors["mode"] == "conditional-crossing"))
+    )
 
     selected.append(("HIST-02", cells_for_attack_r141("HIST-02")[0]))
 

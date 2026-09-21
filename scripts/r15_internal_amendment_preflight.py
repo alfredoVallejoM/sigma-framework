@@ -91,6 +91,7 @@ def build_amendment_manifest(
     source_commit: str,
     config_root: Path,
     artifact: Path,
+    require_amendment_tag: bool = True,
 ) -> dict[str, object]:
     source_commit = _git("rev-parse", f"{source_commit}^{{commit}}")
     source_tree = _git("rev-parse", f"{source_commit}^{{tree}}")
@@ -99,7 +100,7 @@ def build_amendment_manifest(
         raise RuntimeError("base R14.1 tag no longer resolves to frozen source commit")
     if _git("rev-parse", f"{BASE_SOURCE_COMMIT}^{{tree}}") != BASE_SOURCE_TREE:
         raise RuntimeError("base R14.1 source tree drifted")
-    if _tag_target(AMENDMENT_TAG) != source_commit:
+    if require_amendment_tag and _tag_target(AMENDMENT_TAG) != source_commit:
         raise RuntimeError("amendment tag does not resolve to requested source commit")
 
     changed = {
@@ -149,7 +150,7 @@ def build_amendment_manifest(
         "expected_run_units": runs,
         "expected_runkey_sha256": runkey_root,
         "changed_paths": sorted(changed),
-        "confirmatory_unlocked": True,
+        "confirmatory_unlocked": require_amendment_tag,
     }
 
 
@@ -159,12 +160,14 @@ def main() -> int:
     parser.add_argument("--configs", type=Path, required=True)
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--pretag", action="store_true")
     args = parser.parse_args()
     try:
         result = build_amendment_manifest(
             source_commit=args.source_commit,
             config_root=args.configs,
             artifact=args.artifact,
+            require_amendment_tag=not args.pretag,
         )
     except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(exc))

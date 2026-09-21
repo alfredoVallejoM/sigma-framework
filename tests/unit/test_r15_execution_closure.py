@@ -15,6 +15,11 @@ from experiments.r15_history_games import (
     profile_history_game_v3,
 )
 from experiments.r15_layout_ablation import profile_layout_ablation_three_way_v3
+from experiments.r15_endpoint_wrappers import (
+    find_first_full_state_collision_v3,
+    parameter_grinding_work_ratio_v3,
+    parameter_uniformity_profile_v3,
+)
 from experiments.r15_parameter_analysis import parameter_mutual_information_profile_v3
 from experiments.r15_stat_adapters import StreamHasherV3, derive_stream_seed_v3
 from experiments.reduced_oracle import ReducedOracle
@@ -193,3 +198,31 @@ def test_stream_hashing_and_identity_are_deterministic() -> None:
 
 def test_every_frozen_attack_has_one_binding() -> None:
     assert len(R15_EXECUTOR_BINDINGS) == 21
+
+
+def test_exact_primary_endpoint_wrappers() -> None:
+    oracle = ReducedOracle(b"r15-endpoints")
+    config = ReducedHistoryConfig(4, 4, 4, target_round=1, state_count=1)
+    full = find_first_full_state_collision_v3(
+        oracle, config, round_index=0, candidates=32
+    )
+    assert 1 <= full.queries <= 32
+    assert full.censored is (not full.success)
+
+    uniformity = parameter_uniformity_profile_v3(
+        ReducedOracle(b"r15-uniformity"),
+        186,
+        persistent_bits=8,
+    )
+    assert uniformity.samples == 186
+    assert uniformity.pair_count == 93
+    assert uniformity.expected_per_pair == 2
+    assert uniformity.max_deviation >= 0
+
+    grinding = parameter_grinding_work_ratio_v3(
+        ReducedOracle(b"r15-grinding"),
+        93,
+        persistent_bits=8,
+    )
+    assert 0.0 < grinding.net_work_ratio <= 1.0
+    assert grinding.selected_work <= grinding.full_evaluation_baseline_work

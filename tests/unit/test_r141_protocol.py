@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from experiments.r15_estimators import (
+    ScalingCellV3,
+    bootstrap_scaling_slope_interval_v3,
+    bootstrap_survival_statistic_v3,
     holm_adjust_v3,
     kaplan_meier_v3,
     km_q50_v3,
     km_rmst_v3,
     pareto_frontier_v3,
+    scaling_slope_v3,
+    simultaneous_mean_band_v3,
     zero_event_upper_bound_v3,
 )
 from experiments.r141_protocol import (
@@ -13,7 +18,8 @@ from experiments.r141_protocol import (
     cells_for_attack_r141,
     confirmatory_attack_ids_r141,
 )
-from experiments.r141_schema import derive_confirmatory_seed_r141
+from experiments.r13_schema import ResourceBudget
+from experiments.r141_schema import ConfirmatoryRecordR141, derive_confirmatory_seed_r141
 from scripts.check_r141_protocol import check_r141_protocol
 from scripts.prepare_r141_confirmatory import render_r141_configs
 
@@ -82,3 +88,73 @@ def test_holm_and_pareto_are_deterministic() -> None:
     frontier = pareto_frontier_v3([(1, 5, 5), (2, 2, 2), (5, 1, 5), (3, 3, 3)])
     assert (3, 3, 3) not in frontier
     assert (2, 2, 2) in frontier
+
+
+
+def test_r141_confirmatory_record_binds_new_freeze_and_execution_manifest() -> None:
+    budget = ResourceBudget(10, 2, 2, 2, 2, 2, 1, 4, 1)
+    observed = ResourceBudget(5, 1, 1, 1, 1, 1, 1, 2, 1)
+    record = ConfirmatoryRecordR141.create(
+        campaign_id="fixture",
+        attack_id="HIST-01",
+        claim_ids=("C04",),
+        construction="fixture-r125",
+        cell_id="hist-01-000",
+        replicate_id=0,
+        declared=budget,
+        observed=observed,
+        status="no-success",
+        metrics={"next_state_match_rate": 0.0},
+        censor_reason=None,
+        error_class=None,
+        code_commit="1" * 40,
+        artifact_sha256="2" * 64,
+        config_sha256="3" * 64,
+        preregistration_sha256="4" * 64,
+        dependency_lock_sha256="5" * 64,
+        execution_manifest_sha256="6" * 64,
+        host_id="fixture-host",
+        platform_name="linux",
+        architecture="x86_64",
+        python_version="3.13",
+        started_utc="2026-09-21T00:00:00+00:00",
+        completed_utc="2026-09-21T00:00:01+00:00",
+    )
+    assert record.freeze_id == R141_FREEZE_ID
+    assert record.phase == "confirmatory"
+    assert len(record.record_sha256) == 64
+
+
+def test_frozen_scaling_estimators_are_deterministic() -> None:
+    assert scaling_slope_v3([4, 6, 8], [4, 8, 16]) == 0.5
+    times = [2, 3, 4, 5, 6, 7, 8, 9]
+    events = [True, True, True, True, True, False, False, False]
+    interval = bootstrap_survival_statistic_v3(
+        times,
+        events,
+        statistic="rmst",
+        tau=9,
+        label="fixture-rmst",
+        replicates=200,
+    )
+    assert interval.lower <= interval.upper
+
+    cells = (
+        ScalingCellV3(4, (2, 3, 4, 5, 6, 7, 8, 9), (True,) * 8),
+        ScalingCellV3(6, (4, 5, 6, 7, 8, 9, 10, 11), (True,) * 8),
+        ScalingCellV3(8, (8, 9, 10, 11, 12, 13, 14, 15), (True,) * 8),
+    )
+    slope = bootstrap_scaling_slope_interval_v3(
+        cells,
+        label="fixture-slope",
+        replicates=200,
+    )
+    assert slope.lower <= slope.upper
+
+    band = simultaneous_mean_band_v3(
+        ((4.0, (1.0, 2.0, 3.0)), (6.0, (2.0, 3.0, 4.0))),
+        label="fixture-band",
+        replicates=200,
+    )
+    assert len(band) == 2
+    assert all(point.lower <= point.estimate <= point.upper for point in band)

@@ -29,8 +29,7 @@ def test_r15_h_audit_shadow_detects_all_fixture_tampering() -> None:
 
 def test_analysis_shadow_hash_is_repeatable() -> None:
     assert (
-        run_analysis_shadow_v3()["analysis_sha256"]
-        == run_analysis_shadow_v3()["analysis_sha256"]
+        run_analysis_shadow_v3()["analysis_sha256"] == run_analysis_shadow_v3()["analysis_sha256"]
     )
 
 

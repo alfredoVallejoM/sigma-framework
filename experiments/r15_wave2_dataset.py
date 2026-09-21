@@ -55,8 +55,7 @@ def expected_wave2_runkeys(config_root: Path) -> tuple[RunKeyV3, ...]:
                 )
     if len(keys) != WAVE2_EXPECTED_RUN_UNITS:
         raise RuntimeError(
-            f"Wave 2 expected-run cardinality drifted: "
-            f"{len(keys)} != {WAVE2_EXPECTED_RUN_UNITS}"
+            f"Wave 2 expected-run cardinality drifted: {len(keys)} != {WAVE2_EXPECTED_RUN_UNITS}"
         )
     if len(keys) != len(set(keys)):
         raise RuntimeError("Wave 2 expected RunKeys contain duplicates")
@@ -110,7 +109,9 @@ def audit_and_merge_wave2(
     required_attacks = {attack_id for attack_id, _filters in WAVE2_SPECS}
     if not required_attacks.issubset(set(authorized)):
         raise ValueError("execution manifest does not authorize all Wave 2 attacks")
-    if len(controller_commit) != 40 or any(ch not in "0123456789abcdef" for ch in controller_commit):
+    if len(controller_commit) != 40 or any(
+        ch not in "0123456789abcdef" for ch in controller_commit
+    ):
         raise ValueError("controller_commit must be a lowercase 40-hex Git commit")
 
     expected = expected_wave2_runkeys(config_root)
@@ -161,9 +162,7 @@ def audit_and_merge_wave2(
     missing = expected_ids - observed_ids
     extra = observed_ids - expected_ids
     if missing or extra:
-        raise RuntimeError(
-            f"Wave 2 coverage mismatch: missing={len(missing)}, extra={len(extra)}"
-        )
+        raise RuntimeError(f"Wave 2 coverage mismatch: missing={len(missing)}, extra={len(extra)}")
 
     output_root.mkdir(parents=True, exist_ok=True)
     merged_keys: list[RunKeyV3] = []

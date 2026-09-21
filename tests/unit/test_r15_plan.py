@@ -10,9 +10,9 @@ def test_r15_plan_gate_passes_current_predata_plan() -> None:
     assert result["passed"] is True
     assert result["confirmatory_evidence"] is False
     assert result["campaigns"] == 21
-    assert result["primary_ci"] >= 0.95
-    assert result["rare_event_upper"] >= 0.99
-    assert result["power_target"] >= 0.95
+    assert float(result["primary_ci"]) >= 0.95
+    assert float(result["rare_event_upper"]) >= 0.99
+    assert float(result["power_target"]) >= 0.95
 
 
 def test_r15_scale_plan_is_predata_only() -> None:

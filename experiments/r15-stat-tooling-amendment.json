@@ -1,0 +1,54 @@
+{
+  "schema": "sigma-v3-r15-stat-tooling-amendment-v1",
+  "status": "effective-before-stat01-execution",
+  "effective_date": "2026-09-21",
+  "base_freeze_id": "sigma-v3-r14-20260921-v2",
+  "base_tag": "sigma-v3-r14-freeze-v1",
+  "base_source_commit": "80214afde29b3596af83265e18c1e2926e14dd2f",
+  "reason": "The frozen 64 MiB finite stream contract is directly compatible with NIST STS and PractRand. Standard TestU01 SmallCrush/Crush consume more data than one 64 MiB finite stream; repeating/cycling the stream would invalidate the experiment. TestU01 is therefore moved to a descriptive deterministic-continuation subprogram before any STAT-01 data are acquired.",
+  "mandatory_confirmatory_batteries": [
+    {
+      "battery_id": "nist-sts",
+      "version": "2.1.2",
+      "source": "https://csrc.nist.gov/CSRC/media/Projects/Random-Bit-Generation/documents/sts-2_1_2.zip",
+      "stream_contract": "exactly 64 MiB",
+      "sequence_bits": 1048576,
+      "bitstreams_per_stream": 512,
+      "input_mode": "binary",
+      "tests": "all-default"
+    },
+    {
+      "battery_id": "practrand",
+      "version": "pre0.95",
+      "source": "https://downloads.sourceforge.net/project/pracrand/PractRand-pre0.95.zip",
+      "stream_contract": "exactly 64 MiB",
+      "command_profile": "stdin64 -tlmin 1MB -tlmax 64MB"
+    }
+  ],
+  "descriptive_continuation_batteries": [
+    {
+      "battery_id": "testu01-smallcrush",
+      "version": "1.2.3",
+      "classification": "descriptive-continuation",
+      "counts_toward_r15_pass": false,
+      "reason": "standard battery consumption exceeds the frozen 64 MiB finite stream"
+    },
+    {
+      "battery_id": "testu01-crush",
+      "version": "1.2.3",
+      "classification": "descriptive-continuation",
+      "counts_toward_r15_pass": false,
+      "reason": "standard battery consumption exceeds the frozen 64 MiB finite stream"
+    }
+  ],
+  "confirmatory_streams": {
+    "cells": 24,
+    "streams_per_cell": 64,
+    "bytes_per_stream": 67108864,
+    "expected_run_units": 1536,
+    "total_logical_bytes": 103079215104,
+    "stream_retention": "ephemeral"
+  },
+  "mandatory_stat_interpretation": "NIST STS and PractRand are secondary descriptive evidence only and do not substitute for cryptanalysis.",
+  "testu01_license_note": "TestU01 1.2.3 is distributed under a non-commercial license; automatic descriptive execution is not part of mandatory R15 closure."
+}

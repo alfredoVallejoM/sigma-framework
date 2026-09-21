@@ -185,7 +185,7 @@ def execute_structural_shadow_cell_v3(
             history_bits=int(factors["history_bits"]),
             target_round=max(1, int(factors["round_index"])),
         )
-        result = find_first_full_state_collision_v3(
+        full_state = find_first_full_state_collision_v3(
             oracle,
             config,
             round_index=int(factors["round_index"]),
@@ -195,18 +195,18 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "queries_to_first_full_state_collision",
-            result.queries,
+            full_state.queries,
             {
-                "success": result.success,
-                "censored": result.censored,
-                "collision_pairs_at_stop": result.collision_pairs_at_stop,
+                "success": full_state.success,
+                "censored": full_state.censored,
+                "collision_pairs_at_stop": full_state.collision_pairs_at_stop,
             },
         )
 
     if attack_id == "HIST-03":
         bits = int(factors["history_bits"])
         config = _history_config(bits=bits, history_bits=bits)
-        result = profile_history_game_v3(
+        history_game = profile_history_game_v3(
             oracle,
             config,
             persistent=3,
@@ -219,21 +219,21 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "queries",
-            result.queries,
+            history_game.queries,
             {
-                "game": result.game,
-                "success": result.success,
-                "collision_pairs": result.collision_pairs,
-                "cycles": result.cycles,
-                "max_cycle_length": result.max_cycle_length,
-                "max_tail_length": result.max_tail_length,
+                "game": history_game.game,
+                "success": history_game.success,
+                "collision_pairs": history_game.collision_pairs,
+                "cycles": history_game.cycles,
+                "max_cycle_length": history_game.max_cycle_length,
+                "max_tail_length": history_game.max_tail_length,
             },
         )
 
     if attack_id == "HIST-05":
         bits = int(factors["history_bits"])
         state_bits = int(factors["state_bits"])
-        result = profile_history_truncation_v3(
+        truncation = profile_history_truncation_v3(
             seed,
             (bits,),
             state_bits=state_bits,
@@ -246,11 +246,11 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "full_collision_pairs",
-            result.full_collision_pairs,
+            truncation.full_collision_pairs,
             {
-                "visible_collision_pairs": result.visible_collision_pairs,
-                "visible_image_size": result.visible_image_size,
-                "full_image_size": result.full_image_size,
+                "visible_collision_pairs": truncation.visible_collision_pairs,
+                "visible_image_size": truncation.visible_image_size,
+                "full_image_size": truncation.full_image_size,
             },
         )
 
@@ -279,14 +279,14 @@ def execute_structural_shadow_cell_v3(
         )
 
     if attack_id == "BRANCH-05":
-        config = BranchFailureConfigV3(
+        branch_config = BranchFailureConfigV3(
             bits=int(factors["state_bits"]),
             branch_count=int(factors["branch_count"]),
             candidates=min(int(factors["candidates"]), 256),
         )
-        result = profile_branch_failure_v3(
+        branch_failure = profile_branch_failure_v3(
             oracle,
-            config,
+            branch_config,
             "deep",
             str(factors["fault"]),  # type: ignore[arg-type]
         )
@@ -294,16 +294,16 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "collision_pairs",
-            result.collision_pairs,
+            branch_failure.collision_pairs,
             {
                 "fault": str(factors["fault"]),
-                "image_size": result.image_size,
-                "conservative_bits": result.conservative_bits,
+                "image_size": branch_failure.image_size,
+                "conservative_bits": branch_failure.conservative_bits,
             },
         )
 
     if attack_id == "BRANCH-06":
-        result = profile_deep_vector_dependency_v3(
+        branch_dependency = profile_deep_vector_dependency_v3(
             oracle,
             bits=int(factors["state_bits"]),
             branch_count=int(factors["branch_count"]),
@@ -314,17 +314,17 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "affected_branches",
-            result.mean_affected_branches,
+            branch_dependency.mean_affected_branches,
             {
                 "fault": str(factors["fault"]),
-                "interventions": result.interventions,
-                "all_branches_affected_rate": result.all_branches_affected_rate,
-                "hamming_distance_sum": result.hamming_distance_sum,
+                "interventions": branch_dependency.interventions,
+                "all_branches_affected_rate": branch_dependency.all_branches_affected_rate,
+                "hamming_distance_sum": branch_dependency.hamming_distance_sum,
             },
         )
 
     if attack_id == "PARAM-01":
-        result = parameter_uniformity_profile_v3(
+        uniformity = parameter_uniformity_profile_v3(
             oracle,
             min(int(factors["samples"]), 930),
             persistent_bits=12,
@@ -333,17 +333,17 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "max_deviation",
-            result.max_deviation,
+            uniformity.max_deviation,
             {
-                "samples": result.samples,
-                "pair_count": result.pair_count,
-                "relative_max_deviation": result.relative_max_deviation,
-                "chi_square": result.chi_square,
+                "samples": uniformity.samples,
+                "pair_count": uniformity.pair_count,
+                "relative_max_deviation": uniformity.relative_max_deviation,
+                "chi_square": uniformity.chi_square,
             },
         )
 
     if attack_id == "PARAM-02":
-        result = parameter_mutual_information_profile_v3(
+        mi_profile = parameter_mutual_information_profile_v3(
             oracle,
             min(int(factors["samples"]), 512),
             permutations=min(int(factors["permutations"]), 127),
@@ -352,24 +352,24 @@ def execute_structural_shadow_cell_v3(
             candidate_bucket_bits=int(factors["candidate_bucket_bits"]),
             persistent_bucket_bits=int(factors["persistent_bucket_bits"]),
         )
-        primary = max(result.mi_candidate, result.mi_persistent)
+        primary = max(mi_profile.mi_candidate, mi_profile.mi_persistent)
         return ShadowExecutionResultV3(
             attack_id,
             cell.cell_id,
             "mutual_information",
             primary,
             {
-                "samples": result.samples,
-                "mi_candidate": result.mi_candidate,
-                "mi_persistent": result.mi_persistent,
-                "permutation_p_candidate": result.permutation_p_candidate,
-                "permutation_p_persistent": result.permutation_p_persistent,
-                "permutations": result.permutations,
+                "samples": mi_profile.samples,
+                "mi_candidate": mi_profile.mi_candidate,
+                "mi_persistent": mi_profile.mi_persistent,
+                "permutation_p_candidate": mi_profile.permutation_p_candidate,
+                "permutation_p_persistent": mi_profile.permutation_p_persistent,
+                "permutations": mi_profile.permutations,
             },
         )
 
     if attack_id == "PARAM-03":
-        result = parameter_grinding_work_ratio_v3(
+        grinding = parameter_grinding_work_ratio_v3(
             oracle,
             min(int(factors["candidate_budget"]), 512),
             persistent_bits=12,
@@ -378,13 +378,13 @@ def execute_structural_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "net_work_ratio",
-            result.net_work_ratio,
+            grinding.net_work_ratio,
             {
-                "candidate_budget": result.candidate_budget,
-                "attempts": result.attempts,
-                "selected_cost": result.selected_cost,
-                "selected_work": result.selected_work,
-                "baseline_work": result.full_evaluation_baseline_work,
+                "candidate_budget": grinding.candidate_budget,
+                "attempts": grinding.attempts,
+                "selected_cost": grinding.selected_cost,
+                "selected_work": grinding.selected_work,
+                "baseline_work": grinding.full_evaluation_baseline_work,
             },
         )
 

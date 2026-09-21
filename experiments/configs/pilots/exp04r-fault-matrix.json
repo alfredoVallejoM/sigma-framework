@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-04",
   "master_seed": "sigma-exp04r-fault-pilot-v1",
   "widths": [4],

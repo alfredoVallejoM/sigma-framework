@@ -1,9 +1,23 @@
 from experiments.exp02_collisions import run as run_collisions
 from experiments.exp02_collisions import summarize as summarize_collisions
+from experiments.exp03_persistence import _clopper_pearson
 from experiments.exp03_persistence import run as run_persistence
 from experiments.exp03_persistence import summarize as summarize_persistence
 from experiments.exp04_anchor_robustness import run as run_anchors
 from experiments.reduced_oracle import ReducedOracle, trajectory
+
+
+def test_dependency_free_clopper_pearson_matches_closed_boundaries() -> None:
+    low, high = _clopper_pearson(0, 32)
+    assert low == 0.0
+    assert abs(high - (1.0 - 0.025 ** (1.0 / 32.0))) < 1e-12
+
+    low, high = _clopper_pearson(32, 32)
+    assert high == 1.0
+    assert abs(low - 0.025 ** (1.0 / 32.0)) < 1e-12
+
+    low, high = _clopper_pearson(16, 32)
+    assert abs(low - (1.0 - high)) < 1e-12
 
 
 def test_reduced_oracle_is_deterministic_and_domain_separated() -> None:
@@ -29,11 +43,25 @@ def test_reduced_experiments_emit_individual_observations() -> None:
             "max_candidates": 1000,
         }
     )
-    persistence = run_persistence({**common, "widths": [4], "segments": [1, 2], "trials": 20})
+    persistence = run_persistence(
+        {
+            **common,
+            "anchor_relations": ["same", "different"],
+            "constructions": ["stationary", "indexed", "anchored", "anchored-indexed"],
+            "widths": [4],
+            "segments": [1, 2],
+            "trials": 20,
+        }
+    )
     assert len(collisions) == 16
     assert all(not record["censored"] for record in collisions)
-    assert len(persistence) == 80
-    assert all(record["persisted"] for record in persistence if record["construction"] == "simple")
+    assert len(persistence) == 320
+    assert all(
+        record["persisted"]
+        for record in persistence
+        if record["anchor_relation"] == "same"
+        or record["construction"] in {"stationary", "indexed"}
+    )
 
 
 def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None:
@@ -78,9 +106,7 @@ def test_reduced_anchor_experiment_covers_all_constructions_and_faults() -> None
         "permuted-components",
     }
     assert all(
-        collision
-        for (_, relation), collision in related.items()
-        if relation == "identical-control"
+        collision for (_, relation), collision in related.items() if relation == "identical-control"
     )
 
 

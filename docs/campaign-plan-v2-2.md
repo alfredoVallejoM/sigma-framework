@@ -1,7 +1,11 @@
 # Plan ejecutable de campañas Sigma v2-2
 
-Estado: implementación y pilotos locales completos; prerregistro confirmatorio
-aún en borrador. Ningún piloto de este documento es evidencia E4.
+Estado: catálogo técnico subordinado al
+[`plan final`](final-development-plan-v2-2.md). F4 y F6 están cerradas: los 20
+pilotos finalizaron y las 20 configuraciones confirmatorias, con 5.289 tareas,
+están congeladas por hash. Ningún piloto de este documento es evidencia del
+artículo. F7 está en ejecución; estado global en
+[`project-status-2026-09-03.md`](project-status-2026-09-03.md).
 
 ## Reglas de ejecución
 
@@ -22,10 +26,10 @@ aún en borrador. Ningún piloto de este documento es evidencia E4.
 |---|---|---|
 | EXP-01R | `pilots/exp01r-v2-2.json` | seis suites, bordes grandes, Linux/macOS/Windows y consumidor independiente; cero divergencias |
 | EXP-05R | `pilots/exp05r-modes.json` | bits + cero/permutación de roots/cross, longitud de evidence y campos de contexto; cero no-ops |
-| EXP-21R | `exp21-smoke.json` con runner revisado | matriz instrumentada de entradas primitivas y corpus exhaustivo de mutaciones; cero colisiones no especificadas |
+| EXP-21R | `pilots/exp21r-domains.json` | matriz instrumentada de entradas primitivas y corpus exhaustivo de mutaciones; cero colisiones no especificadas |
 
 Si cualquiera falla, no se ejecutan campañas de seguridad ni se regeneran
-claims. El piloto EXP-21R actual cubrió 52.820 pares reales sin violaciones.
+claims. Las cifras de pilotos anteriores no se trasladan al artículo.
 
 ## Ola B — mecanismo central reducido
 
@@ -58,7 +62,7 @@ son inestables y no se reutilizan como estimación final.
 
 EXP-13 sigue bloqueado por ausencia de núcleo nativo especificado. EXP-16
 sigue bloqueado por ausencia de RTL, testbench, librería, corner y síntesis.
-EXP-15 es control histórico: SAT/SMT/MILP no puede rehabilitar `Psi` como raíz.
+EXP-15/Psi queda fuera de la línea y campaña v2.2.
 
 ## Ola D — publicación y reproducción
 
@@ -83,6 +87,5 @@ python -m scripts.export_distribution_streams EXP08_OUTPUT BATTERY_EXPORT
 python -m scripts.release_artifacts dist --require-clean-tag
 ```
 
-La definición de terminado sigue siendo R1–R6: el código local puede cerrar
-R1–R3 y preparar R4; R5/R6 requieren ejecución confirmatoria, infraestructura,
-archivo persistente y revisión externa, y no pueden auto-certificarse.
+La definición de terminado y el orden de ejecución son F0–F9 en el plan rector.
+Este catálogo no puede cerrar gates por sí solo ni sustituir el prerregistro.

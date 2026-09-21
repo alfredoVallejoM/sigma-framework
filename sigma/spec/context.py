@@ -39,7 +39,7 @@ _FIELDS = frozenset(int(field) for field in ContextFieldId)
 
 @dataclass(frozen=True)
 class SigmaContextV2:
-    suite_id: SuiteId = SuiteId.REFERENCE_STREAM_WIDE_V2
+    suite_id: SuiteId = SuiteId.REFERENCE_STREAM_WIDE_V2_2
     anchor_profile: AnchorProfileId = AnchorProfileId.STREAM_WIDE
     round_profile: RoundProfileId = RoundProfileId.WIDE_ONCE
     output_profile: OutputProfileId = OutputProfileId.MULTI_STATE

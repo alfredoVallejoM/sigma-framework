@@ -46,6 +46,17 @@ def run_stat_shadow_suite_v3(root: Path) -> dict[str, object]:
             second = hash_stat_stream_v3(identity, emit_chunk_bytes=511)
             if first != second:
                 raise RuntimeError("STAT stream regeneration changed with chunking")
+            stream_sha256 = first["sha256"]
+            chunk_hashes = first["chunk_sha256"]
+            total_bytes = first["total_bytes"]
+            if not isinstance(stream_sha256, str):
+                raise RuntimeError("STAT stream SHA-256 has invalid type")
+            if not isinstance(chunk_hashes, tuple) or any(
+                not isinstance(value, str) for value in chunk_hashes
+            ):
+                raise RuntimeError("STAT chunk hashes have invalid type")
+            if not isinstance(total_bytes, int):
+                raise RuntimeError("STAT stream length has invalid type")
 
             generator = StatStreamGeneratorV3(identity)
             first_block = generator.output_block(0)
@@ -66,8 +77,8 @@ def run_stat_shadow_suite_v3(root: Path) -> dict[str, object]:
                 "confirmatory": False,
                 "run_key": key.stable_id,
                 "identity": asdict(identity),
-                "stream_sha256": first["sha256"],
-                "chunk_sha256": list(first["chunk_sha256"]),
+                "stream_sha256": stream_sha256,
+                "chunk_sha256": list(chunk_hashes),
             }
             atomic_write_record_v3(root, key, record)
             keys.append(key)
@@ -75,9 +86,9 @@ def run_stat_shadow_suite_v3(root: Path) -> dict[str, object]:
                 {
                     "construction": construction,
                     "corpus": corpus,
-                    "sha256": first["sha256"],
-                    "total_bytes": first["total_bytes"],
-                    "chunk_count": len(first["chunk_sha256"]),
+                    "sha256": stream_sha256,
+                    "total_bytes": total_bytes,
+                    "chunk_count": len(chunk_hashes),
                 }
             )
             index += 1

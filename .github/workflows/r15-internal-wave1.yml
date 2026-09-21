@@ -52,6 +52,7 @@ jobs:
           python -m pytest -q
           tests/unit/test_r15_preflight.py
           tests/unit/test_r15_confirmatory_internal.py
+          tests/unit/test_r15_wave1_dataset.py
       - run: >-
           python -m scripts.check_r141_freeze
           --source-commit "$SOURCE_COMMIT"

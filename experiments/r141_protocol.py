@@ -372,7 +372,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
                 state_count = int(state_count_text)
                 for bits in widths:
                     work = _collision_budget(bits, state_count)
-                    region: RegionRole = "stress" if work == 1 << 22 else "estimable"
+                    collision_region: RegionRole = "stress" if work == 1 << 22 else "estimable"
                     cells.append(
                         _cell(
                             attack_id,
@@ -395,7 +395,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
                             spec["replicates_per_cell"],
                             14_400,
                             analysis,
-                            region=region,
+                            region=collision_region,
                         )
                     )
                     index += 1
@@ -411,12 +411,12 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
         policies = ("fixed-target",) if attack_id == "RED-03" else tuple(spec["policies"])
         for construction in ("r12", "r125"):
             for bits in spec["widths"]:
-                region: RegionRole = (
+                preimage_region: RegionRole = (
                     "estimable" if bits in spec.get("estimable_widths", [4, 6, 8, 10]) else "stress"
                 )
                 reps = (
                     spec["replicates_estimable"]
-                    if region == "estimable"
+                    if preimage_region == "estimable"
                     else spec["replicates_stress"]
                 )
                 for policy in policies:
@@ -443,7 +443,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
                             reps,
                             14_400,
                             analysis,
-                            region=region,
+                            region=preimage_region,
                         )
                     )
                     index += 1
@@ -730,7 +730,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
 
     elif attack_id == "BRANCH-05":
         spec = plan["BRANCH-05"]
-        faults = (
+        branch_faults: tuple[str, ...] = (
             "normal",
             "constant-first",
             "copied-first-two",
@@ -746,7 +746,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
             family="deep-fold",
             secondary=("image_size", "conservative_bits"),
         )
-        for fault in faults:
+        for fault in branch_faults:
             cells.append(
                 _cell(
                     attack_id,
@@ -770,7 +770,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
 
     elif attack_id == "BRANCH-06":
         spec = plan["BRANCH-06"]
-        faults = (
+        vector_faults: tuple[str, ...] = (
             "normal",
             "constant-first",
             "copied-first-two",
@@ -784,7 +784,7 @@ def cells_for_attack_r141(attack_id: str) -> tuple[R141Cell, ...]:
             family="deep-vector",
             secondary=("all_branches_affected_rate", "hamming_distance"),
         )
-        for fault in faults:
+        for fault in vector_faults:
             cells.append(
                 _cell(
                     attack_id,

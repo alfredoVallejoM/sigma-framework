@@ -4,7 +4,6 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-from experiments.r141_protocol import R141_FREEZE_ID
 from experiments.r15_stat_adapters import StreamIdentityV3, derive_stream_seed_v3
 from experiments.r15_stat_shadow import run_stat_shadow_suite_v3
 from experiments.r15_stat_streams import (
@@ -14,6 +13,7 @@ from experiments.r15_stat_streams import (
     hash_stat_stream_v3,
     stat_message_v3,
 )
+from experiments.r141_protocol import R141_FREEZE_ID
 from scripts.check_r15_stat_shadow import check_r15_stat_shadow
 
 

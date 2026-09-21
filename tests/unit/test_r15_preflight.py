@@ -173,7 +173,6 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
     assert json.loads(output.read_text(encoding="utf-8")) == result
 
 
-
 def test_staged_unlock_scopes_partition_confirmatory_attacks() -> None:
     internal = set(authorized_attacks_for_scope("internal"))
     physical = set(authorized_attacks_for_scope("physical"))

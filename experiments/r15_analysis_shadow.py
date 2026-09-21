@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from .common import canonical_json
 from .r14_analysis import FIGURES_V3, TABLES_V3
 from .r15_estimators import (
+    ScalingCellV3,
     bootstrap_mean_interval_v3,
     bootstrap_scaling_slope_interval_v3,
     bootstrap_survival_statistic_v3,
@@ -19,7 +20,6 @@ from .r15_estimators import (
     holm_adjust_v3,
     paired_bootstrap_ratio_interval_v3,
     pareto_frontier_v3,
-    ScalingCellV3,
     simultaneous_mean_band_v3,
     zero_event_upper_bound_v3,
 )

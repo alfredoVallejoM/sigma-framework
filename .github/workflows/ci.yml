@@ -75,6 +75,7 @@ jobs:
       - run: python -m scripts.check_r141_protocol
       - run: python -m scripts.check_r141_freeze
       - run: python -m scripts.r15_preflight --static
+      - run: python -m scripts.check_r15_harness
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl
@@ -201,6 +202,30 @@ jobs:
             experiments/r15-publication-scale-plan.json
             experiments/r15-data-policy.json
             constraints/r14-v3-py313.txt
+          if-no-files-found: error
+          retention-days: 30
+
+
+  r15-harness-battery:
+    name: R15-B synthetic harness battery
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q tests/unit/test_r15_harness.py
+      - run: python -m scripts.check_r15_harness --report /tmp/r15-b-harness.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-b-harness-battery
+          path: /tmp/r15-b-harness.json
           if-no-files-found: error
           retention-days: 30
 

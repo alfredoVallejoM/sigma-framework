@@ -8,7 +8,11 @@ import random
 from collections import Counter
 from dataclasses import dataclass
 
-from .parameter_grinding_v3 import ParameterSpaceV3, derive_parameters_reduced
+from .parameter_grinding_v3 import (
+    DEFAULT_PARAMETER_SPACE_V3,
+    ParameterSpaceV3,
+    derive_parameters_reduced,
+)
 from .reduced_oracle import ReducedOracle
 
 
@@ -72,7 +76,7 @@ def parameter_mutual_information_profile_v3(
     persistent_bits: int = 16,
     candidate_bucket_bits: int = 6,
     persistent_bucket_bits: int = 6,
-    space: ParameterSpaceV3 = ParameterSpaceV3(),
+    space: ParameterSpaceV3 = DEFAULT_PARAMETER_SPACE_V3,
 ) -> MutualInformationProfileV3:
     if samples < 2:
         raise ValueError("samples must be at least two")

@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import platform
-import shutil
 import subprocess
 import tempfile
 from dataclasses import asdict
@@ -14,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .common import canonical_json, sha256_file
+from .common import sha256_file
 from .r13_schema import ResourceBudget
 from .r15_data import RunKeyV3, atomic_write_record_v3, build_ledger_v3
 from .r15_stat_adapters import StreamHasherV3, StreamIdentityV3, derive_stream_seed_v3

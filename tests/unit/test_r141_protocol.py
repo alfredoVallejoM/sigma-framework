@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from experiments.r13_schema import ResourceBudget
 from experiments.r15_estimators import (
     ScalingCellV3,
     bootstrap_scaling_slope_interval_v3,
@@ -18,7 +19,6 @@ from experiments.r141_protocol import (
     cells_for_attack_r141,
     confirmatory_attack_ids_r141,
 )
-from experiments.r13_schema import ResourceBudget
 from experiments.r141_schema import ConfirmatoryRecordR141, derive_confirmatory_seed_r141
 from scripts.check_r141_protocol import check_r141_protocol
 from scripts.prepare_r141_confirmatory import render_r141_configs
@@ -88,7 +88,6 @@ def test_holm_and_pareto_are_deterministic() -> None:
     frontier = pareto_frontier_v3([(1, 5, 5), (2, 2, 2), (5, 1, 5), (3, 3, 3)])
     assert (3, 3, 3) not in frontier
     assert (2, 2, 2) in frontier
-
 
 
 def test_r141_confirmatory_record_binds_new_freeze_and_execution_manifest() -> None:

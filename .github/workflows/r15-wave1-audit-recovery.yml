@@ -1,0 +1,66 @@
+name: R15 Wave 1 Audit Recovery
+
+on:
+  push:
+    branches:
+      - r15-wave1-audit-recovery
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: r15-wave1-audit-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Recover W1 dataset from completed scientific shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: sigma-v3-iap
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -e .
+      - name: Download original W1 unlock bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: r15-internal-unlock-bundle
+          path: /tmp/unlock
+          run-id: 35558201523
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download original W1 scientific shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: r15-w1-*
+          path: /tmp/shards
+          run-id: 35558201523
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify source identity before merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib
+          manifest=json.loads(pathlib.Path("/tmp/unlock/execution-manifest.json").read_text())
+          assert manifest["source_commit"] == "80214afde29b3596af83265e18c1e2926e14dd2f"
+          assert manifest["confirmatory_unlocked"] is True
+          assert manifest["scope"] == "internal"
+          PY
+      - name: Merge and audit existing W1 shards
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/wave1-dataset
+          python -m experiments.r15_wave1_dataset             --shards /tmp/shards             --configs /tmp/unlock/configs             --execution-manifest /tmp/unlock/execution-manifest.json             --output /tmp/wave1-dataset             --report /tmp/wave1-dataset/audit-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-wave1-confirmatory-dataset-recovered
+          path: /tmp/wave1-dataset/
+          if-no-files-found: error
+          retention-days: 90

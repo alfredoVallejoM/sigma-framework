@@ -178,7 +178,8 @@ def _param05(replicate_id: int, nonce_budget: int) -> EngineeringResult:
             "selected_evaluation_ns": result.selected_evaluation_ns,
             "selection_total_ns": result.selection_total_ns,
             "full_evaluation_ns": result.full_evaluation_ns,
-            "full_vs_selection_ratio": result.full_evaluation_ns / max(1, result.selection_total_ns),
+            "full_vs_selection_ratio": result.full_evaluation_ns
+            / max(1, result.selection_total_ns),
         },
     )
 
@@ -230,8 +231,7 @@ def _param06(replicate_id: int) -> EngineeringResult:
 def _specs(attack_id: str) -> tuple[tuple[str, int, dict[str, int]], ...]:
     if attack_id == "PARAM-04":
         return tuple(
-            ("param-04-engineering", replicate, {})
-            for replicate in range(PARAM04_REPLICATES)
+            ("param-04-engineering", replicate, {}) for replicate in range(PARAM04_REPLICATES)
         )
     if attack_id == "PARAM-05":
         return tuple(
@@ -241,8 +241,7 @@ def _specs(attack_id: str) -> tuple[tuple[str, int, dict[str, int]], ...]:
         )
     if attack_id == "PARAM-06":
         return tuple(
-            ("param-06-engineering", replicate, {})
-            for replicate in range(PARAM06_REPLICATES)
+            ("param-06-engineering", replicate, {}) for replicate in range(PARAM06_REPLICATES)
         )
     raise ValueError("unsupported exploratory engineering attack")
 
@@ -402,8 +401,8 @@ def audit_engineering_dataset(
     observed_ids = set(records)
     if observed_ids != expected_ids:
         raise RuntimeError(
-            f"engineering coverage mismatch: missing={len(expected_ids-observed_ids)}, "
-            f"extra={len(observed_ids-expected_ids)}"
+            f"engineering coverage mismatch: missing={len(expected_ids - observed_ids)}, "
+            f"extra={len(observed_ids - expected_ids)}"
         )
 
     output_root.mkdir(parents=True, exist_ok=True)

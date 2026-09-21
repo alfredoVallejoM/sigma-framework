@@ -138,9 +138,20 @@ def static_r15_preflight() -> dict[str, object]:
     }
 
 
+def _reject_preexisting_confirmatory_data() -> None:
+    for root in (
+        ROOT / "experiments" / "v3-confirmatory-results",
+        ROOT / "results" / "v3-confirmatory",
+        ROOT / "results" / "r15",
+    ):
+        if root.exists() and any(path.is_file() for path in root.rglob("*")):
+            raise RuntimeError(f"pre-existing confirmatory data blocks unlock: {root}")
+
+
 def unlock_r15(
     *,
     runtime_manifest: Path,
+    source_freeze: Path,
     config_root: Path,
     artifact: Path,
     host_manifest: Path,
@@ -152,6 +163,12 @@ def unlock_r15(
     if runtime.get("freeze_id") != R141_FREEZE_ID:
         raise ValueError("runtime manifest freeze id mismatch")
 
+    if runtime.get("source_freeze_sha256") != sha256_file(source_freeze):
+        raise ValueError("source-freeze SHA-256 mismatch")
+    source = json.loads(source_freeze.read_text(encoding="utf-8"))
+    if source.get("source_commit") != runtime.get("source_commit"):
+        raise ValueError("source-freeze commit differs from runtime manifest")
+    _reject_preexisting_confirmatory_data()
     tag = verify_r141_tag(runtime_manifest)
     artifact_sha256 = _verify_artifact(runtime, artifact)
     config_sha256, cells, runs = _verify_configs(runtime, config_root)
@@ -187,6 +204,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--static", action="store_true")
     parser.add_argument("--runtime-manifest", type=Path)
+    parser.add_argument("--source-freeze", type=Path)
     parser.add_argument("--configs", type=Path)
     parser.add_argument("--artifact", type=Path)
     parser.add_argument("--host-manifest", type=Path)
@@ -198,6 +216,7 @@ def main() -> int:
         else:
             required = (
                 args.runtime_manifest,
+                args.source_freeze,
                 args.configs,
                 args.artifact,
                 args.host_manifest,
@@ -205,16 +224,18 @@ def main() -> int:
             )
             if any(value is None for value in required):
                 parser.error(
-                    "full unlock requires --runtime-manifest --configs --artifact "
-                    "--host-manifest --output"
+                    "full unlock requires --runtime-manifest --source-freeze "
+                    "--configs --artifact --host-manifest --output"
                 )
             assert args.runtime_manifest is not None
+            assert args.source_freeze is not None
             assert args.configs is not None
             assert args.artifact is not None
             assert args.host_manifest is not None
             assert args.output is not None
             result = unlock_r15(
                 runtime_manifest=args.runtime_manifest,
+                source_freeze=args.source_freeze,
                 config_root=args.configs,
                 artifact=args.artifact,
                 host_manifest=args.host_manifest,

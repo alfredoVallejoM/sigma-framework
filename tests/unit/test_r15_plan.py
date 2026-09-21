@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+
 from scripts.check_r15_plan import DATA, SCALE, check_r15_plan
 
 

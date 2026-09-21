@@ -46,6 +46,28 @@ def _initial_vector(
     )
 
 
+def _apply_fault(
+    vector: tuple[int, ...],
+    *,
+    bits: int,
+    fault: VectorFaultV3,
+) -> tuple[int, ...]:
+    values = list(vector)
+    if fault == "constant-first":
+        values[0] = 0
+    elif fault == "copied-first-two":
+        values[1] = values[0]
+    elif fault == "truncated-first":
+        values[0] &= (1 << max(1, bits // 2)) - 1
+    elif fault == "omitted-last":
+        values[-1] = 0
+    elif fault == "permuted":
+        values = values[1:] + values[:1]
+    elif fault != "normal":
+        raise ValueError("unsupported DeepVector fault")
+    return tuple(values)
+
+
 def _next_vector(oracle: ReducedOracle, vector: tuple[int, ...], bits: int) -> tuple[int, ...]:
     encoded = b"".join(encode_integer(value, bits) for value in vector)
     return tuple(

@@ -76,6 +76,8 @@ jobs:
       - run: python -m scripts.check_r141_freeze
       - run: python -m scripts.r15_preflight --static
       - run: python -m scripts.check_r15_harness
+      - run: python -m scripts.check_r15_structural_shadow
+      - run: python -m scripts.check_r15_reduced_shadow
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl
@@ -205,6 +207,52 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+
+  r15-structural-shadow-battery:
+    name: R15-C structural shadow battery
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q tests/unit/test_r15_structural_shadow.py
+      - run: python -m scripts.check_r15_structural_shadow --report /tmp/r15-c-shadow.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-c-structural-shadow
+          path: /tmp/r15-c-shadow.json
+          if-no-files-found: error
+          retention-days: 30
+
+  r15-reduced-shadow-battery:
+    name: R15-D reduced cryptanalysis shadow battery
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q tests/unit/test_r15_reduced_shadow.py
+      - run: python -m scripts.check_r15_reduced_shadow --report /tmp/r15-d-shadow.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-d-reduced-shadow
+          path: /tmp/r15-d-shadow.json
+          if-no-files-found: error
+          retention-days: 30
 
   r15-harness-battery:
     name: R15-B synthetic harness battery

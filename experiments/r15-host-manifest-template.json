@@ -1,0 +1,37 @@
+{
+  "schema": "sigma-v3-r15-host-manifest-v1",
+  "status": "template-not-ready",
+  "required_physical_hosts": 3,
+  "hosts": [
+    {
+      "host_id": "HOST-01",
+      "physical": true,
+      "platform": "FILL-ME",
+      "architecture": "FILL-ME",
+      "cpu": "FILL-ME",
+      "memory_bytes": 0,
+      "operator": "FILL-ME",
+      "calibration_notes": "FILL-ME"
+    },
+    {
+      "host_id": "HOST-02",
+      "physical": true,
+      "platform": "FILL-ME",
+      "architecture": "FILL-ME",
+      "cpu": "FILL-ME",
+      "memory_bytes": 0,
+      "operator": "FILL-ME",
+      "calibration_notes": "FILL-ME"
+    },
+    {
+      "host_id": "HOST-03",
+      "physical": true,
+      "platform": "FILL-ME",
+      "architecture": "FILL-ME",
+      "cpu": "FILL-ME",
+      "memory_bytes": 0,
+      "operator": "FILL-ME",
+      "calibration_notes": "FILL-ME"
+    }
+  ]
+}

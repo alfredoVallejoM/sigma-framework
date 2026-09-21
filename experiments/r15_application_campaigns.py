@@ -220,10 +220,7 @@ def mitigation_cost_profile_v3(
     values = tuple(derived_costs)
     if not values:
         raise ValueError("derived_costs must be non-empty")
-    if any(
-        isinstance(value, bool) or not isinstance(value, int) or value <= 0
-        for value in values
-    ):
+    if any(isinstance(value, bool) or not isinstance(value, int) or value <= 0 for value in values):
         raise ValueError("derived_costs must contain positive integers")
     if mode == "input-derived":
         effective = values

@@ -39,9 +39,8 @@ class StreamIdentityV3:
             raise ValueError("stream identity labels must be non-empty")
         if self.stream_id < 0:
             raise ValueError("stream_id must be non-negative")
-        if (
-            len(self.seed_hex) != 64
-            or any(character not in "0123456789abcdef" for character in self.seed_hex)
+        if len(self.seed_hex) != 64 or any(
+            character not in "0123456789abcdef" for character in self.seed_hex
         ):
             raise ValueError("seed_hex must be lowercase SHA-256 hex")
         if self.total_bytes <= 0 or self.chunk_bytes <= 0:

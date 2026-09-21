@@ -33,10 +33,7 @@ class RunKeyV3:
 
     @property
     def stable_id(self) -> str:
-        return (
-            f"{self.freeze_id}:{self.attack_id}:{self.cell_id}:"
-            f"{self.replicate_id:08d}"
-        )
+        return f"{self.freeze_id}:{self.attack_id}:{self.cell_id}:{self.replicate_id:08d}"
 
 
 @dataclass(frozen=True)
@@ -56,23 +53,11 @@ class ScratchQuotaV3:
 
 
 def record_path_v3(root: Path, key: RunKeyV3) -> Path:
-    return (
-        root
-        / "raw"
-        / key.attack_id
-        / key.cell_id
-        / f"{key.replicate_id:08d}.json"
-    )
+    return root / "raw" / key.attack_id / key.cell_id / f"{key.replicate_id:08d}.json"
 
 
 def receipt_path_v3(root: Path, key: RunKeyV3) -> Path:
-    return (
-        root
-        / "receipts"
-        / key.attack_id
-        / key.cell_id
-        / f"{key.replicate_id:08d}.json"
-    )
+    return root / "receipts" / key.attack_id / key.cell_id / f"{key.replicate_id:08d}.json"
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -146,11 +131,7 @@ def build_ledger_v3(root: Path, keys: list[RunKeyV3]) -> dict[str, object]:
     entries: list[dict[str, str]] = []
     for key in sorted(keys):
         digest = verify_record_v3(root, key)
-        payload = (
-            bytes.fromhex(chain)
-            + key.stable_id.encode("utf-8")
-            + bytes.fromhex(digest)
-        )
+        payload = bytes.fromhex(chain) + key.stable_id.encode("utf-8") + bytes.fromhex(digest)
         chain = hashlib.sha256(payload).hexdigest()
         entries.append(
             {

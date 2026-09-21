@@ -63,8 +63,8 @@ def run_application_shadow_suite_v3(root: Path) -> dict[str, object]:
     keys: list[RunKeyV3] = []
 
     kdf_parameters = Argon2idParametersV3(
-        memory_kib=64,
-        time_cost=1,
+        memory_kib=19_456,
+        time_cost=2,
         parallelism=1,
         output_length=32,
         suite_id=SuiteIdV3.REFERENCE_IAP_HISTORY_V3,

@@ -577,10 +577,15 @@ def run_internal_shard(
         raise ValueError("invalid shard index/count")
     filters = factor_filters or {}
     execution = json.loads(execution_manifest_path.read_text(encoding="utf-8"))
-    if execution.get("schema") != "sigma-v3-r15-execution-manifest-v2":
+    schema = execution.get("schema")
+    if schema == "sigma-v3-r15-execution-manifest-v2":
+        if execution.get("scope") not in ("internal", "full"):
+            raise ValueError("execution manifest does not authorize internal campaigns")
+    elif schema == "sigma-v3-r15-internal-amendment-manifest-v1":
+        if execution.get("scope") != "internal-amendment":
+            raise ValueError("invalid R15 internal amendment scope")
+    else:
         raise ValueError("unexpected R15 execution manifest schema")
-    if execution.get("scope") not in ("internal", "full"):
-        raise ValueError("execution manifest does not authorize internal campaigns")
     if execution.get("confirmatory_unlocked") is not True:
         raise ValueError("confirmatory execution manifest is not unlocked")
 

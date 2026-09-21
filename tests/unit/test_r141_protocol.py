@@ -29,7 +29,8 @@ def test_r141_protocol_gate_is_predata_and_publication_scale() -> None:
     assert report["passed"] is True
     assert report["confirmatory_executed"] is False
     assert report["attacks"] == 21
-    assert int(report["run_units"]) >= 150_000
+    run_units = report["run_units"]
+    assert isinstance(run_units, int) and run_units >= 150_000
 
 
 def test_r141_attack_cells_are_nonempty_and_unique() -> None:

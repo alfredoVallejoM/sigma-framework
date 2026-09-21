@@ -48,9 +48,7 @@ def test_history_games_and_conditional_crossing_are_executable() -> None:
         )
         assert result.game == game
         assert 1 <= result.queries <= 16
-    crossing = conditional_crossing_trials_v3(
-        oracle, config, round_index=0, trials=64
-    )
+    crossing = conditional_crossing_trials_v3(oracle, config, round_index=0, trials=64)
     assert crossing.trials == 64
     assert 0.0 <= crossing.visible_match_rate <= 1.0
     assert 0.0 <= crossing.full_state_match_rate <= 1.0
@@ -67,10 +65,7 @@ def test_layout_values_only_separates_frames_without_changing_plan() -> None:
         )
     }
     assert profiles["fixed"].unique_plans == profiles["values-only"].unique_plans
-    assert (
-        profiles["fixed"].plan_collision_pairs
-        == profiles["values-only"].plan_collision_pairs
-    )
+    assert profiles["fixed"].plan_collision_pairs == profiles["values-only"].plan_collision_pairs
     assert profiles["values-only"].frame_collision_pairs == 0
     assert profiles["adaptive"].frame_collision_pairs == 0
 
@@ -84,12 +79,8 @@ def test_parameter_mi_permutation_is_deterministic() -> None:
         candidate_bucket_bits=4,
         persistent_bucket_bits=4,
     )
-    left = parameter_mutual_information_profile_v3(
-        ReducedOracle(b"r15-mi"), **kwargs
-    )
-    right = parameter_mutual_information_profile_v3(
-        ReducedOracle(b"r15-mi"), **kwargs
-    )
+    left = parameter_mutual_information_profile_v3(ReducedOracle(b"r15-mi"), **kwargs)
+    right = parameter_mutual_information_profile_v3(ReducedOracle(b"r15-mi"), **kwargs)
     assert left == right
     assert 0.0 < left.permutation_p_candidate <= 1.0
     assert 0.0 < left.permutation_p_persistent <= 1.0
@@ -203,9 +194,7 @@ def test_every_frozen_attack_has_one_binding() -> None:
 def test_exact_primary_endpoint_wrappers() -> None:
     oracle = ReducedOracle(b"r15-endpoints")
     config = ReducedHistoryConfig(4, 4, 4, target_round=1, state_count=1)
-    full = find_first_full_state_collision_v3(
-        oracle, config, round_index=0, candidates=32
-    )
+    full = find_first_full_state_collision_v3(oracle, config, round_index=0, candidates=32)
     assert 1 <= full.queries <= 32
     assert full.censored is (not full.success)
 

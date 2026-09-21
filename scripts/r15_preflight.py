@@ -24,26 +24,25 @@ ROOT = Path(__file__).resolve().parents[1]
 PREREG = ROOT / "experiments" / "preregistration-v3-r141.md"
 LOCK = ROOT / "constraints" / "r14-v3-py313.txt"
 
-UnlockScope = Literal["internal", "physical", "stat", "full"]
+UnlockScope = Literal["internal", "stat", "full"]
 
-PHYSICAL_ATTACKS = ("PARAM-04", "PARAM-05", "PARAM-06")
+ENGINEERING_ATTACKS = ("PARAM-04", "PARAM-05", "PARAM-06")
 STAT_ATTACKS = ("STAT-01",)
 INTERNAL_ATTACKS = tuple(
     attack_id
     for attack_id in confirmatory_attack_ids_r141()
-    if attack_id not in {*PHYSICAL_ATTACKS, *STAT_ATTACKS}
+    if attack_id not in {*ENGINEERING_ATTACKS, *STAT_ATTACKS}
 )
+CORE_CONFIRMATORY_ATTACKS = (*INTERNAL_ATTACKS, *STAT_ATTACKS)
 
 
 def authorized_attacks_for_scope(scope: UnlockScope) -> tuple[str, ...]:
     if scope == "internal":
         return INTERNAL_ATTACKS
-    if scope == "physical":
-        return PHYSICAL_ATTACKS
     if scope == "stat":
         return STAT_ATTACKS
     if scope == "full":
-        return confirmatory_attack_ids_r141()
+        return CORE_CONFIRMATORY_ATTACKS
     raise ValueError("unknown R15 unlock scope")
 
 
@@ -199,8 +198,10 @@ def static_r15_preflight() -> dict[str, object]:
         "confirmatory_unlocked": False,
         "staged_unlock": True,
         "internal_attacks": list(INTERNAL_ATTACKS),
-        "physical_attacks": list(PHYSICAL_ATTACKS),
+        "engineering_attacks": list(ENGINEERING_ATTACKS),
         "stat_attacks": list(STAT_ATTACKS),
+        "mandatory_confirmatory_attacks": list(CORE_CONFIRMATORY_ATTACKS),
+        "mandatory_confirmatory_run_units": 145_088,
         "r141_freeze": freeze,
     }
 
@@ -254,9 +255,11 @@ def unlock_r15(
     host_sha256: str | None = None
     tools_sha256: str | None = None
 
-    if scope in ("physical", "full"):
-        if host_manifest is None:
-            raise ValueError(f"R15 scope={scope} requires --host-manifest")
+    # PARAM-04/05/06 were reclassified before their execution as
+    # exploratory-engineering evidence.  A host manifest may still be supplied
+    # for optional engineering provenance, but it is not part of mandatory R15
+    # confirmatory closure and does not authorize those attacks.
+    if host_manifest is not None:
         hosts = _validate_host_manifest(host_manifest)
         host_sha256 = sha256_file(host_manifest)
 
@@ -300,7 +303,7 @@ def main() -> int:
     parser.add_argument("--static", action="store_true")
     parser.add_argument(
         "--scope",
-        choices=("internal", "physical", "stat", "full"),
+        choices=("internal", "stat", "full"),
         default="full",
     )
     parser.add_argument("--runtime-manifest", type=Path)

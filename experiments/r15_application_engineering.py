@@ -297,7 +297,7 @@ def run_engineering_shard(
         if ordinal % shard_count == shard_index
     ]
     keys: list[RunKeyV3] = []
-    for cell_id, replicate_id, factors in selected:
+    for _cell_id, replicate_id, factors in selected:
         started = _utc_now()
         result = _execute(attack_id, replicate_id, factors)
         completed = _utc_now()

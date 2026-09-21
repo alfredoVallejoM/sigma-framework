@@ -49,7 +49,8 @@ def check_r15_data_closure() -> dict[str, object]:
             raise RuntimeError("duplicate RunKey was silently accepted")
         scratch = enforce_scratch_usage_v3(root, quota)
         ledger = build_ledger_v3(root, keys)
-        if len(ledger["entries"]) != len(keys):
+        entries = ledger["entries"]
+        if not isinstance(entries, list) or len(entries) != len(keys):
             raise RuntimeError("ledger does not contain every canonical record")
 
     return {

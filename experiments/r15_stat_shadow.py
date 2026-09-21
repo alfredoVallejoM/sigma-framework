@@ -6,7 +6,6 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from .r141_protocol import R141_FREEZE_ID
 from .r15_data import RunKeyV3, atomic_write_record_v3, build_ledger_v3
 from .r15_stat_adapters import StreamIdentityV3, derive_stream_seed_v3
 from .r15_stat_streams import (
@@ -15,6 +14,7 @@ from .r15_stat_streams import (
     StatStreamGeneratorV3,
     hash_stat_stream_v3,
 )
+from .r141_protocol import R141_FREEZE_ID
 
 SHADOW_F_NAMESPACE = "sigma-v3-r15-shadow-f-v1"
 SHADOW_F_FREEZE_ID = "synthetic-r15f-shadow"

@@ -18,6 +18,7 @@ from .r141_protocol import R141Cell, cells_for_attack_r141
 from .reduced_oracle import ReducedOracle
 from .tmto_v3 import TMTOConfigV3, measure_tmto_v3
 from .trajectory_attacks_v3 import (
+    PersistentPolicyV3,
     find_window_collision_v3,
     find_window_preimage_v3,
     find_window_second_preimage_v3,
@@ -72,16 +73,16 @@ def execute_reduced_shadow_cell_v3(
     factors = cell.factors
 
     if attack_id == "RED-02":
-        config = _config(cell)
+        history_config = _config(cell)
         cap = min(int(factors["max_candidates"]), 1024)
-        found = find_window_collision_v3(
+        collision = find_window_collision_v3(
             oracle,
-            config,
+            history_config,
             construction=str(factors["construction"]),  # type: ignore[arg-type]
             candidates=cap,
             persistent_policy="any",
         )
-        queries = cap if found is None else found.evaluated_candidates
+        queries = cap if collision is None else collision.evaluated_candidates
         return ReducedShadowResultV3(
             attack_id,
             cell.cell_id,
@@ -90,31 +91,31 @@ def execute_reduced_shadow_cell_v3(
             {
                 "construction": str(factors["construction"]),
                 "state_count": int(factors["state_count"]),
-                "success": found is not None,
-                "censored": found is None,
+                "success": collision is not None,
+                "censored": collision is None,
                 "candidate_cap": cap,
             },
         )
 
     if attack_id == "RED-03":
-        config = _config(cell)
+        history_config = _config(cell)
         construction = str(factors["construction"])
         target_candidate = (1 << 120) + 17
         target = evaluate_reduced_history(
             oracle,
-            config,
+            history_config,
             target_candidate,
             construction,  # type: ignore[arg-type]
         ).window
         cap = min(int(factors["max_candidates"]), 1024)
-        found = find_window_preimage_v3(
+        preimage = find_window_preimage_v3(
             oracle,
-            config,
+            history_config,
             construction=construction,  # type: ignore[arg-type]
             target_window=target,
             candidates=cap,
         )
-        queries = cap if found is None else int(found["evaluated_candidates"])
+        queries = cap if preimage is None else int(preimage["evaluated_candidates"])
         return ReducedShadowResultV3(
             attack_id,
             cell.cell_id,
@@ -123,26 +124,28 @@ def execute_reduced_shadow_cell_v3(
             {
                 "construction": construction,
                 "region": cell.region,
-                "success": found is not None,
-                "censored": found is None,
+                "success": preimage is not None,
+                "censored": preimage is None,
                 "candidate_cap": cap,
             },
         )
 
     if attack_id == "RED-04":
-        config = _config(cell)
+        history_config = _config(cell)
         construction = str(factors["construction"])
-        policy = "same" if factors["policy"] == "same-persistent" else "any"
+        policy: PersistentPolicyV3 = (
+            "same" if factors["policy"] == "same-persistent" else "any"
+        )
         cap = min(int(factors["max_candidates"]), 1024)
-        found = find_window_second_preimage_v3(
+        second_preimage = find_window_second_preimage_v3(
             oracle,
-            config,
+            history_config,
             construction=construction,  # type: ignore[arg-type]
             target_candidate=17,
             candidates=cap,
             persistent_policy=policy,
         )
-        queries = cap if found is None else found.evaluated_candidates
+        queries = cap if second_preimage is None else second_preimage.evaluated_candidates
         return ReducedShadowResultV3(
             attack_id,
             cell.cell_id,
@@ -151,18 +154,18 @@ def execute_reduced_shadow_cell_v3(
             {
                 "construction": construction,
                 "policy": str(factors["policy"]),
-                "success": found is not None,
-                "censored": found is None,
+                "success": second_preimage is not None,
+                "censored": second_preimage is None,
                 "candidate_cap": cap,
             },
         )
 
     if attack_id == "RED-05":
-        config = _config(cell)
+        history_config = _config(cell)
         cap = min(int(factors["max_candidates"]), 1024)
-        result = multi_target_window_attack_v3(
+        multi_target = multi_target_window_attack_v3(
             oracle,
-            config,
+            history_config,
             construction=str(factors["construction"]),  # type: ignore[arg-type]
             targets=int(factors["targets"]),
             search_candidates=cap,
@@ -171,17 +174,17 @@ def execute_reduced_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "queries",
-            int(result["evaluated"]),
+            int(multi_target["evaluated"]),
             {
                 "construction": str(factors["construction"]),
                 "targets": int(factors["targets"]),
-                "success": bool(result["success"]),
+                "success": bool(multi_target["success"]),
                 "candidate_cap": cap,
             },
         )
 
     if attack_id in ("TMTO-01", "TMTO-02"):
-        config = TMTOConfigV3(
+        tmto_config = TMTOConfigV3(
             bits=int(factors["state_bits"]),
             history_bits=int(factors["history_bits"]),
             entries=min(int(factors["entries"]), 64),
@@ -189,9 +192,9 @@ def execute_reduced_shadow_cell_v3(
             distinguished_bits=min(int(factors["distinguished_bits"]), 4),
             targets=min(int(factors["targets"]), 4),
         )
-        result = measure_tmto_v3(
+        tmto_result = measure_tmto_v3(
             oracle,
-            config,
+            tmto_config,
             str(factors["strategy"]),  # type: ignore[arg-type]
             str(factors["construction"]),  # type: ignore[arg-type]
         )
@@ -199,15 +202,15 @@ def execute_reduced_shadow_cell_v3(
             attack_id,
             cell.cell_id,
             "online_queries",
-            result.online_queries,
+            tmto_result.online_queries,
             {
-                "strategy": result.strategy,
-                "construction": result.construction,
-                "offline_queries": result.offline_queries,
-                "history_queries": result.history_queries,
-                "memory_entries": result.memory_entries,
-                "parallel_depth": result.parallel_depth,
-                "reuse_rate": result.reuse_rate,
+                "strategy": tmto_result.strategy,
+                "construction": tmto_result.construction,
+                "offline_queries": tmto_result.offline_queries,
+                "history_queries": tmto_result.history_queries,
+                "memory_entries": tmto_result.memory_entries,
+                "parallel_depth": tmto_result.parallel_depth,
+                "reuse_rate": tmto_result.reuse_rate,
             },
         )
 

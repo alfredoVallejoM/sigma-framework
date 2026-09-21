@@ -80,8 +80,7 @@ def render_r141_configs() -> dict[str, bytes]:
     rendered["campaign-index.json"] = canonical_json(index) + b"\n"
 
     file_hashes = {
-        name: hashlib.sha256(data).hexdigest()
-        for name, data in sorted(rendered.items())
+        name: hashlib.sha256(data).hexdigest() for name, data in sorted(rendered.items())
     }
     manifest = {
         "schema": "sigma-v3-r14-1-config-manifest-v1",

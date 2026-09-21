@@ -19,7 +19,7 @@ congeló todavía toda la implementación de endpoints ni la escala de publicaci
 | R15-C | structural acquisition | **REAL ACQUISITION BLOCKED; 33-cell shadow battery launched** |
 | R15-D | reduced cryptanalysis | **REAL ACQUISITION BLOCKED; 32-cell shadow battery launched** |
 | R15-E | KDF/PoW/mitigation | **REAL ACQUISITION BLOCKED; production-primitive shadow battery launched** |
-| R15-F | external STAT | blocked |
+| R15-F | external STAT | **REAL BATTERIES BLOCKED; 24-cell exact-stream shadow launched** |
 | R15-G | locked analysis | blocked |
 | R15-H | adversarial data audit | blocked |
 | R15 closure | dataset + review + handoff R16 | blocked |
@@ -98,3 +98,10 @@ R15-E shadow uses production Argon2id, history-feedback Sigma v3 and PoW
 primitives at tiny non-confirmatory scale. It validates the three frozen KDF
 treatments, nonce preparation/selection accounting and the three mitigation
 modes without using physical-host measurements or confirmatory seeds.
+
+
+R15-F now has exact pre-data stream semantics in
+`experiments/r15_stat_streams.py`. The shadow battery covers all 8
+constructions × 3 corpora, verifies chunking-invariant regeneration and the
+broken-control defect, but does not invoke external NIST/PractRand/TestU01
+binaries and therefore remains non-confirmatory.

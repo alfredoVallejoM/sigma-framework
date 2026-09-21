@@ -79,6 +79,7 @@ jobs:
       - run: python -m scripts.check_r15_structural_shadow
       - run: python -m scripts.check_r15_reduced_shadow
       - run: python -m scripts.check_r15_application_shadow
+      - run: python -m scripts.check_r15_stat_shadow
       - run: python -m build
       - run: python scripts/release_artifacts.py dist
       - run: python -m pip install --force-reinstall dist/*.whl
@@ -275,6 +276,29 @@ jobs:
         with:
           name: r15-e-application-shadow
           path: /tmp/r15-e-shadow.json
+          if-no-files-found: error
+          retention-days: 30
+
+  r15-stat-shadow-battery:
+    name: R15-F STAT stream shadow battery
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q tests/unit/test_r15_stat_shadow.py
+      - run: python -m scripts.check_r15_stat_shadow --report /tmp/r15-f-shadow.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-f-stat-shadow
+          path: /tmp/r15-f-shadow.json
           if-no-files-found: error
           retention-days: 30
 

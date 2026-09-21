@@ -63,7 +63,7 @@ def run(command: str, *, cwd: Path = ROOT, env: dict[str, str] | None = None, ch
 
 def context(profile: dict[str, Any]) -> dict[str, str]:
     pcache = project_cache(profile)
-    venv = pcache / "venv"
+    venv = pcache / f"venv-py{sys.version_info.major}.{sys.version_info.minor}"
     python_bin = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     return {
         "root": str(ROOT),
@@ -92,7 +92,7 @@ def ensure_python_venv(profile: dict[str, Any]) -> None:
     if not profile.get("toolchains", {}).get("python"):
         return
     pcache = project_cache(profile)
-    venv = pcache / "venv"
+    venv = pcache / f"venv-py{sys.version_info.major}.{sys.version_info.minor}"
     python_bin = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if python_bin.exists():
         return
@@ -107,15 +107,14 @@ def ensure_rust(profile: dict[str, Any]) -> None:
         return
     cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
     prepend_path(cargo_home / "bin")
-    if which("cargo") and which("rustc"):
-        return
-    if not which("curl"):
-        raise RuntimeError("Rust is missing and curl is unavailable for rustup bootstrap")
-    print("[hydrate] Rust missing; bootstrapping rustup (minimal profile)")
-    run("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", check=True)
-    prepend_path(cargo_home / "bin")
-    if not which("cargo"):
-        raise RuntimeError("rustup bootstrap finished but cargo is still unavailable")
+    if not (which("cargo") and which("rustc")):
+        if not which("curl"):
+            raise RuntimeError("Rust is missing and curl is unavailable for rustup bootstrap")
+        print("[hydrate] Rust missing; bootstrapping rustup (minimal profile)")
+        run("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", check=True)
+        prepend_path(cargo_home / "bin")
+        if not which("cargo"):
+            raise RuntimeError("rustup bootstrap finished but cargo is still unavailable")
     components = profile.get("toolchains", {}).get("rust_components", ["rustfmt", "clippy"])
     if components and which("rustup"):
         run("rustup component add " + " ".join(shlex.quote(str(x)) for x in components), check=False)
@@ -167,6 +166,7 @@ def tool_status(profile: dict[str, Any]) -> list[dict[str, Any]]:
 def fingerprint(step: dict[str, Any]) -> str:
     digest = hashlib.sha256()
     digest.update(json.dumps(step, sort_keys=True).encode())
+    digest.update(sys.version.encode())
     for rel in step.get("fingerprints", []):
         path = ROOT / rel
         digest.update(rel.encode())
@@ -235,6 +235,7 @@ def verify(profile: dict[str, Any], level: str) -> int:
         "results": [],
     }
     failed = False
+    manual_pending = False
     for ob in selected:
         oid = ob["id"]
         kind = ob.get("kind", "command")
@@ -242,6 +243,8 @@ def verify(profile: dict[str, Any], level: str) -> int:
         if kind == "manual":
             print(f"[PENDING_MANUAL] {oid}: {ob.get('description', '')}")
             evidence["results"].append({"id": oid, "kind": kind, "required": required, "status": "PENDING_MANUAL"})
+            if required:
+                manual_pending = True
             continue
         command = expand(ob["command"], ctx)
         proc = run(command, env=env)
@@ -253,13 +256,19 @@ def verify(profile: dict[str, Any], level: str) -> int:
             if not ob.get("continue_on_failure", False):
                 break
     evidence["finished_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    evidence["manual_pending"] = manual_pending
     evidence_dir = project_cache(profile) / "evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = evidence_dir / f"{stamp}-{level}.json"
     path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"[evidence] {path}")
-    return 1 if failed else 0
+    if failed:
+        return 1
+    if manual_pending:
+        print("[INCOMPLETE] required manual obligations remain pending")
+        return 3
+    return 0
 
 
 def print_plan(profile: dict[str, Any]) -> None:

@@ -19,6 +19,26 @@ from experiments.reduced_oracle import ReducedOracle
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
 
 
+def test_red02_path_remains_isolated_from_red04_correction() -> None:
+    declared = ResourceBudget(256, 256, 0, 256, 256, 256, 1, 256, 1)
+    outcome = execute_internal_run(
+        "RED-02",
+        {
+            "construction": "r125",
+            "state_bits": 4,
+            "history_bits": 4,
+            "state_count": 1,
+            "target_round": 2,
+            "max_candidates": 64,
+        },
+        declared,
+        b"synthetic-r15-amendment-red02",
+    )
+    assert outcome.status in ("success", "censored")
+    queries = outcome.metrics["queries_to_first_window_collision"]
+    assert isinstance(queries, int) and 1 <= queries <= 64
+
+
 def test_red04_corrective_path_executes_without_runner_defect() -> None:
     declared = ResourceBudget(128, 128, 0, 128, 128, 128, 1, 0, 1)
     outcome = execute_internal_run(

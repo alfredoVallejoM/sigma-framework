@@ -11,6 +11,10 @@ from pathlib import Path
 from experiments.common import canonical_json, sha256_file
 from experiments.r141_protocol import R141_FREEZE_ID
 from experiments.r15_data import RunKeyV3
+from experiments.r15_stat_adapters import (
+    BATTERIES_V3,
+    validate_battery_manifest_entry_v3,
+)
 from scripts.check_r141_freeze import check_r141_freeze
 from scripts.prepare_r141_confirmatory import prepare_r141_configs
 from scripts.verify_r141_tag import verify_r141_tag
@@ -64,6 +68,34 @@ def _validate_host_manifest(path: Path) -> tuple[str, ...]:
     if len(ids) != len(set(ids)):
         raise ValueError("physical host ids must be unique")
     return tuple(sorted(ids))
+
+
+def _validate_external_tools(path: Path) -> tuple[str, ...]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if value.get("schema") != "sigma-v3-r15-external-tools-v1":
+        raise ValueError("unexpected R15 external-tool manifest schema")
+    if value.get("status") != "ready":
+        raise ValueError("external-tool manifest must have status=ready")
+    entries = value.get("batteries")
+    if not isinstance(entries, list):
+        raise ValueError("external-tool batteries must be a list")
+    expected = {spec.battery_id for spec in BATTERIES_V3}
+    observed: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("external-tool entry must be an object")
+        validate_battery_manifest_entry_v3(entry)
+        battery_id = entry["battery_id"]
+        assert isinstance(battery_id, str)
+        if battery_id in observed:
+            raise ValueError("duplicate external battery id")
+        observed.add(battery_id)
+    if observed != expected:
+        raise ValueError(
+            f"external battery coverage mismatch: missing={sorted(expected-observed)}, "
+            f"extra={sorted(observed-expected)}"
+        )
+    return tuple(sorted(observed))
 
 
 def _verify_artifact(runtime: dict[str, object], artifact: Path) -> str:
@@ -155,6 +187,7 @@ def unlock_r15(
     config_root: Path,
     artifact: Path,
     host_manifest: Path,
+    external_tools: Path,
     output: Path,
 ) -> dict[str, object]:
     runtime = json.loads(runtime_manifest.read_text(encoding="utf-8"))
@@ -177,6 +210,7 @@ def unlock_r15(
     if runtime.get("dependency_lock_sha256") != sha256_file(LOCK):
         raise ValueError("dependency lock SHA-256 mismatch")
     hosts = _validate_host_manifest(host_manifest)
+    batteries = _validate_external_tools(external_tools)
     runkey_root = _runkey_root(config_root)
 
     result = {
@@ -190,6 +224,8 @@ def unlock_r15(
         "preregistration_sha256": runtime["preregistration_sha256"],
         "dependency_lock_sha256": runtime["dependency_lock_sha256"],
         "host_ids": list(hosts),
+        "external_batteries": list(batteries),
+        "external_tools_sha256": sha256_file(external_tools),
         "expected_cells": cells,
         "expected_run_units": runs,
         "expected_runkey_sha256": runkey_root,
@@ -208,6 +244,7 @@ def main() -> int:
     parser.add_argument("--configs", type=Path)
     parser.add_argument("--artifact", type=Path)
     parser.add_argument("--host-manifest", type=Path)
+    parser.add_argument("--external-tools", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     try:
@@ -220,18 +257,20 @@ def main() -> int:
                 args.configs,
                 args.artifact,
                 args.host_manifest,
+                args.external_tools,
                 args.output,
             )
             if any(value is None for value in required):
                 parser.error(
                     "full unlock requires --runtime-manifest --source-freeze "
-                    "--configs --artifact --host-manifest --output"
+                    "--configs --artifact --host-manifest --external-tools --output"
                 )
             assert args.runtime_manifest is not None
             assert args.source_freeze is not None
             assert args.configs is not None
             assert args.artifact is not None
             assert args.host_manifest is not None
+            assert args.external_tools is not None
             assert args.output is not None
             result = unlock_r15(
                 runtime_manifest=args.runtime_manifest,
@@ -239,6 +278,7 @@ def main() -> int:
                 config_root=args.configs,
                 artifact=args.artifact,
                 host_manifest=args.host_manifest,
+                external_tools=args.external_tools,
                 output=args.output,
             )
     except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:

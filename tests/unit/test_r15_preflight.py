@@ -156,7 +156,8 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
     )
     assert result["confirmatory_unlocked"] is True
     assert result["expected_run_units"] == 153_536
-    assert int(result["expected_cells"]) > 200
+    expected_cells = result["expected_cells"]
+    assert isinstance(expected_cells, int) and expected_cells > 200
     host_ids = result["host_ids"]
     batteries = result["external_batteries"]
     runkey_sha256 = result["expected_runkey_sha256"]

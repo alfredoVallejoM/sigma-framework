@@ -45,7 +45,6 @@ def _record_hash(data: dict[str, Any]) -> str:
     payload = json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
-
 @dataclass(frozen=True)
 class ConfirmatoryConfigR141:
     schema: str
@@ -148,7 +147,6 @@ def config_from_dict_r141(data: dict[str, Any]) -> ConfirmatoryConfigR141:
         claims=tuple(data["claims"]),
         cells=tuple(data["cells"]),
     )
-
 
 
 
@@ -343,7 +341,6 @@ class ConfirmatoryRecordR141:
         provided = payload.pop("record_sha256")
         if not _is_sha256(provided) or provided != _record_hash(payload):
             raise ValueError("record integrity hash mismatch")
-
 
 def derive_confirmatory_seed_r141(
     attack_id: str,

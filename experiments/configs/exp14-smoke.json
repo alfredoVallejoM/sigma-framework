@@ -1,8 +1,0 @@
-{
-  "experiment": "EXP-14",
-  "master_seed": "sigma-v2-public-seed-2026-09-02",
-  "message_bytes": 64,
-  "state_count": 2,
-  "target_round": 2,
-  "trials": 128
-}

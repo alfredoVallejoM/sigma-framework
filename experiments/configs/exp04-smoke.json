@@ -1,9 +1,0 @@
-{
-  "branch_counts": [2, 3],
-  "experiment": "EXP-04",
-  "faults": ["normal", "constant-first", "correlated-first-two"],
-  "master_seed": "sigma-v2-public-seed-2026-09-02",
-  "max_candidates": 100000,
-  "repetitions": 8,
-  "widths": [6, 8]
-}

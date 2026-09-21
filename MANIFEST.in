@@ -1,10 +1,8 @@
 include LICENSE
 include README.md
 recursive-include docs *.md
-recursive-include specification *.md *.json
+recursive-include specification *.md *.json *.b64
 recursive-include constraints *.txt
 recursive-include scripts *.py
 recursive-include experiments *.py *.json *.md
-prune experiments/results
 recursive-include paper *.md *.bib
-recursive-include paper/figures *.svg *.png *.json

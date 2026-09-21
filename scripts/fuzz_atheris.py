@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coverage-guided fuzz target for all public v2 binary codecs.
+"""Coverage-guided fuzz target for registered v2 and v3 binary codecs.
 
 The first input byte selects a codec and the remaining bytes are the candidate
 wire object. Accepted inputs must serialize to exactly the same bytes.

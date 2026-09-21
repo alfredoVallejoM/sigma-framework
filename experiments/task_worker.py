@@ -11,6 +11,7 @@ from typing import Any
 
 from .common import canonical_json
 from .runner import RUNNERS
+from .schema import validate_config
 
 try:
     import resource
@@ -45,9 +46,7 @@ def main() -> int:
     parser.add_argument("result", type=Path)
     args = parser.parse_args()
     try:
-        config: Any = json.loads(args.config.read_text(encoding="utf-8"))
-        if not isinstance(config, dict):
-            raise ValueError("task config must be an object")
+        config: Any = validate_config(json.loads(args.config.read_text(encoding="utf-8")))
         experiment = config.get("experiment")
         if experiment not in RUNNERS:
             raise ValueError(f"unsupported experiment: {experiment!r}")

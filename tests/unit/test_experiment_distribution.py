@@ -20,8 +20,8 @@ def test_distribution_experiment_publishes_every_p_value() -> None:
         }
     )
     groups = summarize(records)
-    assert len(records) == 64
-    assert len(groups) == 2
+    assert len(records) == 96
+    assert len(groups) == 3
     assert all(len(group["p_values"]) == 4 for group in groups)
     assert all(group["unique_outputs"] == 32 for group in groups)
 
@@ -39,9 +39,7 @@ def test_revised_distribution_keeps_states_and_streams_separate() -> None:
     )
     groups = summarize(records)
     sigma_domains = {
-        str(record["domain"])
-        for record in records
-        if record["construction"] == "sigma-deep-vector"
+        str(record["domain"]) for record in records if record["construction"] == "sigma-deep-vector"
     }
     assert sigma_domains == {"state-0", "state-1"}
     assert len(groups) == 6

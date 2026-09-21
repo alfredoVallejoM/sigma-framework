@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-07",
   "master_seed": "sigma-exp07r-sac-bic-pilot-v1",
   "message_bytes": 1,

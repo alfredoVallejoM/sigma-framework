@@ -9,7 +9,7 @@ from sigma.instrumentation import capture_oracle_inputs
 from sigma.presets import get_preset
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import DecodeError, domain_tag, encode_tlv, encode_uint
-from sigma.spec.ids import CONTEXT_MAGIC, DomainId, SuiteId
+from sigma.spec.ids import CONTEXT_MAGIC, DomainId
 from sigma.v2 import hash_bytes
 
 
@@ -63,11 +63,7 @@ def _instrumented_matrix(presets: list[str], payload: bytes) -> list[dict[str, A
         shared = left_keys & right_keys
         left_domain = str(left[0]["domain"])
         right_domain = str(right[0]["domain"])
-        allowed = (
-            len(shared)
-            if left_domain == right_domain == "RAW-BRANCH"
-            else 0
-        )
+        allowed = len(shared) if left_domain == right_domain == "RAW-BRANCH" else 0
         records.append(
             {
                 "allowed_equalities": allowed,
@@ -93,7 +89,9 @@ def _context_mutations(encoded: bytes) -> dict[str, bytes]:
     unknown = body + encode_uint(0xFFFF, 2) + encode_uint(0, 4)
     downgraded = bytearray(encoded)
     suite_offset = prefix + 6
-    downgraded[suite_offset : suite_offset + 2] = encode_uint(SuiteId.REFERENCE_STREAM_WIDE_V2, 2)
+    # 0x0001 was assigned to the withdrawn v2.1 reference suite.  It remains
+    # reserved on the wire but is deliberately absent from the active enum.
+    downgraded[suite_offset : suite_offset + 2] = encode_uint(0x0001, 2)
     return {
         "trailing-byte": encoded + b"\x00",
         "unsupported-version": encoded[: len(CONTEXT_MAGIC)]

@@ -4,15 +4,12 @@ import time
 from typing import Any
 
 from sigma.applications.kdf_argon2id import (
-    KDF_FINAL_DOMAIN,
     Argon2idParameters,
-    SigmaKdfResult,
+    compose_argon2id_output,
     derive_argon2id,
     derive_argon2id_sigma,
 )
 from sigma.policy import ResourcePolicy
-from sigma.presets import get_preset
-from sigma.v2 import hash_bytes
 
 from .common import derived_random
 
@@ -68,13 +65,13 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                             candidate = base_key
                         else:
                             post_started = time.perf_counter_ns()
-                            context = get_preset(
-                                presets[mode],
-                                salt=salt,
-                                application_context=KDF_FINAL_DOMAIN + parameters.to_bytes(),
-                            )
-                            digest = hash_bytes(base_key, context, policy=policy)
-                            candidate = SigmaKdfResult.bind(parameters, salt, digest).final_key
+                            candidate = compose_argon2id_output(
+                                base_key,
+                                salt,
+                                parameters,
+                                policy=policy,
+                                preset=presets[mode],
+                            ).final_key
                             postprocess_ns += time.perf_counter_ns() - post_started
                         if hmac.compare_digest(candidate, targets[mode]):
                             found = index

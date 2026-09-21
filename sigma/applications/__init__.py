@@ -2,9 +2,12 @@
 
 from .kdf_argon2id import (
     Argon2idParameters,
-    SigmaKdfResult,
+    SigmaDerivedKey,
+    SigmaPasswordRecord,
+    compose_argon2id_output,
     derive_argon2id,
     derive_argon2id_sigma,
+    derive_key_from_password,
     verify_password,
 )
 from .pow import (
@@ -28,10 +31,13 @@ __all__ = [
     "PowParameters",
     "PowPredicate",
     "PowProof",
-    "SigmaKdfResult",
+    "SigmaDerivedKey",
+    "SigmaPasswordRecord",
     "SigmaSignedCommitmentV2",
+    "compose_argon2id_output",
     "derive_argon2id",
     "derive_argon2id_sigma",
+    "derive_key_from_password",
     "evaluate_nonce",
     "sign_ed25519",
     "solve",

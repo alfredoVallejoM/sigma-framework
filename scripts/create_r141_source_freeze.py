@@ -52,6 +52,8 @@ FROZEN_PATHS = (
     "scripts/check_r15_structural_shadow.py",
     "experiments/r15_reduced_shadow.py",
     "scripts/check_r15_reduced_shadow.py",
+    "experiments/r15_application_shadow.py",
+    "scripts/check_r15_application_shadow.py",
     "scripts/check_r15_plan.py",
     "scripts/check_r15_execution_closure.py",
     "scripts/check_r15_data_closure.py",

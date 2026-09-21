@@ -385,7 +385,7 @@ def execute_internal_run(
         targets = int(factors["targets"])
         multi_target = multi_target_window_attack_v3(
             oracle,
-            config,
+            history_config,
             construction=construction,  # type: ignore[arg-type]
             targets=targets,
             search_candidates=cap,

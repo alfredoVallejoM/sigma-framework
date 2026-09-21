@@ -1,1 +1,0 @@
-{"experiment":"EXP-01","master_seed":"sigma-v2-public-seed-2026-09-02","presets":["lightweight-v2","simultaneous-v2","realtime-v2","paranoid-wide-v2","paranoid-deep-v2"],"sizes":[0,1,63,64,65,129,65535,65536,65537],"state_count":3,"target_round":2,"workers":[1,2,3,4,8]}

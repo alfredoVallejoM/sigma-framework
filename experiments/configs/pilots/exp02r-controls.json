@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-02",
   "master_seed": "sigma-exp02r-controls-pilot-v1",
   "widths": [],

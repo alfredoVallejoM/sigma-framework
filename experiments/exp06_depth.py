@@ -6,9 +6,7 @@ from functools import partial
 from typing import Any
 
 from sigma.presets import (
-    lightweight_v2,
     lightweight_v2_2,
-    paranoid_deep_v2,
     paranoid_deep_v2_2,
     paranoid_deep_vector_v2_2,
 )
@@ -46,13 +44,12 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     repetitions = int(config.get("repetitions", 5))
     message_bytes = int(config.get("message_bytes", 64))
     master_seed = str(config["master_seed"])
-    revised = config.get("suite_family") == "v2-2"
     for profile in config["profiles"]:
         if profile == "wide-once":
-            constructor = lightweight_v2_2 if revised else lightweight_v2
+            constructor = lightweight_v2_2
         elif profile == "deep":
-            constructor = paranoid_deep_v2_2 if revised else paranoid_deep_v2
-        elif profile == "deep-vector" and revised:
+            constructor = paranoid_deep_v2_2
+        elif profile == "deep-vector":
             constructor = paranoid_deep_vector_v2_2
         else:
             raise ValueError(f"unsupported round profile: {profile}")
@@ -201,9 +198,9 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     regression_fields = ("profile", "state_count", "candidates", "candidate_workers")
     regression_groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for item in summaries:
-        regression_groups.setdefault(
-            tuple(item[field] for field in regression_fields), []
-        ).append(item)
+        regression_groups.setdefault(tuple(item[field] for field in regression_fields), []).append(
+            item
+        )
     for group in regression_groups.values():
         ordered = sorted(group, key=lambda item: int(item["critical_levels"]))
         xs = [float(item["critical_levels"]) for item in ordered]

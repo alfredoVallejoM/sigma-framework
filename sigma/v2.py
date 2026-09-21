@@ -156,7 +156,7 @@ def hash_file_with_snapshot(
         raise TypeError("file backend must implement FileExecutionBackend")
     with immutable_snapshot(path) as (snapshot, identity):
         policy.validate_message_size(identity.size)
-        anchor = backend.compute_anchor_file(snapshot, selected_context)
+        anchor = backend.compute_anchor_snapshot(snapshot, selected_context)
         digest = _round_engine(selected_context).evaluate_digest(anchor)
     return FileHashResult(digest, identity)
 
@@ -165,12 +165,16 @@ def trace_bytes(
     data: bytes,
     context: Optional[SigmaContextV2] = None,
     trace: Optional[TraceConfig] = None,
+    *,
+    policy: ResourcePolicy = DEFAULT_RESOURCE_POLICY,
 ) -> RoundTranscript:
     """Return a diagnostic transcript; do not persist secret-bearing traces."""
 
     if not isinstance(data, bytes):
         raise TypeError("data must be bytes")
     selected_context = context if context is not None else SigmaContextV2()
+    policy.validate_context(selected_context)
+    policy.validate_message_size(len(data))
     engine = _anchor_engine(selected_context)
     engine.update(data)
     anchor = engine.finalize()

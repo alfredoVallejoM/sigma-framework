@@ -9,7 +9,7 @@ from sigma.anchors import AnchorEvidence, StreamWide
 from sigma.applications.kdf_argon2id import (
     KDF_FINAL_DOMAIN,
     Argon2idParameters,
-    SigmaKdfResult,
+    SigmaPasswordRecord,
 )
 from sigma.applications.signed import SigmaSignedCommitmentV2
 from sigma.outputs import SigmaDigestV2
@@ -60,7 +60,7 @@ def test_public_parsers_reject_arbitrary_bytes_without_unclassified_crashes(data
         SigmaContextV2.from_bytes,
         SigmaDigestV2.from_bytes,
         lambda value: AnchorEvidence.from_bytes(value, context),
-        SigmaKdfResult.from_bytes,
+        SigmaPasswordRecord.from_bytes,
         SigmaSignedCommitmentV2.from_bytes,
     )
     for parser in parsers:
@@ -73,14 +73,14 @@ def test_public_parsers_reject_arbitrary_bytes_without_unclassified_crashes(data
     base=st.binary(min_size=1, max_size=64),
     output_length=st.integers(min_value=16, max_value=128),
 )
-def test_kdf_result_round_trip_property(salt: bytes, base: bytes, output_length: int) -> None:
+def test_kdf_record_round_trip_property(salt: bytes, base: bytes, output_length: int) -> None:
     parameters = Argon2idParameters(19_456, 2, 1, output_length=output_length)
     context = lightweight_v2_2(
         salt=salt,
         application_context=KDF_FINAL_DOMAIN + parameters.to_bytes(),
     )
-    result = SigmaKdfResult.bind(parameters, salt, hash_bytes(base, context))
-    assert SigmaKdfResult.from_bytes(result.to_bytes()) == result
+    record = SigmaPasswordRecord(parameters, salt, hash_bytes(base, context))
+    assert SigmaPasswordRecord.from_bytes(record.to_bytes()) == record
 
 
 @PROPERTY_SETTINGS

@@ -14,6 +14,7 @@ from sigma.applications.pow import (
 from sigma.outputs import SigmaDigestV2
 from sigma.policy import ResourcePolicy
 from sigma.spec import SigmaContextV2
+from sigma.spec.ids import SuiteId
 
 
 def _parameters(predicate: PowPredicate, difficulty: int = 2) -> PowParameters:
@@ -43,6 +44,18 @@ def test_pow_rejects_invalid_dual_state_and_nonce() -> None:
         evaluate_nonce(b"payload", -1, _parameters(PowPredicate.SINGLE_STATE))
     with pytest.raises(ValueError):
         PowParameters.from_bytes(_parameters(PowPredicate.SINGLE_STATE).to_bytes()[:-1])
+    legacy_wire = (
+        _parameters(PowPredicate.SINGLE_STATE).to_bytes().replace(b"SIGMAPOW3", b"SIGMAPOW2", 1)
+    )
+    with pytest.raises(ValueError, match="magic"):
+        PowParameters.from_bytes(legacy_wire)
+
+
+def test_pow_context_is_explicitly_bound_to_active_v22_suite() -> None:
+    assert (
+        _parameters(PowPredicate.SINGLE_STATE).context().suite_id
+        is SuiteId.REFERENCE_STREAM_WIDE_V2_2
+    )
 
 
 @pytest.mark.parametrize("value", [True, 1.0, "1", -1, 2**64])

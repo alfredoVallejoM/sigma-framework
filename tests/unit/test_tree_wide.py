@@ -1,22 +1,18 @@
 import io
+from dataclasses import replace
 
 import pytest
 
 from sigma.anchors import TreeWide
+from sigma.presets import simultaneous_v2_2
 from sigma.spec import SigmaContextV2
-from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import hash_bytes, hash_chunks, hash_reader, verify_full
 
 LEAF_SIZE = 65536
 
 
 def tree_context(**kwargs) -> SigmaContextV2:
-    return SigmaContextV2(
-        suite_id=SuiteId.SIMULTANEOUS_TREE_WIDE_V2,
-        anchor_profile=AnchorProfileId.TREE_WIDE,
-        chunk_size=LEAF_SIZE,
-        **kwargs,
-    )
+    return simultaneous_v2_2(**kwargs)
 
 
 @pytest.mark.parametrize(
@@ -79,10 +75,4 @@ def test_tree_frontier_storage_is_logarithmic() -> None:
 
 def test_tree_suite_rejects_noncanonical_leaf_size() -> None:
     with pytest.raises(ValueError, match="65536"):
-        TreeWide(
-            SigmaContextV2(
-                suite_id=SuiteId.SIMULTANEOUS_TREE_WIDE_V2,
-                anchor_profile=AnchorProfileId.TREE_WIDE,
-                chunk_size=4096,
-            )
-        )
+        TreeWide(replace(simultaneous_v2_2(), chunk_size=4096))

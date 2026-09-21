@@ -7,6 +7,7 @@ def test_sac_experiment_separates_layers_and_builds_bit_matrix() -> None:
             "input_bit_stride": 4,
             "master_seed": "test",
             "message_bytes": 1,
+            "preset": "paranoid-wide-v2-2",
             "samples": 4,
             "state_count": 2,
             "target_round": 1,

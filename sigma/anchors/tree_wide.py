@@ -118,8 +118,10 @@ class TreeWide:
         for branch_index, (algorithm, digest) in enumerate(
             zip(self.context.branches, digests, strict=False)
         ):
-            if not isinstance(digest, bytes) or len(digest) != 64:
-                raise ValueError("prehashed branch digest must contain 64 bytes")
+            if not isinstance(digest, bytes) or len(digest) != self.suite.anchor_component_size:
+                raise ValueError(
+                    "prehashed branch digest must match the suite anchor-component width"
+                )
             node = _TreeNode(digest, self._leaf_count, 1, byte_length, 0)
             frontier = self._frontiers[branch_index]
             while frontier and frontier[-1].leaf_count == node.leaf_count:

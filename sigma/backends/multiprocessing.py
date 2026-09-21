@@ -8,6 +8,7 @@ from typing import Iterator, Tuple
 
 from sigma.anchors import AnchorEvidence, TreeWide
 from sigma.file_snapshot import immutable_snapshot
+from sigma.instrumentation import OracleInput, active_capture, extend_oracle_inputs
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
 from sigma.validation import require_int
@@ -18,30 +19,36 @@ MAX_WORKERS = 256
 
 
 def _hash_leaf_task(
-    arguments: Tuple[bytes, int, bytes],
-) -> Tuple[Tuple[bytes, ...], int]:
-    context_bytes, index, leaf = arguments
+    arguments: Tuple[bytes, int, bytes, bool],
+) -> Tuple[Tuple[bytes, ...], int, list[OracleInput]]:
+    context_bytes, index, leaf, capture = arguments
     context = SigmaContextV2.from_bytes(context_bytes)
+    if capture:
+        from sigma.instrumentation import capture_oracle_inputs
+
+        with capture_oracle_inputs() as records:
+            digests = tuple(
+                TreeWide.leaf_digest(context, index, algorithm, leaf)
+                for algorithm in context.branches
+            )
+        return digests, len(leaf), records
     digests = tuple(
         TreeWide.leaf_digest(context, index, algorithm, leaf) for algorithm in context.branches
     )
-    return digests, len(leaf)
+    return digests, len(leaf), []
 
 
 def _hash_file_leaf_task(
-    arguments: Tuple[str, bytes, int, int, int],
-) -> Tuple[Tuple[bytes, ...], int]:
-    path, context_bytes, index, offset, length = arguments
-    context = SigmaContextV2.from_bytes(context_bytes)
+    arguments: Tuple[str, bytes, int, int, int, bool],
+) -> Tuple[Tuple[bytes, ...], int, list[OracleInput]]:
+    path, context_bytes, index, offset, length, capture = arguments
     with (
         open(path, "rb") as source,
         mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ) as mapped,
     ):
         leaf = bytes(mapped[offset : offset + length])
-    digests = tuple(
-        TreeWide.leaf_digest(context, index, algorithm, leaf) for algorithm in context.branches
-    )
-    return digests, length
+    digests, _, records = _hash_leaf_task((context_bytes, index, leaf, capture))
+    return digests, length, records
 
 
 @dataclass(frozen=True)
@@ -81,16 +88,24 @@ class MultiprocessingTreeBackend(ExecutionBackend, FileExecutionBackend):
                         offset = index * context.chunk_size
                         leaf = data[offset : offset + context.chunk_size]
                         futures.append(
-                            executor.submit(_hash_leaf_task, (context_bytes, index, leaf))
+                            executor.submit(
+                                _hash_leaf_task,
+                                (context_bytes, index, leaf, active_capture() is not None),
+                            )
                         )
                     for future in futures:
-                        yield future.result()
+                        digests, length, records = future.result()
+                        extend_oracle_inputs(records)
+                        yield digests, length
 
             return TreeWide.from_prehashed_leaves(context, bounded_results())
 
     def compute_anchor_file(self, path, context: SigmaContextV2) -> AnchorEvidence:
         with immutable_snapshot(path) as (snapshot, _identity):
             return self._compute_anchor_snapshot(snapshot, context)
+
+    def compute_anchor_snapshot(self, path, context: SigmaContextV2) -> AnchorEvidence:
+        return self._compute_anchor_snapshot(path, context)
 
     def _compute_anchor_snapshot(self, path, context: SigmaContextV2) -> AnchorEvidence:
         if context.anchor_profile is not AnchorProfileId.TREE_WIDE:
@@ -122,10 +137,13 @@ class MultiprocessingTreeBackend(ExecutionBackend, FileExecutionBackend):
                             index,
                             offset,
                             length,
+                            active_capture() is not None,
                         )
                         futures.append(executor.submit(_hash_file_leaf_task, arguments))
                     for future in futures:
-                        yield future.result()
+                        digests, result_length, records = future.result()
+                        extend_oracle_inputs(records)
+                        yield digests, result_length
 
             evidence = TreeWide.from_prehashed_leaves(
                 context,

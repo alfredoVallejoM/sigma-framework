@@ -1,0 +1,108 @@
+"""Numeric identifiers reserved for the incompatible Sigma v3 family."""
+
+from enum import IntEnum
+
+
+class SuiteIdV3(IntEnum):
+    REFERENCE_IAP_V3 = 0x0301
+    EXPLICIT_AUDIT_V3 = 0x0302
+    DEEP_V3 = 0x0303
+    DEEP_VECTOR_V3 = 0x0304
+
+    # R12.5 history-feedback candidates. R12 identifiers stay byte-frozen.
+    REFERENCE_IAP_HISTORY_V3 = 0x0321
+    DEEP_HISTORY_V3 = 0x0323
+    DEEP_VECTOR_HISTORY_V3 = 0x0324
+
+
+class InputProfileIdV3(IntEnum):
+    CANONICAL_BYTES = 0x0301
+
+
+class AnchorProfileIdV3(IntEnum):
+    STREAM_WIDE = 0x0301
+
+
+class RoundProfileIdV3(IntEnum):
+    WIDE_ONCE = 0x0301
+    DEEP = 0x0302
+    DEEP_VECTOR = 0x0303
+
+
+class OutputProfileIdV3(IntEnum):
+    IMPLICIT_J = 0x0301
+    EXPLICIT_BINDING = 0x0302
+
+
+class CardinalityProfileIdV3(IntEnum):
+    BYTE_LENGTH = 0x0301
+
+
+class JointProfileIdV3(IntEnum):
+    VECTOR = 0x0301
+
+
+class LayoutProfileIdV3(IntEnum):
+    SHAKE256_REJECTION = 0x0301
+    SHAKE256_HISTORY_REJECTION = 0x0321
+
+
+class TrajectoryProfileIdV3(IntEnum):
+    BINDING_DERIVED = 0x0301
+    HISTORY_FEEDBACK = 0x0321
+
+
+class BindingFieldIdV3(IntEnum):
+    ANCHOR = 0x0301
+    CARDINALITY = 0x0302
+    LENGTH_SIGNATURE = 0x0303
+    JOINT_SIGNATURE = 0x0304
+
+
+class RoundBindingFieldIdV3(IntEnum):
+    ANCHOR = 0x0301
+    CARDINALITY = 0x0302
+    LENGTH_SIGNATURE = 0x0303
+    JOINT_SIGNATURE = 0x0304
+    HISTORY = 0x0305
+
+
+class LayoutKindV3(IntEnum):
+    INIT = 0x0301
+    ROUND = 0x0302
+
+
+class DomainIdV3(IntEnum):
+    ANCHOR_BRANCH = 0x0301
+    ANCHOR_END = 0x0302
+    LENGTH_SIGNATURE = 0x0303
+    JOINT_SIGNATURE = 0x0304
+    PARAMETER_DERIVATION = 0x0305
+    LAYOUT_INIT = 0x0306
+    LAYOUT_ROUND = 0x0307
+    INIT_FRAME = 0x0308
+    ROUND_FRAME = 0x0309
+    BINDING_FIELD = 0x030A
+    PUBLIC_HEADER = 0x030B
+    EVIDENCE = 0x030C
+    DEEP_BRANCH_FRAME = 0x030D
+    VECTOR_ROUND_FRAME = 0x030E
+    EXPLICIT_EVIDENCE = 0x030F
+    DEEP_FOLD = 0x0310
+    SIGNED_COMMITMENT = 0x0311
+    KDF_BINDING = 0x0312
+    KDF_FINAL_KEY = 0x0313
+    POW_CHALLENGE = 0x0314
+    POW_NONCE = 0x0315
+    POW_PREDICATE = 0x0316
+    HISTORY_SEED = 0x0317
+    HISTORY_STEP = 0x0318
+    HISTORY_LAYOUT_ROUND = 0x0319
+    HISTORY_ROUND_FRAME = 0x031A
+    HISTORY_VECTOR_ROUND_FRAME = 0x031B
+    HISTORY_DEEP_BRANCH_FRAME = 0x031C
+    HISTORY_DEEP_FOLD = 0x031D
+    HISTORY_BINDING_FIELD = 0x031F
+
+
+ALGORITHM_OUTPUT_SIZE_V3 = 64

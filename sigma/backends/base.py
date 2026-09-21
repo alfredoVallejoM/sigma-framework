@@ -24,8 +24,17 @@ class ExecutionBackend(ABC):
 
 
 class FileExecutionBackend(ABC):
+    """Backend accepting mutable source paths and already-stable snapshots."""
+
     @abstractmethod
     def compute_anchor_file(
         self, path: Union[str, PathLike], context: SigmaContextV2
     ) -> Union[AnchorEvidence, CrossWideEvidence]:
         pass
+
+    def compute_anchor_snapshot(
+        self, path: Union[str, PathLike], context: SigmaContextV2
+    ) -> Union[AnchorEvidence, CrossWideEvidence]:
+        """Hash a facade-owned immutable snapshot without copying it again."""
+
+        return self.compute_anchor_file(path, context)

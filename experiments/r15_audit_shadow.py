@@ -33,10 +33,7 @@ def run_audit_shadow_v3() -> dict[str, object]:
     checks: dict[str, bool] = {}
     with tempfile.TemporaryDirectory(prefix="sigma-r15h-") as temporary:
         root = Path(temporary)
-        keys = [
-            RunKeyV3(AUDIT_SHADOW_FREEZE_ID, "AUDIT", "cell-000", index)
-            for index in range(5)
-        ]
+        keys = [RunKeyV3(AUDIT_SHADOW_FREEZE_ID, "AUDIT", "cell-000", index) for index in range(5)]
         for key in keys:
             atomic_write_record_v3(root, key, _record(key))
 
@@ -44,10 +41,7 @@ def run_audit_shadow_v3() -> dict[str, object]:
         reverse = build_ledger_v3(root, list(reversed(keys)))
         checks["ledger_order_independent"] = first["root_sha256"] == reverse["root_sha256"]
 
-        observed = {
-            path.stem
-            for path in (root / "raw" / "AUDIT" / "cell-000").glob("*.json")
-        }
+        observed = {path.stem for path in (root / "raw" / "AUDIT" / "cell-000").glob("*.json")}
         expected = {f"{index:08d}" for index in range(5)}
         checks["complete_runkey_set"] = observed == expected
 

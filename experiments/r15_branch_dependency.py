@@ -3,8 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from .reduced_oracle import ReducedOracle, encode_integer
+
+VectorFaultV3 = Literal[
+    "normal",
+    "constant-first",
+    "copied-first-two",
+    "truncated-first",
+    "omitted-last",
+    "permuted",
+]
 
 
 @dataclass(frozen=True)
@@ -50,6 +60,7 @@ def profile_deep_vector_dependency_v3(
     bits: int,
     branch_count: int,
     candidates: int,
+    fault: VectorFaultV3 = "normal",
 ) -> BranchDependencyResultV3:
     if not 1 <= bits <= 32:
         raise ValueError("bits must be in [1,32]")
@@ -57,6 +68,15 @@ def profile_deep_vector_dependency_v3(
         raise ValueError("branch_count must be in [2,16]")
     if candidates <= 0:
         raise ValueError("candidates must be positive")
+    if fault not in (
+        "normal",
+        "constant-first",
+        "copied-first-two",
+        "truncated-first",
+        "omitted-last",
+        "permuted",
+    ):
+        raise ValueError("unsupported DeepVector fault")
 
     affected_total = 0
     all_affected = 0
@@ -66,7 +86,11 @@ def profile_deep_vector_dependency_v3(
     mask = (1 << bits) - 1
 
     for candidate in range(candidates):
-        vector = _initial_vector(oracle, candidate, bits, branch_count)
+        vector = _apply_fault(
+            _initial_vector(oracle, candidate, bits, branch_count),
+            bits=bits,
+            fault=fault,
+        )
         baseline = _next_vector(oracle, vector, bits)
         for source_branch in range(branch_count):
             mutated = list(vector)
@@ -92,4 +116,8 @@ def profile_deep_vector_dependency_v3(
     )
 
 
-__all__ = ["BranchDependencyResultV3", "profile_deep_vector_dependency_v3"]
+__all__ = [
+    "BranchDependencyResultV3",
+    "VectorFaultV3",
+    "profile_deep_vector_dependency_v3",
+]

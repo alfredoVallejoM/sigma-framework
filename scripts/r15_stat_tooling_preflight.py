@@ -85,9 +85,7 @@ def _validate_tools_manifest(
         observed[battery_id] = raw
 
     if set(observed) != set(MANDATORY_BATTERIES):
-        raise ValueError(
-            "mandatory STAT manifest must contain exactly nist-sts and practrand"
-        )
+        raise ValueError("mandatory STAT manifest must contain exactly nist-sts and practrand")
 
     binaries = {
         "nist-sts": nist_binary,

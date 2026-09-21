@@ -403,6 +403,14 @@ def validate(*, fuzz_iterations: int, report_path: Path | None = None) -> dict[s
                     ],
                 ),
                 _run(
+                    "r15-stat-shadow",
+                    [
+                        sys.executable,
+                        "-m",
+                        "scripts.check_r15_stat_shadow",
+                    ],
+                ),
+                _run(
                     "mutation-fuzz",
                     [
                         sys.executable,

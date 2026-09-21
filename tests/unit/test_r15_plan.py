@@ -16,7 +16,7 @@ def test_r15_plan_gate_passes_current_predata_plan() -> None:
 
 def test_r15_scale_plan_is_predata_only() -> None:
     scale = json.loads(SCALE.read_text(encoding="utf-8"))
-    assert scale["status"] == "pre-freeze-design"
+    assert scale["status"] == "r14.1-freeze-candidate"
     assert scale["confirmatory_evidence"] is False
 
 

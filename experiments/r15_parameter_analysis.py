@@ -84,9 +84,7 @@ def parameter_mutual_information_profile_v3(
         raise ValueError("persistent_bucket_bits is out of range")
 
     values = [
-        derive_parameters_reduced(
-            oracle, candidate, persistent_bits=persistent_bits, space=space
-        )
+        derive_parameters_reduced(oracle, candidate, persistent_bits=persistent_bits, space=space)
         for candidate in range(samples)
     ]
     candidate_mask = (1 << candidate_bucket_bits) - 1

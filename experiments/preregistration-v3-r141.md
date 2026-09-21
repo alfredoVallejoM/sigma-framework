@@ -349,15 +349,42 @@ ExpectedRunKeys=ObservedRunKeys.
 
 ## 17. Unlock condition
 
-No R15 confirmatory acquisition is authorized until all are true:
+### Pre-data staged-unlock amendment
+
+This amendment was frozen **before any R15 confirmatory seed or observation was
+consumed**. It changes only authorization granularity. It does not change any
+attack, cell, factor, sample size, seed derivation, estimator, endpoint, stopping
+rule, censoring rule or multiplicity rule.
+
+Every confirmatory scope requires:
 
 1. R14.1 protocol gate PASS;
 2. R14.1 source/runtime freeze bundle PASS;
 3. exact tag `sigma-v3-r14-freeze-v1` points to the audited source commit;
 4. runtime wheel SHA matches the R14.1 runtime manifest;
 5. generated config manifest matches;
-6. physical-host registry satisfies the three-host requirement;
-7. `scripts/r15_preflight.py` reports `unlocked=true`.
+6. the preregistration and dependency-lock hashes match the runtime manifest.
+
+Authorization is then staged by resource class:
+
+- **internal**: HIST-01/02/03/05/06, RED-02/03/04/05, TMTO-01/02,
+  PARAM-01/02/03, LAYOUT-04, BRANCH-05/06. No physical-host or external-battery
+  manifest is required because these are deterministic software experiments.
+- **physical**: PARAM-04/05/06. In addition to the common requirements, a
+  ready registry of at least three concrete physical hosts is mandatory.
+- **stat**: STAT-01. In addition to the common requirements, a ready manifest
+  for NIST STS, PractRand, TestU01 SmallCrush and TestU01 Crush, including
+  version and binary SHA-256, is mandatory.
+- **full**: requires both the physical-host and external-tool manifests and
+  authorizes the union of all 21 attack families.
+
+Each execution manifest records its scope and exact `authorized_attacks`.
+A runner must reject any attack not explicitly authorized by the execution
+manifest. Staging therefore cannot weaken the frozen host or external-tool
+requirements for the campaigns that depend on them.
+
+No scope may be unlocked if pre-existing unregistered confirmatory data is
+present in the checkout.
 
 ## 18. Publication interpretation
 

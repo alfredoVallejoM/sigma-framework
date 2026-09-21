@@ -156,8 +156,11 @@ def test_full_r15_preflight_emits_exact_execution_manifest(
     )
     assert result["confirmatory_unlocked"] is True
     assert result["expected_run_units"] == 153_536
-    assert result["expected_cells"] > 200
-    assert len(result["host_ids"]) == 3
-    assert len(result["external_batteries"]) == 4
-    assert len(result["expected_runkey_sha256"]) == 64
+    assert int(result["expected_cells"]) > 200
+    host_ids = result["host_ids"]
+    batteries = result["external_batteries"]
+    runkey_sha256 = result["expected_runkey_sha256"]
+    assert isinstance(host_ids, list) and len(host_ids) == 3
+    assert isinstance(batteries, list) and len(batteries) == 4
+    assert isinstance(runkey_sha256, str) and len(runkey_sha256) == 64
     assert json.loads(output.read_text(encoding="utf-8")) == result

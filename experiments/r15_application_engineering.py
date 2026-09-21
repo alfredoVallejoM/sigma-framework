@@ -343,8 +343,6 @@ def run_engineering_shard(
 
 
 
-
-
 def _receipt_for_record(record_path: Path) -> Path:
     parts = record_path.parts
     try:

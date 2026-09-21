@@ -14,7 +14,6 @@ from sigma.binding.prepare import prepare_binding_v3
 from sigma.sources import BytesSource
 from sigma.spec.ids_v3 import SuiteIdV3
 
-from .common import canonical_json
 from .r15_application_campaigns import (
     mitigation_cost_profile_v3,
     profile_pow_nonce_selection_v3,
@@ -193,8 +192,8 @@ def run_application_shadow_suite_v3(root: Path) -> dict[str, object]:
 
 
 __all__ = [
-    "ApplicationShadowResultV3",
     "SHADOW_E_FREEZE_ID",
     "SHADOW_E_NAMESPACE",
+    "ApplicationShadowResultV3",
     "run_application_shadow_suite_v3",
 ]

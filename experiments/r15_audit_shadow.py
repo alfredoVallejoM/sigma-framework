@@ -92,7 +92,7 @@ def run_audit_shadow_v3() -> dict[str, object]:
             checks["missing_record_rejected"] = False
 
         try:
-            build_ledger_v3(root, keys + [keys[4]])
+            build_ledger_v3(root, [*keys, keys[4]])
         except ValueError:
             checks["duplicate_ledger_key_rejected"] = True
         else:

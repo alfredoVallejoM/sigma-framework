@@ -23,7 +23,8 @@ def test_r15_h_audit_shadow_detects_all_fixture_tampering() -> None:
     checks = report["checks"]
     assert isinstance(checks, dict)
     assert all(checks.values())
-    assert report["check_count"] >= 6
+    check_count = report["check_count"]
+    assert isinstance(check_count, int) and check_count >= 6
 
 
 def test_analysis_shadow_hash_is_repeatable() -> None:

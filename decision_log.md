@@ -245,3 +245,25 @@ volume, deterministic regeneration, stream hashing, scratch ceilings and a
 small retained scientific archive. R15 remains blocked until these decisions
 are materialized in regenerated configs/preregistration and pass a new R14.1
 gate.
+
+## 2026-09-21 — Enmienda pre-data del estado de salida de NIST STS
+
+Decision:
+La fuente local de tooling STAT se fija en
+`16f363004284d7d2e50bb86b4c63e6d63db78694` bajo el tag local no publicado
+`sigma-v3-r15-stat-tooling-v1`. El adaptador acepta el código de salida `1` de
+NIST STS 2.1.2 únicamente cuando la consola contiene la terminación completa y
+existe un `finalAnalysisReport` con su cabecera normativa. Cualquier otro código
+no cero o evidencia incompleta sigue siendo `ExternalBatteryExit`.
+
+Reason:
+El smoke real pre-data confirmó que `assess.c` devuelve literalmente `1` tras
+ejecutar correctamente el postprocesado. El runner congelado trataba todo valor
+no cero como error, lo que habría clasificado erróneamente todos los registros
+NIST sin cambiar sus resultados estadísticos.
+
+Impact:
+No cambian streams, seeds, RunKeys, tamaños, baterías, cargas ni interpretación
+estadística. Cambian sólo la clasificación del estado del proceso externo y
+anotaciones de tipos del auditor. La identidad corregida se registra en
+`experiments/r15-local-campaigns.json` antes de ejecutar STAT-01.

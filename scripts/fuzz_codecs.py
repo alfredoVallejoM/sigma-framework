@@ -1,4 +1,4 @@
-"""Deterministic mutation fuzz harness for every public v2 binary parser."""
+"""Deterministic mutation fuzz harness for registered public v2/v3 codecs."""
 
 import argparse
 import random
@@ -9,16 +9,24 @@ from sigma.anchors import AnchorEvidence, CrossWide, CrossWideEvidence, StreamWi
 from sigma.applications.kdf_argon2id import (
     KDF_FINAL_DOMAIN,
     Argon2idParameters,
-    SigmaKdfResult,
+    SigmaPasswordRecord,
 )
 from sigma.applications.pow import PowParameters, PowPredicate
 from sigma.applications.signed import SigmaSignedCommitmentV2
+from sigma.binding import HistoryCommitmentV3, RoundBindingV3
+from sigma.layout import HistoryLayoutPlan
 from sigma.outputs import SigmaDigestV2
+from sigma.outputs.digest_v3 import SigmaDigestV3, digest_from_evaluation_v3
 from sigma.presets import lightweight_v2_2, paranoid_wide_v2_2
+from sigma.rounds.history_v3 import HistoryWideOnceEvaluationV3
+from sigma.sources import BytesSource
 from sigma.spec import SigmaContextV2
+from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import DecodeError
 from sigma.spec.ids import SignatureAlgorithmId
+from sigma.spec.ids_v3 import SuiteIdV3
 from sigma.v2 import hash_bytes
+from sigma.v3 import evaluate_v3
 
 
 def _mutate(rng: random.Random, data: bytes) -> bytes:
@@ -66,7 +74,7 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
         salt=kdf_salt,
         application_context=KDF_FINAL_DOMAIN + kdf_parameters.to_bytes(),
     )
-    kdf_result = SigmaKdfResult.bind(
+    kdf_record = SigmaPasswordRecord(
         kdf_parameters, kdf_salt, hash_bytes(b"diagnostic-base", kdf_context)
     )
     wide_context = lightweight_v2_2()
@@ -82,12 +90,28 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
         b"fuzz-key",
         b"\x00" * 64,
     )
+    history_context = SigmaContextV3.for_suite(
+        SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+        salt=b"fuzz-history-salt",
+        challenge=b"fuzz-history-challenge",
+        application_context=b"scripts/fuzz_codecs",
+    )
+    history_evaluation = evaluate_v3(
+        history_context,
+        BytesSource(b"fuzz-history-seed"),
+    )
+    assert isinstance(history_evaluation, HistoryWideOnceEvaluationV3)
+    history = history_evaluation.histories[0]
+    round_binding = RoundBindingV3(history_evaluation.prepared.binding, history)
+    history_layout = history_evaluation.round_layouts[0]
+    history_digest = digest_from_evaluation_v3(history_evaluation)
+
     return (
         ("context", context.to_bytes(), SigmaContextV2.from_bytes),
         ("digest", digest.to_bytes(), SigmaDigestV2.from_bytes),
         ("pow", pow_parameters.to_bytes(), PowParameters.from_bytes),
         ("kdf", kdf_parameters.to_bytes(), Argon2idParameters.from_bytes),
-        ("kdf-result", kdf_result.to_bytes(), SigmaKdfResult.from_bytes),
+        ("kdf-record", kdf_record.to_bytes(), SigmaPasswordRecord.from_bytes),
         (
             "evidence-wide",
             wide_evidence.to_bytes(),
@@ -99,6 +123,11 @@ def canonical_codec_cases() -> tuple[tuple[str, bytes, Callable[[bytes], Any]], 
             lambda data: CrossWideEvidence.from_bytes(data, cross_context),
         ),
         ("signed", signed.to_bytes(), SigmaSignedCommitmentV2.from_bytes),
+        ("v3-history-context", history_context.to_bytes(), SigmaContextV3.from_bytes),
+        ("v3-history", history.to_bytes(), HistoryCommitmentV3.from_bytes),
+        ("v3-round-binding", round_binding.to_bytes(), RoundBindingV3.from_bytes),
+        ("v3-history-layout", history_layout.to_bytes(), HistoryLayoutPlan.from_bytes),
+        ("v3-history-digest", history_digest.to_bytes(), SigmaDigestV3.from_bytes),
     )
 
 

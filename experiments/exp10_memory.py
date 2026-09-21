@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from sigma.anchors import TreeWide
 from sigma.backends import MultiprocessingTreeBackend
-from sigma.presets import get_preset, lightweight_v2, simultaneous_v2
+from sigma.presets import get_preset
 from sigma.rounds import TraceConfig, TracePolicy
 from sigma.v2 import _anchor_engine, _round_engine
 
@@ -80,20 +80,15 @@ def _worker(task: tuple[str, int, int, int, int, int, str]) -> dict[str, Any]:
         "tree-wide-v2-2": "simultaneous-v2-2",
         "parallel-tree-v2-2": "simultaneous-v2-2",
     }
-    if profile in revised_presets:
-        context = get_preset(
-            revised_presets[profile], target_round=target_round, state_count=state_count
-        )
-    else:
-        context = (
-            lightweight_v2(target_round=target_round, state_count=state_count)
-            if profile == "stream-wide"
-            else simultaneous_v2(target_round=target_round, state_count=state_count)
-        )
+    try:
+        preset_name = revised_presets[profile]
+    except KeyError as exc:
+        raise ValueError(f"unsupported v2.2 memory profile: {profile}") from exc
+    context = get_preset(preset_name, target_round=target_round, state_count=state_count)
     temporary: Optional[tempfile.TemporaryDirectory[str]] = None
     path: Optional[Path] = None
-    parallel = profile in {"parallel-tree", "parallel-tree-v2-2"}
-    tree_profile = profile in {"tree-wide", "tree-wide-v2-2"}
+    parallel = profile == "parallel-tree-v2-2"
+    tree_profile = profile == "tree-wide-v2-2"
     if parallel:
         temporary = tempfile.TemporaryDirectory(prefix="sigma-exp10-")
         path = Path(temporary.name) / "message.bin"
@@ -205,11 +200,7 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     state_counts = config.get("state_counts", [2])
     trace_policies = config.get("trace_policies", ["none"])
     for profile in config["profiles"]:
-        worker_values = (
-            config.get("workers", [1])
-            if profile in {"parallel-tree", "parallel-tree-v2-2"}
-            else [1]
-        )
+        worker_values = config.get("workers", [1]) if profile == "parallel-tree-v2-2" else [1]
         for workers_value in worker_values:
             for io_chunk_value in config["io_chunks"]:
                 for size_value in config["sizes"]:
@@ -312,9 +303,7 @@ def summarize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 if value is not None:
                     values_by_size.setdefault(int(item["bytes"]), []).append(int(value))
             if set(values_by_size) == {int(size) for size in sizes}:
-                medians = [
-                    float(statistics.median(values_by_size[int(size)])) for size in sizes
-                ]
+                medians = [float(statistics.median(values_by_size[int(size)])) for size in sizes]
                 memory_models[metric] = _fit_models(sizes, medians)
         summaries.append(
             {

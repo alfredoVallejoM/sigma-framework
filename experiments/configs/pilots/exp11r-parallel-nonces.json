@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "campaign": "pilot-v2-2",
   "challenge_modes": ["unique"],
   "experiment": "EXP-11",

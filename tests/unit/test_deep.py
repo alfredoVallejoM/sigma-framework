@@ -5,7 +5,8 @@ import tracemalloc
 import pytest
 
 from sigma.anchors import CrossWide
-from sigma.presets import paranoid_deep_v2, paranoid_deep_v2_2, paranoid_wide_v2
+from sigma.policy import ResourcePolicy
+from sigma.presets import paranoid_deep_v2_2, paranoid_wide_v2_2
 from sigma.rounds import (
     Deep,
     DeepBranchBackend,
@@ -17,7 +18,7 @@ from sigma.v2 import hash_bytes, trace_bytes, verify_full
 
 
 def test_deep_evaluates_every_branch_at_every_transition() -> None:
-    context = paranoid_deep_v2(target_round=2, state_count=3)
+    context = paranoid_deep_v2_2(target_round=2, state_count=3)
     transcript = trace_bytes(b"abc", context)
     assert len(transcript.states) == 5
     assert len(transcript.branch_outputs) == 4
@@ -25,8 +26,16 @@ def test_deep_evaluates_every_branch_at_every_transition() -> None:
     assert all(len(output) == 64 for outputs in transcript.branch_outputs for output in outputs)
 
 
+def test_trace_enforces_resource_policy_before_work() -> None:
+    context = paranoid_deep_v2_2(target_round=2, state_count=3)
+    with pytest.raises(ValueError, match="target_round"):
+        trace_bytes(b"abc", context, policy=ResourcePolicy(max_target_round=1))
+    with pytest.raises(ValueError, match="message size"):
+        trace_bytes(b"abc", context, policy=ResourcePolicy(max_message_bytes=2))
+
+
 def test_deep_reinjects_cross_anchor() -> None:
-    context = paranoid_deep_v2()
+    context = paranoid_deep_v2_2()
     engine = Deep(context)
     anchor_a = CrossWide.compute(context, (b"a",))
     anchor_b = CrossWide.compute(context, (b"b",))
@@ -35,15 +44,15 @@ def test_deep_reinjects_cross_anchor() -> None:
 
 
 def test_deep_and_wide_are_separate_suites_and_verify_fully() -> None:
-    deep = hash_bytes(b"abc", paranoid_deep_v2(target_round=2))
-    wide = hash_bytes(b"abc", paranoid_wide_v2(target_round=2))
+    deep = hash_bytes(b"abc", paranoid_deep_v2_2(target_round=2))
+    wide = hash_bytes(b"abc", paranoid_wide_v2_2(target_round=2))
     assert deep != wide
     assert verify_full(b"abc", deep)
     assert not verify_full(b"abd", deep)
 
 
 def test_deep_rolling_evaluation_matches_full_trace() -> None:
-    context = paranoid_deep_v2(target_round=8, state_count=3)
+    context = paranoid_deep_v2_2(target_round=8, state_count=3)
     anchor = CrossWide.compute(context, (b"abc",))
     engine = Deep(context)
     rolling = engine.evaluate_digest(anchor)
@@ -58,7 +67,7 @@ def test_deep_rolling_evaluation_matches_full_trace() -> None:
 
 
 def _deep_rolling_peak(target_round: int) -> int:
-    context = paranoid_deep_v2(target_round=target_round, state_count=3)
+    context = paranoid_deep_v2_2(target_round=target_round, state_count=3)
     anchor = CrossWide.compute(context, (b"memory-regression",))
     peaks = []
     for _ in range(3):

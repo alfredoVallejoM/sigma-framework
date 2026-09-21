@@ -4,7 +4,7 @@ import pytest
 
 from sigma.anchors import AnchorEvidence, CrossWide, StreamWide
 from sigma.backends import MultiprocessingTreeBackend
-from sigma.presets import paranoid_deep_v2
+from sigma.presets import paranoid_deep_v2_2
 from sigma.rounds import Deep, TraceConfig, TracePolicy, WideOnce
 from sigma.spec import SigmaContextV2
 from sigma.spec.encoding import encode_uint
@@ -50,7 +50,7 @@ def test_round_engines_reject_invalid_indices(value: object) -> None:
     with pytest.raises(ValidationError):
         WideOnce(context).next_state(anchor, value, b"s" * 64)  # type: ignore[arg-type]
 
-    deep_context = paranoid_deep_v2()
+    deep_context = paranoid_deep_v2_2()
     deep_anchor = CrossWide.compute(deep_context, (b"abc",))
     with pytest.raises(ValidationError):
         Deep(deep_context).next_state(deep_anchor, value, b"s" * 64)  # type: ignore[arg-type]

@@ -1,3 +1,7 @@
+import os
+
+import pytest
+
 from experiments.exp09_performance import run, summarize
 
 
@@ -51,3 +55,20 @@ def test_revised_performance_covers_deep_vector_and_local_verification() -> None
         "rounds",
     }
     assert all(record["construction"] == "sigma-deep-vector" for record in records)
+
+
+def test_file_cold_records_the_required_cache_control() -> None:
+    if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
+        pytest.skip("POSIX_FADV_DONTNEED is unavailable")
+    records = run(
+        {
+            "constructions": ["sha512"],
+            "master_seed": "cold-file",
+            "operations": ["file-cold"],
+            "processes": 1,
+            "repetitions": 1,
+            "sizes": [8],
+            "warmups": 0,
+        }
+    )
+    assert records[0]["cache_state"] == "posix-fadvise-dontneed-before-each-read"

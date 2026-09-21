@@ -3,7 +3,7 @@ import pytest
 from sigma.backends.base import ExecutionBackend
 from sigma.incremental import IncrementalSigmaV2
 from sigma.policy import PolicyViolation, ResourcePolicy, classify_context
-from sigma.presets import lightweight_v2
+from sigma.presets import lightweight_v2_2
 from sigma.spec import SigmaContextV2
 from sigma.spec.ids import AnchorProfileId
 from sigma.v2 import hash_bytes, verify_full
@@ -31,7 +31,7 @@ def test_context_status_separates_shape_suite_and_policy() -> None:
     assert status.suite_valid is False
     assert status.policy_acceptable is False
 
-    context = lightweight_v2(target_round=5)
+    context = lightweight_v2_2(target_round=5)
     status = classify_context(context, ResourcePolicy(max_target_round=4))
     assert status.well_formed is True
     assert status.suite_valid is True
@@ -43,7 +43,7 @@ def test_context_status_separates_shape_suite_and_policy() -> None:
 
 def test_policy_rejects_context_before_backend_work() -> None:
     backend = RecordingBackend()
-    context = lightweight_v2(target_round=5)
+    context = lightweight_v2_2(target_round=5)
     with pytest.raises(PolicyViolation, match="target_round"):
         hash_bytes(
             b"payload",
@@ -59,7 +59,7 @@ def test_policy_rejects_message_before_backend_work() -> None:
     with pytest.raises(PolicyViolation, match="message size"):
         hash_bytes(
             b"12345",
-            lightweight_v2(),
+            lightweight_v2_2(),
             backend,
             policy=ResourcePolicy(max_message_bytes=4),
         )
@@ -67,16 +67,16 @@ def test_policy_rejects_message_before_backend_work() -> None:
 
 
 def test_incremental_policy_rejects_before_mutating_state() -> None:
-    incremental = IncrementalSigmaV2(lightweight_v2(), policy=ResourcePolicy(max_message_bytes=4))
+    incremental = IncrementalSigmaV2(lightweight_v2_2(), policy=ResourcePolicy(max_message_bytes=4))
     with pytest.raises(PolicyViolation, match="message size"):
         incremental.update(b"12345")
     assert incremental.checkpoint().offset == 0
     incremental.update(b"1234")
-    assert incremental.finalize() == hash_bytes(b"1234", lightweight_v2())
+    assert incremental.finalize() == hash_bytes(b"1234", lightweight_v2_2())
 
 
 def test_policy_is_not_part_of_digest_bytes() -> None:
-    context = lightweight_v2(target_round=3)
+    context = lightweight_v2_2(target_round=3)
     strict = ResourcePolicy(name="strict", max_target_round=3, max_message_bytes=3)
     relaxed = ResourcePolicy(name="relaxed", max_target_round=9, max_message_bytes=99)
     assert hash_bytes(b"abc", context, policy=strict) == hash_bytes(b"abc", context, policy=relaxed)
@@ -84,7 +84,7 @@ def test_policy_is_not_part_of_digest_bytes() -> None:
 
 
 def test_verifier_turns_policy_rejection_into_false() -> None:
-    context = lightweight_v2(target_round=5)
+    context = lightweight_v2_2(target_round=5)
     digest = hash_bytes(b"abc", context, policy=ResourcePolicy(max_target_round=5))
     assert not verify_full(b"abc", digest, policy=ResourcePolicy(max_target_round=4))
 

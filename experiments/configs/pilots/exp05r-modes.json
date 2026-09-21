@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "experiment": "EXP-05",
   "master_seed": "sigma-exp05r-modes-pilot-v1",
   "message_bytes": 2,

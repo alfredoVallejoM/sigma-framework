@@ -1,16 +1,23 @@
 import re
 from pathlib import Path
 
+import pytest
+
 import sigma
 from sigma.spec.ids import SuiteId
 from sigma.suites.registry import get_suite
 from sigma.version import (
+    ACTIVE_SUITE_FAMILIES,
     CONTEXT_WIRE_VERSION,
     DIGEST_WIRE_VERSION,
     EVIDENCE_WIRE_VERSION,
+    KDF_PARAMETER_WIRE_VERSION,
+    KDF_RECORD_WIRE_VERSION,
     PACKAGE_VERSION,
+    POW_WIRE_VERSION,
     SIGNED_COMMITMENT_WIRE_VERSION,
     SUPPORTED_SUITE_FAMILIES,
+    TRANSITIONAL_SUITE_FAMILIES,
 )
 
 
@@ -26,20 +33,24 @@ def test_version_axes_are_independent_and_declared() -> None:
         CONTEXT_WIRE_VERSION,
         DIGEST_WIRE_VERSION,
         EVIDENCE_WIRE_VERSION,
+        KDF_PARAMETER_WIRE_VERSION,
+        KDF_RECORD_WIRE_VERSION,
+        POW_WIRE_VERSION,
         SIGNED_COMMITMENT_WIRE_VERSION,
-    ) == (2, 2, 2, 2)
-    assert SUPPORTED_SUITE_FAMILIES == ("v2-1", "v2-2")
+    ) == (2, 2, 2, 2, 2, 3, 2)
+    assert ACTIVE_SUITE_FAMILIES == ("v2-2",)
+    assert TRANSITIONAL_SUITE_FAMILIES == ()
+    assert SUPPORTED_SUITE_FAMILIES == ("v2-2",)
 
 
-def test_v21_is_frozen_while_v22_remains_experimental() -> None:
-    v21 = get_suite(SuiteId.REFERENCE_STREAM_WIDE_V2)
+def test_maturity_axes_are_independent() -> None:
     v22 = get_suite(SuiteId.REFERENCE_STREAM_WIDE_V2_2)
-    assert (v21.suite_family, v21.evidence_version, v21.stable) == ("v2-1", 1, True)
-    assert (v22.suite_family, v22.evidence_version, v22.stable) == ("v2-2", 2, False)
+    assert (v22.suite_family, v22.evidence_version) == ("v2-2", 2)
+    assert (v22.wire_frozen, v22.vectors_frozen, v22.suite_stable) == (True, True, True)
+    assert v22.security_reviewed is False
 
 
-def test_historical_realtime_suite_is_deprecated_without_a_v22_replacement() -> None:
-    historical = get_suite(SuiteId.REALTIME_STREAM_WIDE_V2)
-    assert historical.stable is True
-    assert historical.deprecated is True
-    assert all(suite_id.name != "REALTIME_STREAM_WIDE_V2_2" for suite_id in SuiteId)
+def test_withdrawn_suite_identifiers_are_not_runtime_members() -> None:
+    assert all(not suite_id.name.endswith("_V2") for suite_id in SuiteId)
+    with pytest.raises(ValueError):
+        SuiteId(0x0001)

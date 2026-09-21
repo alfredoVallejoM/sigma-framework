@@ -1,16 +1,12 @@
 from sigma.anchors import CrossWide, StreamWide
+from sigma.presets import paranoid_wide_v2_2
 from sigma.rounds import WideOnce
 from sigma.spec import SigmaContextV2
-from sigma.spec.ids import AnchorProfileId, SuiteId
 from sigma.v2 import hash_bytes, verify_full
 
 
 def cross_context(**kwargs) -> SigmaContextV2:
-    return SigmaContextV2(
-        suite_id=SuiteId.PARANOID_CROSS_WIDE_V2,
-        anchor_profile=AnchorProfileId.CROSS_WIDE,
-        **kwargs,
-    )
+    return paranoid_wide_v2_2(**kwargs)
 
 
 def test_cross_wide_retains_roots_and_adds_connections() -> None:

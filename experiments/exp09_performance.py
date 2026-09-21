@@ -9,12 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from sigma.presets import (
-    lightweight_v2,
     lightweight_v2_2,
-    paranoid_deep_v2,
     paranoid_deep_v2_2,
     paranoid_deep_vector_v2_2,
-    paranoid_wide_v2,
     paranoid_wide_v2_2,
 )
 from sigma.v2 import (
@@ -52,19 +49,19 @@ def _branches(message: bytes) -> bytes:
     )
 
 
-def _preset(construction: str, revised: bool = False):
+def _preset(construction: str):
     if construction == "sigma-wide":
-        return lightweight_v2_2() if revised else lightweight_v2()
+        return lightweight_v2_2()
     if construction == "sigma-cross":
-        return paranoid_wide_v2_2() if revised else paranoid_wide_v2()
+        return paranoid_wide_v2_2()
     if construction == "sigma-deep":
-        return paranoid_deep_v2_2() if revised else paranoid_deep_v2()
-    if construction == "sigma-deep-vector" and revised:
+        return paranoid_deep_v2_2()
+    if construction == "sigma-deep-vector":
         return paranoid_deep_vector_v2_2()
     raise ValueError(f"operation requires a Sigma construction: {construction}")
 
 
-def _memory_full(construction: str, message: bytes, revised: bool = False) -> bytes:
+def _memory_full(construction: str, message: bytes) -> bytes:
     if construction == "sha256":
         return hashlib.sha256(message).digest()
     if construction == "sha512":
@@ -77,39 +74,44 @@ def _memory_full(construction: str, message: bytes, revised: bool = False) -> by
         return hashlib.blake2b(message, digest_size=64).digest()
     if construction == "concat-branches":
         return _branches(message)
-    return hash_bytes(message, _preset(construction, revised)).to_bytes()
+    return hash_bytes(message, _preset(construction)).to_bytes()
 
 
-def _file_full(construction: str, path: Path, revised: bool = False) -> bytes:
+def _file_full(construction: str, path: Path) -> bytes:
     if construction.startswith("sigma-"):
-        return hash_file(path, _preset(construction, revised)).to_bytes()
+        return hash_file(path, _preset(construction)).to_bytes()
     with path.open("rb") as source:
         message = source.read()
-    return _memory_full(construction, message, revised)
+    return _memory_full(construction, message)
 
 
-def _prepared_operation(construction: str, operation: str, message: bytes, revised: bool = False):
+def _prepared_operation(construction: str, operation: str, message: bytes):
     if operation == "full-hash":
-        return lambda: _memory_full(construction, message, revised), "memory"
-    if operation in {"file-hash", "file-hot"}:
+        return lambda: _memory_full(construction, message), "memory"
+    if operation in {"file-hash", "file-hot", "file-cold"}:
         temporary = tempfile.TemporaryDirectory(prefix="sigma-exp09-")
         path = Path(temporary.name) / "message.bin"
         path.write_bytes(message)
 
         def file_call() -> bytes:
-            result = _file_full(construction, path, revised)
+            if operation == "file-cold":
+                if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
+                    raise RuntimeError("file-cold requires POSIX_FADV_DONTNEED")
+                with path.open("rb") as source:
+                    os.posix_fadvise(source.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+            result = _file_full(construction, path)
             if not path.exists():
                 raise RuntimeError("benchmark input unexpectedly disappeared")
             return result
 
         file_call._temporary = temporary  # type: ignore[attr-defined]
-        cache_state = (
-            "warm-page-cache-after-warmup"
-            if operation == "file-hot"
-            else "uncontrolled-page-cache"
-        )
+        cache_state = {
+            "file-cold": "posix-fadvise-dontneed-before-each-read",
+            "file-hash": "uncontrolled-page-cache",
+            "file-hot": "warm-page-cache-after-warmup",
+        }[operation]
         return file_call, cache_state
-    context = _preset(construction, revised)
+    context = _preset(construction)
     anchor_engine = _anchor_engine(context)
     anchor_engine.update(message)
     anchor = anchor_engine.finalize()
@@ -145,10 +147,10 @@ def _prepared_operation(construction: str, operation: str, message: bytes, revis
     raise ValueError(f"unsupported operation: {operation}")
 
 
-def _measure(task: tuple[str, str, int, int, int, int, bool]) -> dict[str, Any]:
-    construction, operation, size, seed, warmups, repetition, revised = task
+def _measure(task: tuple[str, str, int, int, int, int]) -> dict[str, Any]:
+    construction, operation, size, seed, warmups, repetition = task
     message = random.Random(seed).randbytes(size)
-    function, cache_state = _prepared_operation(construction, operation, message, revised)
+    function, cache_state = _prepared_operation(construction, operation, message)
     for _ in range(warmups):
         function()
     voluntary_before, involuntary_before = _context_switches()
@@ -158,7 +160,14 @@ def _measure(task: tuple[str, str, int, int, int, int, bool]) -> dict[str, Any]:
     elapsed = time.perf_counter_ns() - started
     cpu_elapsed = time.process_time_ns() - cpu_started
     voluntary_after, involuntary_after = _context_switches()
-    byte_operations = {"anchor", "file-hash", "file-hot", "full-hash", "verification"}
+    byte_operations = {
+        "anchor",
+        "file-hash",
+        "file-hot",
+        "file-cold",
+        "full-hash",
+        "verification",
+    }
     return {
         "bytes": size,
         "cache_state": cache_state,
@@ -194,13 +203,19 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
     repetitions = int(config.get("repetitions", 5))
     warmups = int(config.get("warmups", 2))
     master_seed = str(config["master_seed"])
-    sigma = {"sigma-wide", "sigma-cross", "sigma-deep"}
-    revised = config.get("suite_family") == "v2-2"
-    if revised:
-        sigma.add("sigma-deep-vector")
+    sigma = {"sigma-wide", "sigma-cross", "sigma-deep", "sigma-deep-vector"}
     for construction in config["constructions"]:
         for operation in config["operations"]:
-            if operation not in ("full-hash", "file-hash") and construction not in sigma:
+            if (
+                operation
+                not in (
+                    "full-hash",
+                    "file-hash",
+                    "file-hot",
+                    "file-cold",
+                )
+                and construction not in sigma
+            ):
                 continue
             for size_value in config["sizes"]:
                 size = int(size_value)
@@ -208,7 +223,14 @@ def run(config: dict[str, Any]) -> list[dict[str, Any]]:
                     label = f"EXP-09/{construction}/{operation}/{size}/{repetition}"
                     seed = derived_random(master_seed, label).getrandbits(128)
                     tasks.append(
-                        (str(construction), str(operation), size, seed, warmups, repetition, revised)
+                        (
+                            str(construction),
+                            str(operation),
+                            size,
+                            seed,
+                            warmups,
+                            repetition,
+                        )
                     )
     order_rng = derived_random(master_seed, "EXP-09/task-order")
     order_rng.shuffle(tasks)

@@ -1,6 +1,6 @@
 {
   "schema": "sigma-v3-r15-publication-scale-plan-v1",
-  "status": "pre-freeze-design",
+  "status": "r14.1-freeze-candidate",
   "confirmatory_evidence": false,
   "confidence": {
     "primary_ci": 0.95,
@@ -218,7 +218,18 @@
         "any-persistent"
       ],
       "replicates_estimable": 512,
-      "replicates_stress": 256
+      "replicates_stress": 256,
+      "estimable_widths": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "stress_widths": [
+        12,
+        14,
+        16
+      ]
     },
     "RED-05": {
       "widths": [
@@ -320,7 +331,9 @@
       "cells": 24,
       "streams_per_cell": 64,
       "retention": "manifest+hashes+logs; streams ephemeral",
-      "bytes_per_stream": "freeze after adapter validation"
+      "bytes_per_stream": 67108864,
+      "aggregate_bytes_per_cell": 4294967296,
+      "total_processed_bytes": 103079215104
     }
   }
 }

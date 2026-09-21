@@ -1,0 +1,158 @@
+name: R15 Internal Wave 1
+
+on:
+  push:
+    branches:
+      - r15-acquisition-wave1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: r15-internal-wave1
+  cancel-in-progress: false
+
+jobs:
+  unlock-internal:
+    name: R15 internal unlock and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      source_commit: ${{ steps.identity.outputs.source_commit }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "source_commit=${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "SOURCE_COMMIT=${GITHUB_SHA}" >> "${GITHUB_ENV}"
+          echo "R15_TAG=sigma-v3-r14-freeze-v1" >> "${GITHUB_ENV}"
+      - run: python -m pip install --upgrade pip
+      - run: >-
+          python -m pip install
+          -c constraints/r14-v3-py313.txt
+          ".[test,quality,analysis,kdf,signatures]"
+      - run: >-
+          python -m scripts.check_r141_freeze
+          --source-commit "$SOURCE_COMMIT"
+          --report /tmp/r141-freeze-gate.json
+      - run: python -m scripts.prepare_r141_confirmatory --output /tmp/r141-configs
+      - run: >-
+          python -m scripts.create_r141_source_freeze
+          --source-commit "$SOURCE_COMMIT"
+          --output /tmp/r141-source-freeze.json
+      - run: python -m build --outdir /tmp/r141-dist
+      - run: python scripts/release_artifacts.py /tmp/r141-dist
+      - run: >-
+          python -m scripts.build_r141_runtime_manifest
+          --distribution /tmp/r141-dist
+          --source-freeze /tmp/r141-source-freeze.json
+          --configs /tmp/r141-configs
+          --preregistration experiments/preregistration-v3-r141.md
+          --dependency-lock constraints/r14-v3-py313.txt
+          --source-commit "$SOURCE_COMMIT"
+          --output /tmp/r141-runtime-manifest.json
+      - name: Create exact R14.1 tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "sigma-r15-bot"
+          git config user.email "sigma-r15-bot@users.noreply.github.com"
+          if git rev-parse -q --verify "refs/tags/$R15_TAG" >/dev/null; then
+            TARGET="$(git rev-list -n 1 "$R15_TAG")"
+            test "$TARGET" = "$SOURCE_COMMIT"
+          else
+            git tag -a "$R15_TAG" "$SOURCE_COMMIT" -m "Sigma v3 R14.1 staged publication freeze"
+            git push origin "refs/tags/$R15_TAG"
+          fi
+          git fetch --tags --force
+      - run: mkdir -p /tmp/r15-unlock-bundle/dist
+      - run: cp -a /tmp/r141-configs /tmp/r15-unlock-bundle/configs
+      - run: cp -a /tmp/r141-dist/. /tmp/r15-unlock-bundle/dist/
+      - run: cp /tmp/r141-source-freeze.json /tmp/r15-unlock-bundle/source-freeze.json
+      - run: cp /tmp/r141-runtime-manifest.json /tmp/r15-unlock-bundle/runtime-manifest.json
+      - run: cp /tmp/r141-freeze-gate.json /tmp/r15-unlock-bundle/freeze-gate.json
+      - name: Unlock internal confirmatory scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL="$(find /tmp/r15-unlock-bundle/dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python -m scripts.r15_preflight             --scope internal             --runtime-manifest /tmp/r15-unlock-bundle/runtime-manifest.json             --source-freeze /tmp/r15-unlock-bundle/source-freeze.json             --configs /tmp/r15-unlock-bundle/configs             --artifact "$WHEEL"             --output /tmp/r15-unlock-bundle/execution-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-internal-unlock-bundle
+          path: /tmp/r15-unlock-bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+  wave1:
+    name: R15 W1 ${{ matrix.campaign.key }} shard ${{ matrix.shard }}
+    needs: unlock-internal
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        campaign:
+          - key: param01
+            config: param-01.json
+            factor: ""
+          - key: param03
+            config: param-03.json
+            factor: ""
+          - key: hist01b
+            config: hist-01.json
+            factor: "mode=conditional-crossing"
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - uses: actions/download-artifact@v4
+        with:
+          name: r15-internal-unlock-bundle
+          path: /tmp/unlock
+      - name: Install exact frozen wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL="$(find /tmp/unlock/dist -maxdepth 1 -name '*.whl' -print -quit)"
+          python -m pip install --force-reinstall --no-deps "$WHEEL"
+      - name: Execute confirmatory shard
+        shell: bash
+        env:
+          CONFIG_NAME: ${{ matrix.campaign.config }}
+          FACTOR_FILTER: ${{ matrix.campaign.factor }}
+          SHARD_INDEX: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/r15-results
+          ARGS=(
+            --config "/tmp/unlock/configs/$CONFIG_NAME"
+            --execution-manifest /tmp/unlock/execution-manifest.json
+            --output /tmp/r15-results
+            --shard-index "$SHARD_INDEX"
+            --shard-count 8
+            --report /tmp/r15-results/shard-report.json
+          )
+          if [[ -n "$FACTOR_FILTER" ]]; then
+            ARGS+=(--factor "$FACTOR_FILTER")
+          fi
+          cd /tmp
+          python -I -m experiments.r15_confirmatory_internal "${ARGS[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r15-w1-${{ matrix.campaign.key }}-shard-${{ matrix.shard }}
+          path: /tmp/r15-results/
+          if-no-files-found: error
+          retention-days: 90

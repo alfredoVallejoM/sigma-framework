@@ -34,24 +34,16 @@ def check_r15_structural_shadow() -> dict[str, object]:
         raise RuntimeError("R15-C shadow crossed the confirmatory boundary")
 
     branch05_faults = {
-        item["metrics"]["fault"]
-        for item in results
-        if item["attack_id"] == "BRANCH-05"
+        item["metrics"]["fault"] for item in results if item["attack_id"] == "BRANCH-05"
     }
     branch06_faults = {
-        item["metrics"]["fault"]
-        for item in results
-        if item["attack_id"] == "BRANCH-06"
+        item["metrics"]["fault"] for item in results if item["attack_id"] == "BRANCH-06"
     }
     if len(branch05_faults) != 8:
         raise RuntimeError("BRANCH-05 shadow fault coverage is incomplete")
     if len(branch06_faults) != 6:
         raise RuntimeError("BRANCH-06 shadow fault coverage is incomplete")
-    hist03_games = {
-        item["metrics"]["game"]
-        for item in results
-        if item["attack_id"] == "HIST-03"
-    }
+    hist03_games = {item["metrics"]["game"] for item in results if item["attack_id"] == "HIST-03"}
     if hist03_games != {"collision", "second-preimage", "fixed-point", "cycle"}:
         raise RuntimeError("HIST-03 shadow game coverage is incomplete")
 

@@ -258,7 +258,7 @@ def _analysis_surface(
             "excluded_from_r15_pass": exploratory,
         }
 
-    tmto_points = []
+    tmto_points: list[tuple[int, int, int]] = []
     for attack_id in ("TMTO-01", "TMTO-02"):
         for record in by_attack.get(attack_id, ()):
             metrics = record["metrics"]
@@ -268,7 +268,7 @@ def _analysis_surface(
                 metrics.get("memory_entries"),
             )
             if all(isinstance(value, int) and not isinstance(value, bool) for value in values):
-                tmto_points.append(tuple(int(value) for value in values))
+                tmto_points.append((int(values[0]), int(values[1]), int(values[2])))
     frontier = pareto_frontier_v3(tmto_points) if tmto_points else ()
 
     return {

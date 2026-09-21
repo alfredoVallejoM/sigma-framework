@@ -1,0 +1,7 @@
+R15 internal Wave 2 trigger
+source_commit=80214afde29b3596af83265e18c1e2926e14dd2f
+controller_commit=0319fbe9145530258565d43d343a80a3ba4829f2
+expected_run_units=49664
+history_shards=64
+layout_shards=64
+branch_shards=96

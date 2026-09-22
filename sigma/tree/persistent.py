@@ -401,9 +401,10 @@ class TreePersistentIndexV1:
             )
         payload_end = len(view) - 32
         expected_checksum = bytes(view[payload_end:])
-        actual_checksum = hashlib.sha256(
-            _INDEX_INTEGRITY_DOMAIN + view[:payload_end]
-        ).digest()
+        checksum_hasher = hashlib.sha256()
+        checksum_hasher.update(_INDEX_INTEGRITY_DOMAIN)
+        checksum_hasher.update(view[:payload_end])
+        actual_checksum = checksum_hasher.digest()
         if not hmac.compare_digest(expected_checksum, actual_checksum):
             raise PersistentTreeIndexDecodeError("persistent index checksum mismatch")
 

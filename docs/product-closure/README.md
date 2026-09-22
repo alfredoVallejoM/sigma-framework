@@ -91,9 +91,6 @@ Cierre ST2:
 Evidencia normativa de cierre:
 - ST2-IMPLEMENTATION-EVIDENCE.md
 
-ST3 permanece PLANNED.
-
-
 ST3 — Portable Tree Resume — está **COMPLETE** tras revisión adversaria.
 
 Cierre ST3:
@@ -112,9 +109,6 @@ SourceHint permanece explícitamente heurístico y no forma parte de la segurida
 
 Evidencia normativa:
 - ST3-IMPLEMENTATION-EVIDENCE.md
-
-ST4 permanece PLANNED.
-
 
 ST4 — Delta / Append — está **COMPLETE** tras revisión adversaria.
 
@@ -136,9 +130,29 @@ Cierre ST4:
 - KAT ST4 SHA-256:
   `ed94e768dd52c71039b938eec9eafdd8330465a974b4636c3a2a975129178999`.
 
-Persistent index layout is deliberately deferred to ST5/SA3.
+ST5 closes the in-memory index layout and resource policy; a persistent sidecar wire remains deferred to SA3/future storage work.
 
 Evidencia normativa:
 - ST4-IMPLEMENTATION-EVIDENCE.md
 
-ST5 permanece PLANNED.
+ST5 — Tree Performance and Scale Closure — está **COMPLETE** tras revisión adversaria.
+
+Cierre ST5:
+- 1,000 optimized/reference Tree builds: 0 divergences;
+- 500 FULL/STREAMING proof corpora: 0 divergences;
+- optimized leaf framing preserves exact ST0 bytes without four payload-sized frames;
+- ProofIndex 16 MiB audit: ~0.39 MiB extra allocation, no second B-sized payload copy;
+- streaming Tree 32 MiB audit: ~24 KiB auxiliary peak;
+- near-full 16 MiB range proof generation: ~23 KiB auxiliary peak;
+- near-full 16 MiB range verification: ~138 KiB auxiliary peak;
+- explicit FULL / STREAMING / REJECT resource plans;
+- DeltaIndex B-sized mutable copy is explicit and budgeted;
+- over-budget delta rejects before index construction;
+- Manifest reads are bounded to 65,536 bytes per request;
+- frozen local ledger:
+  `ST5-PERFORMANCE-LEDGER.json`.
+
+Evidence:
+- ST5-IMPLEMENTATION-EVIDENCE.md
+
+No persistent index wire was introduced in ST5; only its logical layout/resource contract was closed.

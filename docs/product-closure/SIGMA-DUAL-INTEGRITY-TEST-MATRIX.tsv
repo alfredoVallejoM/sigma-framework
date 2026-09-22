@@ -159,3 +159,52 @@ REL-REF-001	REL1	T7	Independent Tree/artifact consumer	product corpus	all new wi
 REL-WHEEL-001	REL2	T8	Isolated wheel consumer	installed package	core workflows	pass	BLOCKING
 REL-DOC-001	REL2	T8	Executable docs	installed package	all examples	pass	BLOCKING
 REL-ADV-001	REL3	T4	Adversarial release review	obligations ledger	all blocking obligations	manual PASS	BLOCKING
+PX0-DIFF-001	PX0	T3	Persistent index vs ephemeral/no-index	current Tree reference	proof/delta/append random corpus	exact result parity	BLOCKING
+PX0-ADV-001	PX0	T4	Stale/corrupt persistent index	fresh rebuild	bit corruption + changed source	detect/reject before trusted result	BLOCKING
+PX0-TXN-001	PX0	T4	Atomic persistent index publication	previous valid index	failure injection	old index remains valid	BLOCKING
+PX1-STORE-001	PX1	T3	CAS put/get identity	canonical ArtifactId	random artifact corpus	put/get byte-identical and ID-checked	BLOCKING
+PX1-TXN-001	PX1	T4	Crash-safe artifact publication	previous store snapshot	write/rename/db failure injection	no partial artifact visible	BLOCKING
+PX1-GC-001	PX1	T2	Reachability-preserving GC	lineage reference graph	random roots/graphs	all reachable artifacts survive	BLOCKING
+PX2-DAG-001	PX2	T2	Lineage parent/child graph	SA0 parent IDs	random DAG	queries match bound parent relation	BLOCKING
+PX2-ADV-001	PX2	T4	Cycle/unresolved parent policy	reference graph	cycles + missing parents	explicit reject/external/unresolved result	BLOCKING
+PX3-RT-001	PX3	T3	Remote/local backend round-trip	local CAS	filesystem/S3-compatible fixtures	canonical bytes identical	BLOCKING
+PX3-FAULT-001	PX3	T4	Interrupted remote transfer	full local object	retry/resume/failure injection	verify before publication; idempotent	BLOCKING
+PX4-DIFF-001	PX4	T3	Gateway vs local verification	Python product API	random artifacts/policies	exact decision/receipt parity	BLOCKING
+PX4-CHEAP-001	PX4	T4	Gateway preflight resource rejection	bomb body/source	oversize/timeout policies	no expensive hashing/buffering	BLOCKING
+PX4-CONC-001	PX4	T4	Gateway cancellation isolation	pointwise local verifier	concurrent cancel/timeout	other requests unaffected	BLOCKING
+PX5-KAT-001	PX5	T1	DSL compile determinism	canonical VerificationPolicyV1	frozen YAML/JSON corpus	exact PolicyId	BLOCKING
+PX5-ADV-001	PX5	T4	DSL ambiguity/conflict rejection	none	unknown keys, conflicting requirements, bad units	reject with deterministic diagnostics	BLOCKING
+IX0-RT-001	IX0	T3	OCI/ORAS attach-pull round-trip	canonical Sigma bytes	local registry fixtures	byte-identical extracted evidence	BLOCKING
+IX0-ID-001	IX0	T4	OCI metadata identity separation	ArtifactId reference	registry annotation/tag mutations	ArtifactId unchanged	BLOCKING
+IX1-SIG-001	IX1	T3	Sigstore bundle verification	Sigstore reference tooling	keyless/local test identities	valid bundle accepted; wrong identity rejected	BLOCKING
+IX1-CLAIM-001	IX1	T4	Rekor/integrity claim separation	Sigma verifier + log fact	with/without log inclusion	artifact validity independent of log presence	BLOCKING
+IX2-MAP-001	IX2	T3	Sigma to in-toto/SLSA mapping	official schema validation	artifact/lineage fixtures	canonical supported mapping	BLOCKING
+IX2-ADV-001	IX2	T4	Unsupported/opaque SLSA semantics	closed adapter	unknown predicates/claims	Unsupported; no inferred SLSA level	BLOCKING
+IX3-ORDER-001	IX3	T4	TUF-before-Sigma verifier ordering	instrumented verifier	expired/rollback/valid metadata	TUF failure stops Sigma verification	BLOCKING
+IX3-RT-001	IX3	T3	TUF target Sigma metadata round-trip	TUF reference implementation	target fixtures	canonical Sigma reference preserved	BLOCKING
+IX4-BACKEND-001	IX4	T3	Signing-input parity across backends	local Ed25519 reference	mock PKCS11/KMS/keyless backends	exact signing bytes	BLOCKING
+IX4-SECRET-001	IX4	T4	Secret non-disclosure	log/receipt/artifact scanner	mock secret/key corpus	no key material emitted	BLOCKING
+IX5-LOG-001	IX5	T3	Transparency inclusion/consistency	log reference verifier	entry/checkpoint/proof fixtures	proofs validate exactly	BLOCKING
+IX5-CLAIM-001	IX5	T4	Transparency claim boundary	artifact verifier	valid/invalid artifact with valid log inclusion	log inclusion never substitutes artifact validity	BLOCKING
+ML0-KAT-001	ML0	T1	Data/ML metadata profile codec	frozen profile vectors	Dataset/Model/Checkpoint/Shard/Embedding profiles	exact canonical bytes	BLOCKING
+ML0-ID-001	ML0	T4	Advisory metadata identity separation	ArtifactId reference	advisory field mutations	ArtifactId unchanged	BLOCKING
+ML1-SAFE-001	ML1	T4	Safe format inspection	malicious fixtures	pickle/code-execution payloads	no arbitrary execution	BLOCKING
+ML1-MAP-001	ML1	T3	Logical-to-physical range mapping	format-native parser	Tensor/column/chunk fixtures	exact byte ranges + valid Tree proofs	BLOCKING
+ML2-SHARD-001	ML2	T3	Sharded artifact graph	ordered shard reference	missing/duplicate/reordered shards	exact top-level binding or reject	BLOCKING
+ML2-PART-001	ML2	T2	Partial shard verification	full shard rebuild	random selected shards	policy-consistent exact subset results	BLOCKING
+ML3-RT-001	ML3	T3	ML registry push/pull	local canonical store	HF/MLflow/generic adapter fixtures	canonical bytes preserved	BLOCKING
+ML3-ID-001	ML3	T4	Registry metadata identity separation	ArtifactId reference	labels/tags/cache metadata mutation	ArtifactId unchanged	BLOCKING
+NR0-KAT-001	NR0	T7	Rust frozen-corpus parity	Python/std-lib references	all Tree/Artifact/Policy/Receipt KATs	byte-identical	BLOCKING
+NR0-PARSE-001	NR0	T5	Rust/Python parser parity	shared malformed corpus	fuzz/mutation wires	same accept/reject class	BLOCKING
+NR1-DIFF-001	NR1	T3	Pure Python vs native Python backend	pure Python authority	random product operations	exact bytes/results	BLOCKING
+NR1-ADV-001	NR1	T4	Native exception/policy parity	pure Python authority	invalid/unsupported/resource cases	same semantic outcome	BLOCKING
+NR2-KAT-001	NR2	T7	Go wire parity	frozen canonical corpus	Tree/Artifact/Policy/Receipt	byte-identical	BLOCKING
+NR2-VERIFY-001	NR2	T3	Go verifier parity	independent consumer	random supported evidence	exact verification result	BLOCKING
+NR3-KAT-001	NR3	T7	JS/WASM wire/proof parity	frozen corpus + reference verifier	Node/browser/WASM fixtures	byte-identical/same proof result	BLOCKING
+NR3-MEM-001	NR3	T6	WASM/browser memory ceiling	resource model	large proof/artifact inputs	explicit bounded failure, no crash	BLOCKING
+AX0-REG-001	AX0	T1	RangeProof V1 regression	frozen ST2 corpus	all existing V1 vectors	byte exact unchanged	BLOCKING
+AX0-BOUND-001	AX0	T6	Subchunk disclosure/proof-size bounds	geometry model	boundary/exhaustive small ranges	exact disclosure bound + ledger	BLOCKING
+AX1-STMT-001	AX1	T1	Private-proof statement canonicality	selected standard proof system	statement/transcript vectors	exact versioned statement	BLOCKING
+AX1-CLAIM-001	AX1	T4	ZK threat/setup claim boundary	external proof-system assumptions	setup/soundness/privacy variants	documented scoped claims only	BLOCKING
+AX2-POISON-001	AX2	T4	Untrusted distributed cache poisoning	local verifier	wrong artifacts/proofs/indexes	never alters accepted local result	BLOCKING
+AX2-LOAD-001	AX2	T6	Distributed protocol backpressure/cancellation	resource model	concurrent slow/large peers	bounded resources and isolated cancellation	BLOCKING

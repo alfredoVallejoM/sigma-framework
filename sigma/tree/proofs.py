@@ -6,7 +6,7 @@ import hmac
 from dataclasses import dataclass, field
 
 from .codec import TreeDecodeError, decode_items, decode_uint, encode_items, parse_record, record, u16, u32, u64
-from .core import combine_nodes, empty_root, leaf_node
+from .core import _leaf_node_buffer, combine_nodes, empty_root, leaf_node
 from .ids import (
     MAX_INCLUSION_STEPS,
     MAX_RANGE_WITNESS_NODES,
@@ -391,7 +391,7 @@ class TreeProofIndex:
 
     data: bytes
     profile: TreeProfileV1 = DEFAULT_PROFILE
-    _leaves: tuple[bytes, ...] = field(init=False, repr=False)
+    _leaves: tuple[memoryview, ...] = field(init=False, repr=False)
     _leaf_nodes: tuple[TreeNode, ...] = field(init=False, repr=False)
     _nodes: dict[tuple[int, int], TreeNode] = field(init=False, repr=False)
     root: TreeRoot = field(init=False)
@@ -401,13 +401,14 @@ class TreeProofIndex:
             raise TypeError("proof index data must be bytes")
         if self.profile != DEFAULT_PROFILE:
             raise ValueError("unsupported proof index profile")
+        view = memoryview(self.data)
         leaves = tuple(
-            self.data[offset : offset + self.profile.chunk_size]
+            view[offset : offset + self.profile.chunk_size]
             for offset in range(0, len(self.data), self.profile.chunk_size)
         )
         self._leaves = leaves
         self._leaf_nodes = tuple(
-            leaf_node(
+            _leaf_node_buffer(
                 self.profile,
                 index,
                 index * self.profile.chunk_size,
@@ -485,6 +486,184 @@ class TreeProofIndex:
             suffix,
             witnesses,
         )
+
+
+def _streaming_geometry_root(
+    data: bytes,
+    profile: TreeProfileV1 = DEFAULT_PROFILE,
+) -> TreeRoot:
+    if not isinstance(data, bytes):
+        raise TypeError("streaming proof source must be bytes")
+    if profile != DEFAULT_PROFILE:
+        raise ValueError("unsupported streaming proof profile")
+    if not data:
+        raise ValueError("empty tree has no selective proofs")
+    leaf_count = (len(data) + profile.chunk_size - 1) // profile.chunk_size
+    return TreeRoot(
+        profile,
+        len(data),
+        leaf_count,
+        (b"\x00" * 64,) * len(profile.algorithms),
+    )
+
+
+def _subtree_node_from_view(
+    view: memoryview,
+    profile: TreeProfileV1,
+    start: int,
+    count: int,
+    total_leaf_count: int,
+    total_bytes: int,
+) -> TreeNode:
+    if count == 1:
+        leaf_start = start * profile.chunk_size
+        leaf_end = min(leaf_start + profile.chunk_size, total_bytes)
+        return _leaf_node_buffer(
+            profile,
+            start,
+            leaf_start,
+            view[leaf_start:leaf_end],
+        )
+    left_count = _largest_power_strictly_less(count)
+    return combine_nodes(
+        profile,
+        _subtree_node_from_view(
+            view,
+            profile,
+            start,
+            left_count,
+            total_leaf_count,
+            total_bytes,
+        ),
+        _subtree_node_from_view(
+            view,
+            profile,
+            start + left_count,
+            count - left_count,
+            total_leaf_count,
+            total_bytes,
+        ),
+    )
+
+
+def prove_leaf_streaming(data: bytes, leaf_index: int) -> InclusionProofV1:
+    """Generate an inclusion proof with O(log N) auxiliary memory and no full index."""
+    geometry_root = _streaming_geometry_root(data)
+    geometry = inclusion_geometry(geometry_root, leaf_index)
+    view = memoryview(data)
+    steps = tuple(
+        InclusionStepV1(
+            side,
+            _subtree_node_from_view(
+                view,
+                DEFAULT_PROFILE,
+                start,
+                count,
+                geometry_root.leaf_count,
+                geometry_root.byte_length,
+            ),
+        )
+        for side, start, count, _ in geometry
+    )
+    leaf_start = leaf_index * DEFAULT_PROFILE.chunk_size
+    leaf_end = min(leaf_start + DEFAULT_PROFILE.chunk_size, len(data))
+    node = _leaf_node_buffer(
+        DEFAULT_PROFILE,
+        leaf_index,
+        leaf_start,
+        view[leaf_start:leaf_end],
+    )
+    for step in steps:
+        node = (
+            combine_nodes(DEFAULT_PROFILE, step.sibling, node)
+            if step.side is ProofSide.LEFT
+            else combine_nodes(DEFAULT_PROFILE, node, step.sibling)
+        )
+    root = TreeRoot(
+        DEFAULT_PROFILE,
+        len(data),
+        geometry_root.leaf_count,
+        node.digests,
+    )
+    return InclusionProofV1(
+        DEFAULT_PROFILE,
+        root,
+        leaf_index,
+        leaf_end - leaf_start,
+        steps,
+    )
+
+
+def prove_range_streaming(data: bytes, start: int, length: int) -> RangeProofV1:
+    """Generate a range proof without retaining a full TreeProofIndex."""
+    if not isinstance(data, bytes):
+        raise TypeError("range proof source must be bytes")
+    _validate_raw_range(len(data), start, length)
+    geometry_root = _streaming_geometry_root(data)
+    first_leaf, last_leaf_exclusive, prefix_length, suffix_length = _range_geometry(
+        geometry_root,
+        start,
+        length,
+    )
+    view = memoryview(data)
+    witnesses = tuple(
+        _subtree_node_from_view(
+            view,
+            DEFAULT_PROFILE,
+            witness_start,
+            witness_count,
+            geometry_root.leaf_count,
+            geometry_root.byte_length,
+        )
+        for witness_start, witness_count, _ in range_witness_geometry(
+            geometry_root,
+            first_leaf,
+            last_leaf_exclusive,
+        )
+    )
+    components: dict[tuple[int, int], TreeNode] = {
+        (node.start_leaf, node.leaf_count): node for node in witnesses
+    }
+    for leaf_index in range(first_leaf, last_leaf_exclusive):
+        leaf_start = leaf_index * DEFAULT_PROFILE.chunk_size
+        leaf_end = min(leaf_start + DEFAULT_PROFILE.chunk_size, len(data))
+        components[(leaf_index, 1)] = _leaf_node_buffer(
+            DEFAULT_PROFILE,
+            leaf_index,
+            leaf_start,
+            view[leaf_start:leaf_end],
+        )
+
+    node = _reconstruct_from_components(
+        DEFAULT_PROFILE,
+        0,
+        geometry_root.leaf_count,
+        components,
+    )
+    root = TreeRoot(
+        DEFAULT_PROFILE,
+        len(data),
+        geometry_root.leaf_count,
+        node.digests,
+    )
+    end = start + length
+    first_leaf_start = first_leaf * DEFAULT_PROFILE.chunk_size
+    last_leaf = last_leaf_exclusive - 1
+    last_leaf_end = min(
+        last_leaf * DEFAULT_PROFILE.chunk_size + DEFAULT_PROFILE.chunk_size,
+        len(data),
+    )
+    prefix = data[first_leaf_start:start] if prefix_length else b""
+    suffix = data[end:last_leaf_end] if suffix_length else b""
+    return RangeProofV1(
+        DEFAULT_PROFILE,
+        root,
+        start,
+        length,
+        prefix,
+        suffix,
+        witnesses,
+    )
 
 
 def prove_leaf(data: bytes, leaf_index: int) -> InclusionProofV1:

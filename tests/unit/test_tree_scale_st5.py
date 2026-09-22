@@ -15,7 +15,6 @@ from sigma.tree import (
     TreeScalePolicyV1,
     build_directory_manifest,
     build_tree,
-    delta_index_scaled,
     estimate_index_bytes,
     plan_tree_index,
     prove_leaf_scaled,

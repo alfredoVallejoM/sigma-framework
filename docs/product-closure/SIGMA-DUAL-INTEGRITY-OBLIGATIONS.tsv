@@ -83,13 +83,13 @@ SV2-O04	SV	SV2	Policy decision deterministic	repeatability tests	COMPLETE	YES
 SV2-O05	SV	SV2	Normalized policy identity stable	KAT + codec tests	COMPLETE	YES
 SV2-O06	SV	SV2	Defined strict-policy subset is monotone	property tests	COMPLETE	NO
 SV2-O07	SV	SV2	Legacy v2.2 requires explicit opt-in	negative default tests	COMPLETE	YES
-SV3-O01	SV	SV3	Receipt binds artifact/policy/verifier/result	mutation tests	ACTIVE	YES
-SV3-O02	SV	SV3	Optional receipt signature covers canonical record	signature tests	ACTIVE	YES
-SV3-O03	SV	SV3	Receipt does not imply opaque provenance truth	manual claim audit	ACTIVE	NO
-SV3-O04	SV	SV3	Unsigned receipt marked unsigned	codec/API tests	ACTIVE	NO
-SV3-O05	SV	SV3	Batch verify equals pointwise verify	differential	ACTIVE	YES
-SV3-O06	SV	SV3	Batch item failures isolated	failure injection	ACTIVE	YES
-SV3-O07	SV	SV3	Batch result ordering deterministic	property tests	ACTIVE	NO
+SV3-O01	SV	SV3	Receipt binds artifact/policy/verifier/result	mutation tests	COMPLETE	YES
+SV3-O02	SV	SV3	Optional receipt signature covers canonical record	signature tests	COMPLETE	YES
+SV3-O03	SV	SV3	Receipt does not imply opaque provenance truth	manual claim audit	COMPLETE	NO
+SV3-O04	SV	SV3	Unsigned receipt marked unsigned	codec/API tests	COMPLETE	NO
+SV3-O05	SV	SV3	Batch verify equals pointwise verify	differential	COMPLETE	YES
+SV3-O06	SV	SV3	Batch item failures isolated	failure injection	COMPLETE	YES
+SV3-O07	SV	SV3	Batch result ordering deterministic	property tests	COMPLETE	NO
 SA0-O01	SA	SA0	Artifact profile requires exactly declared evidence	codec/type tests	PLANNED	YES
 SA0-O02	SA	SA0	ArtifactId calculation non-circular	KAT + mutation	PLANNED	YES
 SA0-O03	SA	SA0	Descriptor canonical	codec fuzz	PLANNED	YES

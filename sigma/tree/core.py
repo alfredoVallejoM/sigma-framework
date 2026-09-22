@@ -29,8 +29,21 @@ def leaf_node(profile: TreeProfileV1, index: int, offset: int, leaf: bytes) -> T
         raise ValueError("leaf length is outside profile bounds")
     if offset != index * profile.chunk_size:
         raise ValueError("canonical leaf offset does not match its index")
-    frame = record(b"SIGTLEAF", ((1, profile.to_bytes()), (2, u64(index)), (3, u64(offset)), (4, u32(len(leaf))), (5, leaf)))
-    return TreeNode(index, 1, len(leaf), 0, tuple(_hash(a, domain_tag(TreeDomainId.LEAF) + frame) for a in profile.algorithms))
+    digests = []
+    for algorithm in profile.algorithms:
+        frame = record(
+            b"SIGTLEAF",
+            (
+                (1, profile.to_bytes()),
+                (2, u16(int(algorithm))),
+                (3, u64(index)),
+                (4, u64(offset)),
+                (5, u32(len(leaf))),
+                (6, leaf),
+            ),
+        )
+        digests.append(_hash(algorithm, domain_tag(TreeDomainId.LEAF) + frame))
+    return TreeNode(index, 1, len(leaf), 0, tuple(digests))
 
 
 def combine_nodes(profile: TreeProfileV1, left: TreeNode, right: TreeNode, *, require_equal_perfect: bool = False) -> TreeNode:
@@ -38,10 +51,13 @@ def combine_nodes(profile: TreeProfileV1, left: TreeNode, right: TreeNode, *, re
         raise ValueError("tree nodes are not adjacent")
     if left.byte_length != left.leaf_count * profile.chunk_size:
         raise ValueError("left subtree must be full before a right sibling")
+    count = left.leaf_count + right.leaf_count
+    canonical_left_count = 1 << ((count - 1).bit_length() - 1)
+    if left.leaf_count != canonical_left_count:
+        raise ValueError("children do not match the canonical recursive split")
     if require_equal_perfect and not (left.is_perfect and right.is_perfect and left.height == right.height):
         raise ValueError("frontier carry requires equal perfect subtrees")
     height = max(left.height, right.height) + 1
-    count = left.leaf_count + right.leaf_count
     length = left.byte_length + right.byte_length
     digests = []
     for algorithm, x, y in zip(profile.algorithms, left.digests, right.digests, strict=True):

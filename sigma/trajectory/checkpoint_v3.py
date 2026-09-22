@@ -274,11 +274,18 @@ def checkpoint_from_evaluation_v3(
         if round_index > target
         else ()
     )
-    history = (
-        evaluation.histories[round_index]
-        if _is_history_evaluation(evaluation)
-        else None
-    )
+    history: HistoryCommitmentV3 | None
+    if isinstance(
+        evaluation,
+        (
+            HistoryWideOnceEvaluationV3,
+            HistoryDeepEvaluationV3,
+            HistoryDeepVectorEvaluationV3,
+        ),
+    ):
+        history = evaluation.histories[round_index]
+    else:
+        history = None
     return TrajectoryCheckpointV1(
         evaluation.context,
         evaluation.prepared.binding,

@@ -114,3 +114,31 @@ Evidencia normativa:
 - ST3-IMPLEMENTATION-EVIDENCE.md
 
 ST4 permanece PLANNED.
+
+
+ST4 — Delta / Append — está **COMPLETE** tras revisión adversaria.
+
+Cierre ST4:
+- 5,000 cumulative delta cases PASS;
+- 1,000 cumulative append cases PASS;
+- 500 fresh independent differential cases PASS;
+- exact affected-leaf/ancestor closure;
+- compatible overlap normalization order-independent;
+- conflicting overlaps rejected;
+- RebuildRequired for insertion/deletion/length shifts;
+- rollback before and during commit publication;
+- append reuses prior canonical frontier/subtrees;
+- 1,000-leaf performance sweep:
+  - 0.1% ~369x vs rebuild;
+  - 1% ~49x;
+  - 10% ~6x;
+  - 100% ~0.71x, retained as negative result;
+- KAT ST4 SHA-256:
+  `ed94e768dd52c71039b938eec9eafdd8330465a974b4636c3a2a975129178999`.
+
+Persistent index layout is deliberately deferred to ST5/SA3.
+
+Evidencia normativa:
+- ST4-IMPLEMENTATION-EVIDENCE.md
+
+ST5 permanece PLANNED.

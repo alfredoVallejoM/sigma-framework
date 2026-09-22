@@ -35,13 +35,16 @@ La capa de producto se divide en:
 - Sigma Trajectory: historia global.
 - Sigma Artifact: composición TREE / TRAJECTORY / DUAL.
 
-## Primer bloque autorizado
+## Estado ST0
 
-El primer bloque implementable es ST0 — Sigma Tree core extraction.
+ST0 — Sigma Tree core extraction — está **COMPLETE** tras revisión adversaria.
 
-Antes de escribir ST1-ST4 se debe cerrar ST0 y demostrar que:
+El cierre demuestra que:
 1. ninguna KAT histórica cambia;
 2. TreeCore tiene una única semántica;
 3. legacy_v22 está aislado;
-4. reference y production coinciden;
-5. el contrato de complejidad está instrumentado.
+4. reference y production coinciden en root y frontier;
+5. el contrato de complejidad está instrumentado;
+6. el gate de cierre ejecuta >=100k mutaciones de codecs y mutaciones TLV estructurales explícitas.
+
+ST1 no forma parte del cierre ST0 y permanece PLANNED.

@@ -32,11 +32,11 @@ __all__ = [
     "ARTIFACT_ID_DOMAIN",
     "ARTIFACT_MAGIC",
     "ARTIFACT_WIRE_VERSION",
-    "ArtifactDescriptorProfileV1",
-    "ArtifactProfileV1",
     "MANIFEST_ID_DOMAIN",
     "MAX_ARTIFACT_MEDIA_TYPE_BYTES",
     "MAX_ARTIFACT_NAME_BYTES",
     "MAX_ARTIFACT_PARENTS",
     "MAX_ARTIFACT_RECORD_BODY",
+    "ArtifactDescriptorProfileV1",
+    "ArtifactProfileV1",
 ]

@@ -1,5 +1,5 @@
 name: temporary-sa0-vector
-# remediation-pass: 4
+# remediation-pass: 2
 
 on:
   push:

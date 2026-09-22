@@ -4,6 +4,7 @@ import base64
 import gzip
 import json
 from pathlib import Path
+from typing import Any
 
 from reference.trajectory_audit_v3 import (
     MODE_COMPACT,
@@ -30,12 +31,12 @@ CORPUS_PATH = (
 )
 
 
-def _document() -> dict[str, object]:
+def _document() -> dict[str, Any]:
     decoded = gzip.decompress(base64.b64decode(CORPUS_PATH.read_text(encoding="ascii")))
     return json.loads(decoded.decode("utf-8"))
 
 
-def _reference_evaluation_from_case(case: dict[str, object]) -> dict[str, object]:
+def _reference_evaluation_from_case(case: dict[str, Any]) -> dict[str, Any]:
     return {
         "states": tuple(bytes.fromhex(value) for value in case["states_hex"]),
         "round_layouts": tuple(

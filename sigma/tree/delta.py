@@ -350,8 +350,11 @@ class TreeDeltaIndex:
         old_leaf_bytes = {index: self._leaves[index] for index in affected_leaves}
         old_leaf_nodes = {index: self._leaf_nodes[index] for index in affected_leaves}
         touched_node_keys = set(closure) | set(temp_nodes)
-        missing = object()
-        old_nodes = {key: self._nodes.get(key, missing) for key in touched_node_keys}
+        old_nodes = {
+            node_key: self._nodes[node_key]
+            for node_key in touched_node_keys
+            if node_key in self._nodes
+        }
         old_root = self.root
         try:
             for index, value in updated_leaf_bytes.items():
@@ -365,11 +368,11 @@ class TreeDeltaIndex:
             for index, value in old_leaf_bytes.items():
                 self._leaves[index] = value
                 self._leaf_nodes[index] = old_leaf_nodes[index]
-            for key, value in old_nodes.items():
-                if value is missing:
-                    self._nodes.pop(key, None)
+            for node_key in touched_node_keys:
+                if node_key in old_nodes:
+                    self._nodes[node_key] = old_nodes[node_key]
                 else:
-                    self._nodes[key] = value
+                    self._nodes.pop(node_key, None)
             self.root = old_root
             raise
 
@@ -499,13 +502,16 @@ class TreeDeltaIndex:
         old_list_length = len(self._leaves)
         old_tail_value = self._leaves[full_count] if tail_length else None
         affected_leaf_node_keys = set(new_leaf_nodes)
-        missing = object()
         old_leaf_node_values = {
-            key: self._leaf_nodes.get(key, missing) for key in affected_leaf_node_keys
+            leaf_key: self._leaf_nodes[leaf_key]
+            for leaf_key in affected_leaf_node_keys
+            if leaf_key in self._leaf_nodes
         }
         touched_node_keys = set(invalidated) | set(temp_nodes)
         old_node_values = {
-            key: self._nodes.get(key, missing) for key in touched_node_keys
+            node_key: self._nodes[node_key]
+            for node_key in touched_node_keys
+            if node_key in self._nodes
         }
         old_root = self.root
         try:
@@ -527,16 +533,16 @@ class TreeDeltaIndex:
             del self._leaves[old_list_length:]
             if tail_length and old_tail_value is not None:
                 self._leaves[full_count] = old_tail_value
-            for key, value in old_leaf_node_values.items():
-                if value is missing:
-                    self._leaf_nodes.pop(key, None)
+            for leaf_key in affected_leaf_node_keys:
+                if leaf_key in old_leaf_node_values:
+                    self._leaf_nodes[leaf_key] = old_leaf_node_values[leaf_key]
                 else:
-                    self._leaf_nodes[key] = value
-            for key, value in old_node_values.items():
-                if value is missing:
-                    self._nodes.pop(key, None)
+                    self._leaf_nodes.pop(leaf_key, None)
+            for node_key in touched_node_keys:
+                if node_key in old_node_values:
+                    self._nodes[node_key] = old_node_values[node_key]
                 else:
-                    self._nodes[key] = value
+                    self._nodes.pop(node_key, None)
             self._byte_length = old_length
             self.root = old_root
             raise

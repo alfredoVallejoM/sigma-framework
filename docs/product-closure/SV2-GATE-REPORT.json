@@ -1,0 +1,19 @@
+{
+  "cheap_reject_cases": 100,
+  "closure_eligible": true,
+  "decision_cases": 400,
+  "decision_stream_sha256": "a1f9c8416ed58ba36e3579cb23abe49581f33c865817c4e11d6b8b4442712a6e",
+  "empirical_performance_claims": false,
+  "four_way_coverage": [
+    "accepted",
+    "inconclusive",
+    "rejected",
+    "unsupported"
+  ],
+  "legacy_default": "rejected",
+  "legacy_opt_in": "accepted",
+  "monotonic_cases": 100,
+  "passed": true,
+  "policy_id_stream_sha256": "0891f356952c62463c08670b5c0afe1f41bedd6f9c408f00b187952db1b73e56",
+  "schema": "sigma-sv2-verification-policy-gate-v1"
+}

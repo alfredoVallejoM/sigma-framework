@@ -2215,39 +2215,328 @@ determinismo, orden de checks y semántica de decisión.
 
 ### 14.1. Objetivo
 
-Registrar qué verificador ejecutó qué policy sobre qué objeto.
+Registrar de forma canónica:
+
+    qué identidad de artefacto
+    qué policy
+    qué verificador
+    qué evidencia
+    qué decisión
+
+produjeron un resultado de verificación.
+
+SV3 no depende de SA0. Por tanto `artifact_identity` es un identificador opaco
+canónico de 1..255 bytes. Cuando SA0 defina ArtifactId, su wire/ID se inserta en
+este campo sin cambiar VerificationReceiptV1.
+
+### 14.2. Wire
+
+Magic:
+
+    SIGRCPT1
+
+Envelope:
+
+    record-version-3 strict TLV.
 
 Campos:
 
-- artifact identity;
-- policy identity;
-- verifier package version;
-- verifier build/commit identity opcional;
-- verification mode;
-- result;
-- evidence hashes;
-- optional timestamp claim;
-- optional standard signature.
+1. artifact_identity;
+2. policy_id;
+3. verifier_package;
+4. verifier_version;
+5. verifier_build opcional;
+6. evidence_kind opcional;
+7. evidence_id opcional;
+8. decision_kind;
+9. decision_code;
+10. decision_reason;
+11. structure_valid tri-state;
+12. message_binding_verified tri-state;
+13. canonical evidence_hashes;
+14. claimed_unix_time opcional;
+15. signature_status;
+16. signature_algorithm;
+17. public_key_id;
+18. signature.
 
-### 14.2. Claim boundary
+Los strings son UTF-8 NFC y no admiten NUL.
 
-El receipt prueba que un verificador produjo ese record. No convierte una claim de provenance en verdadera por sí mismo.
+`policy_id` y todo evidence hash son exactamente 32 bytes.
+
+### 14.3. Result binding
+
+`receipt_from_decision_v1` exige:
+
+    receipt.policy_id = decision.policy_id.
+
+Si existe:
+
+    decision.evidence_id
+
+debe aparecer en:
+
+    receipt.evidence_hashes.
+
+El receipt permite reconstruir:
+
+    VerificationDecisionV1
+
+mediante `decision_projection()`, incluyendo:
+- Accepted/Rejected/Inconclusive/Unsupported;
+- reason code;
+- reason text;
+- evidence identity;
+- structure-valid state;
+- message-binding state.
+
+No existe un `verification_mode` redundante. El nivel realmente ejecutado queda
+representado por:
+
+    structure_valid
+    message_binding_verified.
+
+Esto evita un enum que pudiera contradecir al decision real.
+
+### 14.4. Verifier identity
+
+La identidad del verificador queda ligada por:
+
+    verifier_package
+    verifier_version
+    verifier_build.
+
+Default product:
+
+    verifier_package = "sigma-framework"
+    verifier_version = PACKAGE_VERSION.
+
+`verifier_build` es opcional y puede contener commit/build identity.
+
+### 14.5. Unsigned receipts
+
+Estado explícito:
+
+    ReceiptSignatureStatusV1.UNSIGNED.
+
+Un receipt unsigned exige canónicamente:
+
+    signature_algorithm = None
+    public_key_id = b""
+    signature = b"".
+
+Nunca se interpreta la ausencia de bytes como una firma implícita.
+
+### 14.6. Signed receipts
+
+Única primitive de firma en SV3:
+
+    Ed25519.
+
+No se introduce una nueva primitive criptográfica.
+
+Para signed receipts:
+
+    signature_status = SIGNED
+    signature_algorithm = ED25519
+    public_key_id != empty
+    len(signature) = 64.
+
+Signing input:
+
+    "SIGMA-VERIFICATION-RECEIPT-V1\0"
+      || canonical_receipt_record_with_empty_signature
+
+donde el record ya contiene:
+- todos los campos de resultado/evidencia;
+- SIGNED status;
+- ED25519 algorithm;
+- public_key_id.
+
+Por tanto sólo se excluyen los 64 bytes que deben ser calculados.
+
+Mutar cualquier campo ligado invalida la firma.
+
+### 14.7. Receipt identity
+
+Se define:
+
+    ReceiptId = SHA256(canonical receipt wire).
+
+Es un content identifier; no es una nueva security-width claim.
+
+### 14.8. Timestamp boundary
+
+`claimed_unix_time` es sólo una claim firmable.
+
+Una firma válida sobre:
+
+    claimed_unix_time = T
+
+demuestra que el signer autenticó un record que contenía T.
+
+No demuestra:
+- que el reloj fuera fiable;
+- que el evento ocurriera realmente en T;
+- existencia histórica externa;
+- timestamp authority.
+
+### 14.9. Provenance boundary
+
+Un receipt puede autenticar bytes/identidades/claims, pero no convierte una
+provenance opaca en verdad semántica.
+
+En particular:
+
+    valid receipt signature
+      !=
+    true provenance.
+
+La semántica de provenance pertenece a SA2.
 
 ## 15. Batch verification
 
-BatchVerify es una capa de scheduling:
+### 15.1. Modelo
 
-    BatchVerify(items) = map(Verify, items)
+Batch es una capa de scheduling:
 
-Puede paralelizar, pero cada item conserva su resultado, evidence identity y error.
+    BatchVerify(items)
+      = map(PointwiseVerify, items).
 
-No hay state sharing criptográfico entre items.
+No existe state sharing criptográfico entre items.
 
-Ley:
+Cada `BatchVerificationItemV1` contiene:
+- artifact_identity;
+- evidence;
+- VerificationPolicyV1;
+- source opcional;
+- VerificationCapabilitiesV1;
+- evidence hashes opcionales;
+- claimed timestamp opcional.
 
-    batch[i] = single_verify(item_i)
+### 15.2. Pointwise law
 
-para todo i.
+La autoridad semántica es:
+
+    verify_batch_item_v1(item,index).
+
+Para todo input tuple:
+
+    verify_batch_v1(items).items[i]
+      =
+    verify_batch_item_v1(items[i],index=i).
+
+El gate compara esta igualdad directamente.
+
+### 15.3. Result wire
+
+Per-item magic:
+
+    SIGBCRI1
+
+Batch magic:
+
+    SIGBCHT1
+
+Cada item result contiene:
+- input index;
+- artifact_identity;
+- VerificationReceiptV1 si hubo decision;
+- error_type/error_message si una excepción del item impidió producir decision.
+
+El batch record contiene la secuencia ordenada de item-result wires.
+
+### 15.4. Failure isolation
+
+`verify_batch_item_v1` captura excepciones de un item como:
+
+    BatchItemResultV1(
+      receipt=None,
+      error_type=...,
+      error_message=...
+    ).
+
+No captura errores de configuración global del batch de forma silenciosa:
+- invalid max_workers;
+- signer config incoherente;
+- batch vacío/oversized
+
+se rechazan antes de scheduling.
+
+Los textos de excepción capturados se:
+- NFC-normalizan;
+- eliminan NUL como representación escapada;
+- limitan a 4096 bytes UTF-8.
+
+Así incluso un error hostil no puede hacer fallar el registro del propio error.
+
+### 15.5. Ordering
+
+El orden canónico declarado es:
+
+    input order.
+
+Resultado:
+
+    item[i].index = i.
+
+No se ordena por artifact identity, evidence ID ni completion order.
+
+`ThreadPoolExecutor.map` se usa cuando `max_workers>1` porque conserva input
+ordering.
+
+### 15.6. Serial/threaded equivalence
+
+Para inputs deterministas y el mismo verifier configuration:
+
+    Batch_serial.to_bytes()
+      =
+    Batch_threaded.to_bytes().
+
+El paralelismo sólo cambia scheduling.
+
+### 15.7. Signed batch receipts
+
+Batch puede producir receipts unsigned o firmar cada receipt con Ed25519 usando
+la misma configuración explícita del batch.
+
+La firma sigue siendo per-item.
+
+No existe:
+- shared batch signature;
+- shared cryptographic state;
+- aggregate security claim.
+
+### 15.8. Batch identity
+
+Se define:
+
+    BatchId = SHA256(canonical batch-result wire).
+
+Es sólo content identity.
+
+### 15.9. Complejidad
+
+Sea n el número de items y C_i el coste del verifier seleccionado para item i.
+
+Trabajo total:
+
+    O(sum_i C_i + total receipt/result encoding).
+
+Memoria de resultados:
+
+    O(total result wire size).
+
+Serial:
+- wall time aproximadamente suma de C_i.
+
+Threaded:
+- scheduling puede reducir wall time según workload/host;
+- no se congela aquí ninguna claim empírica de speedup.
+
+SV3 cierra primero equivalencia/aislamiento/canonicalidad. Throughput y scaling
+empíricos se dejan para una campaña posterior.
+
 
 ## 16. Familia C — Sigma Artifact V1
 

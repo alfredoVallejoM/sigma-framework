@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 
 from sigma.outputs.digest import SigmaDigestV2
@@ -127,7 +127,7 @@ class BatchVerificationItemV1:
     )
     policy: VerificationPolicyV1
     source: CanonicalSource | bytes | None = None
-    capabilities: VerificationCapabilitiesV1 = VerificationCapabilitiesV1()
+    capabilities: VerificationCapabilitiesV1 = field(default_factory=VerificationCapabilitiesV1)
     evidence_hashes: tuple[bytes, ...] | None = None
     claimed_unix_time: int | None = None
 

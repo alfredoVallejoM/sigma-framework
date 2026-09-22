@@ -193,3 +193,32 @@ def test_checkpoint_codec_rejects_missing_duplicate_reordered_unknown_fields():
     for mutated in mutations:
         with pytest.raises(ValueError):
             TrajectoryCheckpointV1.from_bytes(mutated)
+
+
+def test_source_rebind_returns_false_if_wrong_source_has_shorter_trajectory():
+    evaluation = _evaluation(
+        SuiteIdV3.DEEP_VECTOR_HISTORY_V3,
+        b"source-with-one-trajectory-shape",
+    )
+    checkpoint = checkpoint_from_evaluation_v3(
+        evaluation,
+        len(evaluation.states) - 1,
+    )
+
+    candidates = [
+        b"",
+        b"x",
+        b"short",
+        b"different-source",
+        bytes(range(32)),
+    ]
+    for candidate in candidates:
+        wrong_eval = evaluate_v3(checkpoint.context, BytesSource(candidate))
+        if len(wrong_eval.states) <= checkpoint.round_index:
+            assert not verify_trajectory_checkpoint_source_v3(
+                BytesSource(candidate),
+                checkpoint,
+            )
+            break
+    else:
+        pytest.skip("fixture candidates did not produce a shorter trajectory")

@@ -1,0 +1,20 @@
+{
+  "all_index_cases": 1214,
+  "checkpoint_stream_sha256": "5e4205ef191c7fd53553d88383ec617b3e8424f85ff33df0a246d8d0faf72ec6",
+  "closure_eligible": true,
+  "continuation_digest_stream_sha256": "26f5f9d4ed8df5b51de0c7bb74c158c276acf7e9342c58ac790b1b05b1516fe9",
+  "directed_mutations": 1946,
+  "empirical_performance_claims": false,
+  "evaluations": 60,
+  "passed": true,
+  "schema": "sigma-sv1-trajectory-checkpoint-gate-v1",
+  "source_rebinds": 30,
+  "suites": [
+    "0x0301",
+    "0x0303",
+    "0x0304",
+    "0x0321",
+    "0x0323",
+    "0x0324"
+  ]
+}

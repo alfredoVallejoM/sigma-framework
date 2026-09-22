@@ -181,9 +181,10 @@ No se almacena información que pueda derivarse de forma ambigua.
 
 Para chunk i:
 
-    LeafFrame =
+    LeafFrame_j =
       domain ||
       profile ||
+      algorithm_id_j ||
       leaf_index ||
       byte_offset ||
       byte_length ||
@@ -191,7 +192,7 @@ Para chunk i:
 
 Cada rama j:
 
-    L_i,j = H_j(LeafFrame)
+    L_i,j = H_j(LeafFrame_j)
 
 La inclusión de índice, offset y longitud evita interpretar el mismo bloque como otra posición sin cambiar el input hasheado.
 
@@ -214,9 +215,13 @@ Se calcula de forma independiente por rama.
 Precondiciones:
 
 - left y right son adyacentes;
-- mismo height;
-- mismo leaf_count;
-- right.start_leaf = left.start_leaf + left.leaf_count.
+- right.start_leaf = left.start_leaf + left.leaf_count;
+- el subárbol izquierdo es byte-full;
+- para n = left.leaf_count + right.leaf_count, left.leaf_count es la mayor potencia de dos estrictamente menor que n;
+- sólo el carry interno de frontier exige además hijos perfectos de igual altura.
+
+Esta regla hace coincidir la composición incremental con la partición recursiva
+canónica y excluye árboles alternativos con los mismos intervalos.
 
 ### 4.6. TreeFrontier
 
@@ -228,7 +233,8 @@ La frontier contiene como máximo un perfect subtree por altura h con b_h = 1.
 
 Invariante:
 
-    frontier heights son estrictamente crecientes y únicas.
+    frontier heights son estrictamente decrecientes y únicas
+    en orden izquierda -> derecha.
 
 La frontier es la autoridad para resume y append.
 

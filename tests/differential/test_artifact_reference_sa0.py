@@ -127,3 +127,18 @@ def test_product_artifact_matches_independent_encoder_random_corpus():
 
         if manifest is not None:
             assert manifest_identity_v1(manifest) == manifest_ref
+
+
+def test_independent_artifact_encoder_never_imports_sigma():
+    import ast
+    from pathlib import Path
+
+    path = Path(__file__).parents[2] / "reference" / "artifact_v1.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        for alias in node.names
+    }
+    assert not any(name == "sigma" or name.startswith("sigma.") for name in imported)

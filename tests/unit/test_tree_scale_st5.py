@@ -13,6 +13,7 @@ from sigma.tree import (
     TreeIndexModeV1,
     TreeProofIndex,
     TreeScalePolicyV1,
+    build_directory_manifest,
     build_tree,
     delta_index_scaled,
     estimate_index_bytes,
@@ -21,6 +22,7 @@ from sigma.tree import (
     prove_leaf_streaming,
     prove_range_scaled,
     prove_range_streaming,
+    verify_range,
 )
 
 
@@ -154,3 +156,41 @@ def test_zero_copy_proof_index_has_no_second_payload_sized_allocation():
     # The old ST2 layout duplicated essentially all B in leaf byte slices.
     # The optimized layout should stay well below another full B allocation.
     assert peak < len(data) // 2
+
+
+def test_large_range_verification_does_not_copy_entire_range():
+    data = bytes((i * 11 + 3) % 251 for i in range(8 * 65_536 + 19))
+    index = TreeProofIndex(data)
+    start = 3
+    length = len(data) - 7
+    proof = index.prove_range(start, length)
+    selected = data[start : start + length]
+
+    tracemalloc.start()
+    assert verify_range(selected, proof)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    # Verification may materialize at most the two edge leaves, not another
+    # copy of the multi-megabyte selected range.
+    assert peak < 4 * 65_536
+
+
+def test_manifest_file_reader_requests_at_most_one_tree_chunk(tmp_path, monkeypatch):
+    import sigma.tree.manifest as manifest_module
+
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / "large.bin").write_bytes(b"x" * (3 * 65_536 + 17))
+    real_read = manifest_module.os.read
+    requests = []
+
+    def tracked_read(fd, size):
+        requests.append(size)
+        return real_read(fd, size)
+
+    monkeypatch.setattr(manifest_module.os, "read", tracked_read)
+    manifest = build_directory_manifest(root)
+    assert manifest.entries
+    assert requests
+    assert max(requests) <= 65_536

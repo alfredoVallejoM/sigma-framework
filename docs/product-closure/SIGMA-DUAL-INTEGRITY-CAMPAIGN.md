@@ -1079,37 +1079,333 @@ COMPLETE requiere:
 
 ### Objetivo
 
-Cerrar deuda accidental de Tree sin modificar semántica.
+Cerrar deuda accidental de rendimiento/memoria en Sigma Tree sin cambiar un solo
+wire o claim criptográfico ST0-ST4.
 
-### Campaign
+ST5 no es una nueva primitive. Es:
+- optimización byte-preserving;
+- layout/memory audit;
+- resource-policy closure;
+- performance ledger freeze.
 
-- profile CPU;
-- allocations;
-- memory;
-- index layout;
-- proof generation;
-- range verification;
-- resume;
-- delta;
-- manifest.
+### Implementación
 
-### Invariantes
+Cambios productivos:
 
-ST5-O01 — Reference preserved  
-Optimización no altera bytes.
+- `sigma/tree/core.py`
+  - leaf framing hasheado por partes;
+  - full chunks procesados mediante memoryview;
+  - no materialización de cuatro leaf records grandes.
+- `sigma/tree/proofs.py`
+  - TreeProofIndex con zero-copy leaf views;
+  - `prove_leaf_streaming`;
+  - `prove_range_streaming`;
+  - `verify_range` con reconstrucción recursiva O(log N), sin target-node map O(range).
+- `sigma/tree/scale.py`
+  - TreeScalePolicyV1;
+  - TreeIndexPlanV1;
+  - FULL / STREAMING / REJECT;
+  - estimadores conservadores;
+  - scaled proof APIs;
+  - delta budget rejection.
+- `sigma/tree/manifest.py`
+  - read requests limitados a un chunk de 65,536 bytes.
 
-ST5-O02 — No hidden copies  
-Objetos grandes no se copian sin ledger explícito.
+Tooling/evidencia:
 
-ST5-O03 — Streaming memory budget  
-Build y verify pueden ejecutarse con memoria acotada respecto a B salvo index explícito.
+- `scripts/product_closure/st5_gate.py`;
+- `scripts/product_closure/st5_benchmark.py`;
+- `docs/product-closure/ST5-PERFORMANCE-LEDGER.json`;
+- tests unit/differential ST5.
 
-ST5-O04 — Scale fallback  
-Si index completo excede policy, operar sin él o rechazar explícitamente.
+### ST5-O01 — Reference preserved
 
-### Exit
+Todo cambio optimizado debe reproducir exactamente la referencia independiente.
 
-Publicar baseline + optimized ledger y razones para cualquier regresión aceptada.
+Gate:
+
+- >=1,000 build cases random + boundary;
+- >=500 proof corpora;
+- FULL inclusion == STREAMING inclusion byte por byte;
+- FULL range == STREAMING range byte por byte;
+- independent proof verifier acepta ambos.
+
+Ejecución local exact-semantic:
+
+    build cases: 1,000
+    build divergences: 0
+    build stream SHA-256:
+    18f439cb297bab461841384a6d02220c61794414061d40b5dc2aacca5ee9ce18
+
+    proof cases: 500
+    proof divergences: 0
+    proof stream SHA-256:
+    f83f23c39aa28defb75dd88d7e34313d30ae4658bc931ba275881c3c38770b55
+
+### ST5-O02 — No hidden large copies
+
+#### Leaf hashing
+
+Antes de ST5 cada rama construía un record leaf completo con raw payload.
+
+Ahora se hashea:
+
+    domain
+    + header
+    + TLV prefix
+    + leaf-field header
+    + raw memoryview
+
+sin construir un segundo leaf-sized frame.
+
+#### ProofIndex
+
+Antes:
+
+    source bytes
+    + bytes slices por cada leaf
+
+Ahora:
+
+    source bytes
+    + memoryviews
+    + summaries
+
+Audit 16 MiB:
+
+    source                 = 16,777,216 B
+    peak extra allocation  =    392,534 B
+    ratio                  =      2.34%
+
+No existe otra copia B-sized.
+
+#### Range verification
+
+Se eliminaron dos deudas sucesivas encontradas durante ST5:
+
+1. `prefix + range_bytes + suffix` copiaba todo el rango;
+2. un dict de target leaf nodes crecía con el número de hojas verificadas.
+
+La implementación final recorre recursivamente la geometría canónica.
+
+Near-full 16 MiB range:
+
+    selected bytes         ~= 16.78 MiB
+    verification peak      ~= 138 KiB
+
+#### Streaming range generation
+
+También se eliminó un target-node map O(range) en
+`prove_range_streaming`.
+
+Near-full 16 MiB range:
+
+    auxiliary peak         ~= 23 KiB
+
+más el proof output obligatorio.
+
+### ST5-O03 — Streaming memory budget
+
+TreeBuilder conserva únicamente:
+- tail < chunk;
+- frontier O(log N);
+- transient framing pequeño.
+
+Sweep local:
+
+| input | peak auxiliary allocation |
+|---:|---:|
+| 64 KiB | 3.3 KiB |
+| 256 KiB | 4.1 KiB |
+| 1 MiB | 5.2 KiB |
+| 4 MiB | 6.3 KiB |
+| 16 MiB | 7.3 KiB |
+| 32 MiB | 8.2 KiB |
+
+Gate independiente de 32 MiB:
+
+    conservative observed peak ~= 24 KiB
+    hard gate budget           = 2 MiB
+
+El crecimiento observado corresponde a frontier/counters, no a B.
+
+Manifest regular-file reads:
+
+    request_size <= 65,536 bytes
+
+por llamada.
+
+### ST5-O04 — Scale fallback
+
+Resource policy:
+
+    TreeScalePolicyV1(
+      max_index_bytes,
+      proof_fallback,
+      delta_fallback
+    )
+
+Decision object:
+
+    TreeIndexPlanV1
+
+con:
+- operation;
+- FULL / STREAMING / REJECT;
+- source bytes;
+- leaf count;
+- estimate;
+- budget;
+- reason.
+
+#### Proof estimate
+
+    65,536 + 4,096 * leaves
+
+Audit 16 MiB:
+- measured peak: 392,534 B;
+- estimate: 1,114,112 B.
+
+#### Delta estimate
+
+    65,536 + B + 4,608 * leaves
+
+Audit 8 MiB:
+- measured peak: 8,564,890 B;
+- estimate: 9,043,968 B.
+
+Delta over-budget:
+
+    TreeIndexBudgetExceeded
+
+antes de construir TreeDeltaIndex.
+
+No hay fallback oculto a full rebuild.
+
+### FULL vs STREAMING trade-off
+
+FULL paga index build una vez y después genera proofs en microsegundos.
+
+STREAMING elimina el full index, pero vuelve a hashear O(B) por proof.
+
+Ejemplo local ~16 MiB:
+
+    ProofIndex build                 ~= 191 ms
+    FULL inclusion generation       ~= 24 us
+    STREAMING inclusion generation  ~= 197 ms
+    FULL range generation           ~= 46 us
+    STREAMING range generation      ~= 205 ms
+
+Los proof wires son idénticos.
+
+Esto es una trade-off resource/time explícita, no una regresión silenciosa.
+
+### Build baseline vs optimized
+
+Referencia full-frame vs implementación ST5:
+
+| B | speedup | optimized peak | reference peak |
+|---:|---:|---:|---:|
+| 64 KiB | ~1.27x | 3.1 KiB | 193 KiB |
+| 256 KiB | ~1.14x | 3.8 KiB | 259 KiB |
+| 1 MiB | ~1.07x | 4.9 KiB | 265 KiB |
+| 4 MiB | ~1.11x | 5.9 KiB | 290 KiB |
+
+Throughput local observado:
+
+    ~75-88 MiB/s
+
+No se publica como cifra cross-host.
+
+### CPU profile
+
+Tras eliminar copies accidentales, el coste dominante es el esperado:
+
+    hashlib primitive update calls
+
+Sobre un perfil local de 1 MiB:
+- hash update principal ~7.7 ms;
+- BLAKE2b update ~1.25 ms;
+- parent composition <1 ms.
+
+Conclusión:
+
+    remaining dominant work is intrinsic hashing, not Python frame copying.
+
+### Resume / Delta / Append / Manifest cross-check
+
+ST5 no redefine estas semánticas.
+
+Representative local ledger:
+
+Resume (~16 MiB prefix):
+- restore median ~5 us;
+- prefix bytes no se rehashean.
+
+Delta one-byte sobre ~16 MiB:
+- rehashed payload 65,536 B;
+- recomputed nodes 10;
+- ~1.96 ms local.
+
+Append one chunk + 17 B:
+- rehashed payload 65,572 B;
+- recomputed nodes 4;
+- prior frontier reused;
+- ~1.21 ms local.
+
+Manifest 64 x 64 KiB:
+- input 4 MiB;
+- hashing fixture ~52 ms;
+- peak auxiliary ~0.20 MiB;
+- read request <= one Tree chunk.
+
+Los sweeps más amplios de delta/append permanecen congelados en ST4.
+
+### Persistent index decision
+
+ST5 cierra el layout lógico y resource policy, pero no crea un sidecar wire.
+
+No es necesario para O01-O04 y añadirlo aquí crearía:
+- nuevo compatibility lifecycle;
+- atomic persistence contract;
+- mmap/storage policy;
+- nuevo parser surface.
+
+Puede añadirse en SA3/futura etapa de storage sin modificar Tree identity.
+
+### Performance ledger
+
+Autoridad local congelada:
+
+    docs/product-closure/ST5-PERFORMANCE-LEDGER.json
+
+Estado epistemológico:
+
+    EMPIRICAL-PERFORMANCE
+
+para timings.
+
+PROVED-STRUCTURAL / TESTED-CONFORMANCE para:
+- byte preservation;
+- zero-copy source views;
+- fallback determinista;
+- bounded auxiliary-state architecture.
+
+### Exit ST5
+
+ST5 se marca COMPLETE sólo si:
+
+1. ST5-O01..O04 pasan revisión adversaria;
+2. 1,000 build differentials sin divergencia;
+3. 500 FULL/STREAMING proof differentials sin divergencia;
+4. ProofIndex no duplica B;
+5. range generation/verification no conserva O(range) target structures;
+6. streaming Tree memory permanece bounded;
+7. proof over-budget selecciona STREAMING o REJECT según policy;
+8. delta over-budget rechaza antes de index construction;
+9. conservative estimators cubren los audit fixtures;
+10. ST0-ST4 vector/wire semantics no cambian;
+11. ledger baseline/optimized queda congelado y revisado.
 
 ## 9. SV0 — Trajectory Audit
 

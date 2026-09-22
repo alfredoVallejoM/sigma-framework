@@ -32,7 +32,10 @@ def trajectory_digest_wire(
         challenge=challenge,
         application_context=application_context,
     )
-    return result["digest"]
+    digest = result["digest"]
+    if not isinstance(digest, bytes):
+        raise TypeError("independent v3 digest must be bytes")
+    return digest
 
 
 def verify_trajectory_side(

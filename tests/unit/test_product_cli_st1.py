@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
-from pathlib import Path
 
 from sigma.product_cli import build_parser
 from sigma.tree import ManifestV1, TreeRoot, build_tree

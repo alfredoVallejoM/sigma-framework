@@ -47,4 +47,28 @@ El cierre demuestra que:
 5. el contrato de complejidad está instrumentado;
 6. el gate de cierre ejecuta >=100k mutaciones de codecs y mutaciones TLV estructurales explícitas.
 
-ST1 no forma parte del cierre ST0 y permanece PLANNED.
+ST1 — Canonical Manifest — está **CANDIDATE**.
+
+Implementado:
+- canonical paths NFC/UTF-8 y ordering por bytes;
+- FILE / DIRECTORY / SYMLINK(TEXT) con TreeRoot V1;
+- metadata base host-independent;
+- optional SigmaDigestV3 byte binding;
+- scanner sin follow implícito y apertura O_NOFOLLOW cuando está disponible;
+- oracle independiente;
+- gate local reproducible + peer-report cross-platform;
+- ledger de complejidad;
+- CLI provisional `sigma manifest`.
+
+Evidencia local:
+- 50,000 path cases;
+- 1,000 traversal permutations;
+- 1,000 differential manifests contra referencia;
+- 50,000 codec bit mutations;
+- 20 structural TLV mutations;
+- root relocation / touch / chmod / content / symlink tests PASS;
+- fixture Linux SHA-256:
+  `abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83`.
+
+ST1 permanece CANDIDATE porque el gate bloqueante exige todavía un peer report
+macOS que reproduzca exactamente ese fixture hash. ST2 permanece PLANNED.

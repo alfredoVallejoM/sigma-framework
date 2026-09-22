@@ -27,6 +27,17 @@ __all__ = [
     "continue_trajectory_checkpoint_v3",
     "finalize_trajectory_checkpoint_v3",
     "verify_trajectory_checkpoint_source_v3",
+    "ParsedVerificationEvidenceV1",
+    "PolicySymlinkModeV1",
+    "VerificationCapabilitiesV1",
+    "VerificationDecisionCodeV1",
+    "VerificationDecisionKindV1",
+    "VerificationDecisionV1",
+    "VerificationEvidenceKindV1",
+    "VerificationPolicyV1",
+    "parse_verification_evidence_v1",
+    "policy_is_stricter_or_equal_v1",
+    "verify_with_policy_v1",
 ]
 
 from .checkpoint_v3 import (
@@ -37,4 +48,18 @@ from .checkpoint_v3 import (
     continue_trajectory_checkpoint_v3,
     finalize_trajectory_checkpoint_v3,
     verify_trajectory_checkpoint_source_v3,
+)
+
+from .policy_v1 import (
+    ParsedVerificationEvidenceV1,
+    PolicySymlinkModeV1,
+    VerificationCapabilitiesV1,
+    VerificationDecisionCodeV1,
+    VerificationDecisionKindV1,
+    VerificationDecisionV1,
+    VerificationEvidenceKindV1,
+    VerificationPolicyV1,
+    parse_verification_evidence_v1,
+    policy_is_stricter_or_equal_v1,
+    verify_with_policy_v1,
 )

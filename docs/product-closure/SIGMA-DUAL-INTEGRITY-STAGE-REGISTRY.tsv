@@ -5,7 +5,7 @@ ST1	ST	Canonical manifest	CANDIDATE	ST0	YES	ST1 blocking obligations + cross-pla
 ST2	ST	Inclusion and range proofs	COMPLETE	ST0	YES	ST2 blocking obligations + independent verifier
 ST3	ST	Portable tree resume	COMPLETE	ST0	YES	ST3 blocking obligations + 100k split differential
 ST4	ST	Delta and append	COMPLETE	ST0;ST3	YES	ST4 blocking obligations + performance gate
-ST5	ST	Tree performance and scale closure	PLANNED	ST2;ST3;ST4	NO	Performance ledger frozen and reviewed
+ST5	ST	Tree performance and scale closure	ACTIVE	ST2;ST3;ST4	NO	Performance ledger frozen and reviewed
 SV0	SV	Trajectory audit	PLANNED	BASE	YES	SV0 blocking obligations + R12.5 corpus replay
 SV1	SV	Trajectory checkpoint	PLANNED	SV0	YES	SV1 blocking obligations + all-index differential
 SV2	SV	Verification policy	PLANNED	SV0	YES	SV2 blocking obligations + policy adversarial suite

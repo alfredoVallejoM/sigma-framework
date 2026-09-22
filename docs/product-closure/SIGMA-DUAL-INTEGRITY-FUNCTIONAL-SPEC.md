@@ -990,6 +990,257 @@ ST4 no introduce nueva seguridad criptográfica.
 Incremental reuse no convierte una root en prueba de provenance/frescura y no
 autoriza mutaciones fuera del dominio same-length/append.
 
+## 8A. Tree Scale Policy V1
+
+### 8A.1. Objetivo
+
+ST5 cierra deuda accidental de rendimiento/memoria sin introducir una nueva
+semántica criptográfica ni un nuevo Tree wire.
+
+Las optimizaciones deben preservar exactamente:
+
+    TreeRoot V1
+    InclusionProof V1
+    RangeProof V1
+    TreeResumeCheckpoint V1
+    TreeDelta/Append results
+
+respecto a las referencias ya congeladas.
+
+### 8A.2. Leaf hashing sin frame grande materializado
+
+ST0 define la leaf preimage canónica:
+
+    domain || record(SIGTLEAF, profile, algorithm, index, offset, length, raw_leaf)
+
+ST5 conserva exactamente esos bytes pero alimenta la primitive hash en partes:
+
+    domain
+    record header
+    TLV prefix fields 1..5
+    field-6 TLV header
+    raw leaf buffer
+
+No se construyen cuatro records grandes completos para las cuatro ramas.
+
+`leaf_node(...)` conserva la API bytes histórica. Internamente
+`_leaf_node_buffer` admite bytes/bytearray/memoryview para evitar copies de
+chunks completos.
+
+### 8A.3. Streaming TreeBuilder
+
+`TreeBuilder.update(bytes)` conserva su contrato público.
+
+Los full chunks dentro del input se procesan mediante `memoryview`, sin crear
+slices bytes de 65,536 bytes por chunk.
+
+Sólo la tail incompleta puede copiarse al buffer interno.
+
+Por tanto, aparte del input propiedad del caller:
+
+    M_builder = O(chunk_size + m log N)
+
+y en V1 chunk_size es fijo.
+
+### 8A.4. ProofIndex layout
+
+El layout FULL de `TreeProofIndex` conserva:
+- una referencia al source bytes del caller;
+- memoryviews por leaf;
+- leaf summaries;
+- canonical subtree summaries.
+
+No conserva una segunda copia B-sized del payload.
+
+Los memoryviews deben referenciar exactamente al source original.
+
+### 8A.5. Streaming proof fallback
+
+Se añaden:
+
+    prove_leaf_streaming(data, leaf_index)
+    prove_range_streaming(data, start, length)
+
+Ambos producen **exactamente el mismo proof wire** que TreeProofIndex.
+
+Trade-off:
+
+FULL:
+- index build O(mB);
+- proof generation O(m log N);
+- memoria index explícita.
+
+STREAMING:
+- no full index;
+- O(B) hashing work por proof en el peor caso;
+- O(log N) auxiliary tree state;
+- RangeProof conserva sólo sus witnesses/edge bytes de salida.
+
+El fallback no cambia la evidencia, sólo el resource plan.
+
+### 8A.6. Range verification scale closure
+
+`verify_range(range_bytes,proof)` no concatena el rango completo ni almacena
+todos sus target leaf nodes.
+
+La reconstrucción recorre recursivamente la geometría canónica:
+
+- subtree fuera del target -> consumir un witness;
+- target singleton -> hashear esa leaf;
+- partial subtree -> reconstruir left/right y combinar.
+
+Auxiliary tree state:
+
+    O(log N)
+
+más como máximo los dos edge chunks que ST2 ya exige materializar.
+
+La memoria no crece linealmente con `length` salvo el `range_bytes` que ya
+pertenece al caller y el output/input proof.
+
+### 8A.7. Scale policy
+
+`TreeScalePolicyV1` fija:
+
+    max_index_bytes
+    proof_fallback
+    delta_fallback
+
+Modos:
+
+    FULL
+    STREAMING
+    REJECT
+
+Operaciones indexadas:
+
+    PROOF
+    DELTA
+
+La decisión queda materializada en `TreeIndexPlanV1`:
+
+- operation;
+- mode;
+- source bytes;
+- leaf count;
+- estimated index bytes;
+- budget bytes;
+- reason.
+
+Nunca existe fallback invisible.
+
+### 8A.8. Presupuesto de ProofIndex
+
+Estimador V1:
+
+    estimate_proof_index
+      = 65,536 + 4,096 * leaf_count
+
+El source bytes del caller se excluye porque no se copia dentro del index.
+
+El coeficiente es deliberadamente conservador y no pretende ser una fórmula
+portable de RSS.
+
+Si:
+
+    estimate <= max_index_bytes
+
+se selecciona FULL.
+
+Si excede budget:
+- STREAMING si la proof policy lo permite;
+- REJECT si la policy exige no degradar tiempo.
+
+### 8A.9. Presupuesto de DeltaIndex
+
+DeltaIndex sí necesita estado mutable del objeto para la aceleración ST4.
+
+Su copia B-sized es intencional y presupuestada:
+
+    estimate_delta_index
+      = 65,536
+        + source_bytes
+        + 4,608 * leaf_count
+
+Si excede budget:
+
+    TreeIndexBudgetExceeded
+
+antes de construir el índice.
+
+ST5 no define "streaming delta = rebuild completo"; hacerlo violaría la frontera
+incremental ST4.
+
+### 8A.10. APIs escaladas
+
+    plan_tree_index(byte_length, operation, policy)
+    estimate_index_bytes(byte_length, operation)
+
+    prove_leaf_scaled(data, leaf_index, policy=...)
+    prove_range_scaled(data, start, length, policy=...)
+
+    delta_index_scaled(data, policy=...)
+
+Las proof APIs devuelven:
+
+    ScaledProofResultV1(proof, plan)
+
+de modo que el caller puede auditar si se usó FULL o STREAMING.
+
+### 8A.11. Manifest I/O bound
+
+El scanner ST1 conserva la semántica de manifest.
+
+ST5 limita cada `os.read` de fichero regular a:
+
+    65,536 bytes
+
+en lugar de bloques de 1 MiB.
+
+El coste de manifest sigue:
+
+    O(mB + F log F)
+
+pero la memoria transitoria por fichero queda acotada por el chunk V1 más el
+estado TreeBuilder.
+
+### 8A.12. Persistent index decision
+
+ST5 **no** crea un wire de índice persistente.
+
+Razones:
+1. un index no forma parte de la identidad criptográfica;
+2. el layout óptimo depende de mmap/storage/resource policy;
+3. introducir un nuevo record persistente exigiría su propio lifecycle,
+   compatibility y atomic-update contract;
+4. no es necesario para cerrar O01-O04.
+
+ST5 sí congela:
+- layout lógico FULL;
+- zero-copy proof payload policy;
+- mutable DeltaIndex budget;
+- fallback behaviour;
+- estimadores de resource policy.
+
+Un sidecar persistente puede añadirse en SA3/una etapa posterior sin cambiar
+ningún wire ST0-ST4.
+
+### 8A.13. Claim boundary
+
+Los timings ST5 son EMPIRICAL-PERFORMANCE locales.
+
+No se convierten en:
+- claim criptográfica;
+- garantía cross-host;
+- claim ASIC;
+- claim constant-time.
+
+La evidencia estructural ST5 es:
+- byte preservation;
+- absence/presence explícita de payload copies;
+- bounded auxiliary memory contracts;
+- deterministic resource-policy decisions.
+
 ## 9. Manifest V1
 
 ### 9.1. Objetivo

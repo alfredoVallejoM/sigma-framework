@@ -306,13 +306,13 @@ def test_policy_codec_rejects_missing_duplicate_reordered_unknown_fields():
         mutations.append(
             _policy_record(
                 encoded,
-                fields[: index + 1] + [field] + fields[index + 1 :],
+                [*fields[: index + 1], field, *fields[index + 1 :]],
             )
         )
     reordered = list(fields)
     reordered[0], reordered[1] = reordered[1], reordered[0]
     mutations.append(_policy_record(encoded, reordered))
-    mutations.append(_policy_record(encoded, fields + [(0xFFFF, b"")]))
+    mutations.append(_policy_record(encoded, [*fields, (0xFFFF, b"")]))
 
     for mutated in mutations:
         with pytest.raises(ValueError):

@@ -713,51 +713,282 @@ para impedir convertir esa comprobación en una claim de seguridad.
 
 ## 8. TreeDelta V1
 
-### 8.1. Operaciones soportadas
+### 8.1. Objetivo y frontera
+
+ST4 añade actualización incremental a Sigma Tree V1 sin cambiar ninguna ley de
+TreeRoot/TreeNode/chunking de ST0.
 
 V1 soporta:
 
-A. Same-length replacement.
-B. Append.
-C. Truncate sólo si se implementa y demuestra antes de closure.
+A. same-length replacement;
+B. append.
 
-Inserción o borrado interior que desplaza fronteras de chunk:
+No soporta como update incremental:
+- inserción interior;
+- borrado interior;
+- replacement con longitud distinta.
+
+Esos casos desplazan las fronteras de chunk y devuelven:
 
     RebuildRequired
 
-### 8.2. Same-length replacement
+en vez de ejecutar silenciosamente un algoritmo O(B) bajo el nombre incremental.
 
-Dado conjunto normalizado de rangos cambiados, se identifican leaves afectadas A y su cierre ancestral Anc(A).
+ST4 define un índice **efímero en memoria** `TreeDeltaIndex`. El formato de un
+índice persistente, mmap, fallback de escala y políticas de almacenamiento se
+reservan para ST5/SA3.
 
-Se recomputan sólo:
+### 8.2. TreeEditV1
 
-- bytes afectados;
-- leaf roots afectados;
-- ancestors afectados.
+Un edit contiene:
 
-### 8.3. Ley de equivalencia
+    start:u64
+    delete_length:u64
+    data:bytes
 
-    update(Tree(X), Δ) = Tree(apply(X, Δ))
+Un edit pertenece al dominio incremental V1 sólo si:
 
-para todo Δ perteneciente al dominio soportado.
+    delete_length = len(data)
 
-### 8.4. Transactionality
+Un edit vacío es un no-op canónico.
 
-La nueva root no se publica hasta completar y verificar todo el update.
+### 8.3. Normalización de edits
 
-Si falla cualquier lectura, hash, policy o persistencia:
+Antes de hashear se ejecuta:
 
-    state_after = state_before
+    normalize_tree_edits(edits,total_bytes)
 
-### 8.5. Complejidad
+Reglas:
+- ordenar por start/end;
+- validar bounds;
+- rechazar cambios de longitud con RebuildRequired;
+- fusionar rangos adyacentes;
+- fusionar overlaps si escriben exactamente los mismos bytes en la intersección;
+- rechazar overlaps contradictorios.
 
-Para k hojas afectadas:
+La normalización es independiente del orden de entrada.
 
-    T_delta = O(B_delta + m |Anc(A)|)
+Por tanto no existe semántica oculta de "last write wins".
 
-con cota estructural aproximada O(B_delta + m k log N).
+### 8.4. Índice efímero
 
-El ledger empírico debe contrastar esta predicción.
+`TreeDeltaIndex(data)` materializa una vez:
+
+- bytes por leaf;
+- TreeNode de cada leaf;
+- cache de subárboles canónicos de la Tree actual;
+- TreeRoot actual.
+
+Construcción inicial:
+
+    O(mB)
+
+y memoria base:
+
+    O(B + mN)
+
+aproximadamente, antes de optimizaciones ST5.
+
+El índice no forma parte de la identidad criptográfica del objeto.
+
+### 8.5. Same-length replacement
+
+Para edits normalizados se calcula el conjunto A de leaves intersectadas.
+
+Los edits se particionan en un único pase edit -> leaf. No se cruza cada leaf
+contra todos los edits; esto evita deuda O(k^2) en updates fragmentados.
+
+Para cada leaf afectada:
+1. copiar únicamente esa leaf;
+2. aplicar sus segmentos;
+3. recomputar su leaf frame/digest vector.
+
+Después se calcula el cierre ancestral canónico exacto:
+
+    Anc(A)
+
+sobre la geometría ST0.
+
+Sólo se recomputan:
+
+    A union Anc_internal(A).
+
+Un subtree canónico disjunto se reutiliza sin modificar su TreeNode.
+
+### 8.6. Ley de equivalencia delta
+
+Para todo delta soportado:
+
+    Delta(TreeDeltaIndex(X), Δ).root
+      = Tree(apply_same_length(X, Δ))
+
+byte por byte.
+
+Además:
+
+    recomputed_nodes = exact_ancestor_closure(A)
+
+y todo subtree disjunto conserva su node summary.
+
+### 8.7. Transactionality
+
+Hashing, composición y construcción de la nueva root ocurren antes de publicar.
+
+El commit en memoria mantiene un rollback journal limitado a:
+- leaves tocadas;
+- leaf nodes tocados;
+- cache keys invalidadas/recalculadas;
+- root previa.
+
+Si falla hashing/composición:
+
+    state_after = state_before.
+
+Si falla una operación durante la publicación del commit, el journal restaura:
+
+    leaves_after = leaves_before
+    cache_after  = cache_before
+    root_after   = root_before.
+
+No se publica una root parcial.
+
+### 8.8. Telemetría
+
+Cada update devuelve `TreeUpdateTelemetryV1` con:
+
+- operation;
+- old/new byte length;
+- replacement/appended bytes;
+- affected leaves;
+- invalidated node keys;
+- recomputed node keys;
+- reused node keys;
+- leaf payload bytes rehashed;
+- branch hash invocations;
+- frontier nodes reused para append.
+
+Esta telemetría es evidencia de complejidad/ingeniería, no una claim criptográfica.
+
+### 8.9. Append
+
+Para X con:
+- canonical full-leaf frontier F;
+- optional rightmost tail T;
+
+append(Y) conserva todos los subárboles previos que siguen siendo canónicos y
+disjuntos del tail modificado.
+
+Sólo se vuelve a hashear:
+
+    T || Y
+
+particionado en nuevas leaves, más los bridge/ancestor nodes necesarios para la
+nueva geometría.
+
+Si X termina exactamente en frontera de chunk, no se vuelve a hashear ninguna
+leaf antigua.
+
+Si X tiene tail parcial, sólo esa leaf antigua puede cambiar.
+
+Ley:
+
+    Append(TreeDeltaIndex(X),Y).root
+      = Tree(X || Y).
+
+Para Y vacío:
+
+    Append(index,b"").root = index.root
+
+sin hashing adicional.
+
+### 8.10. Cache correctness tras crecimiento
+
+La cache puede conservar summaries de geometrías históricas. Un node previo sólo
+se reutiliza si:
+
+1. su key existe;
+2. esa key era un subtree canónico de la Tree inmediatamente anterior;
+3. su intervalo queda completamente dentro del prefijo de hojas completas no
+   modificado.
+
+Así un summary obsoleto de una geometría previa nunca se reutiliza por coincidencia
+accidental de key.
+
+### 8.11. Complejidad delta
+
+Sea:
+- B_delta = bytes de replacement canónico;
+- k = leaves afectadas;
+- Anc(A) = cierre ancestral;
+- m=4.
+
+Después de construir el índice:
+
+    T_delta =
+      O(B_delta partitioning
+        + bytes_de_leaves_afectadas
+        + m |Anc(A)|).
+
+Como cada leaf tiene tamaño fijo:
+
+    T_delta = O(B_delta + m k log N)
+
+como cota estructural conservadora.
+
+Para cambios de un byte, el payload mínimo rehasheado es una leaf completa,
+porque ST0 compromete a granularidad de 65,536 bytes.
+
+### 8.12. Complejidad append
+
+Sea t la tail previa (< chunk) y Y el suffix:
+
+    T_append =
+      O(t + |Y| + m * bridge_nodes).
+
+No hay término O(B_old) de rehash del prefijo.
+
+### 8.13. Performance boundary
+
+Incremental no se presenta como universalmente más rápido.
+
+Cuando:
+
+    k/N -> 1
+
+la ventaja desaparece y el overhead del índice puede hacer delta más lento que un
+rebuild directo.
+
+El criterio de valor de ST4 es el régimen local.
+
+El ledger obligatorio mide:
+- 1 leaf;
+- 0.1%;
+- 1%;
+- 10%;
+- 100%.
+
+y publica también cualquier slowdown en 100%.
+
+### 8.14. API
+
+    index = TreeDeltaIndex(data)
+
+    index.apply_delta([
+      TreeEditV1(start, delete_length, replacement),
+      ...
+    ]) -> TreeUpdateResultV1
+
+    index.append(suffix) -> TreeUpdateResultV1
+
+`materialize()` existe para export/testing y es explícitamente O(B); no participa
+en el camino incremental.
+
+### 8.15. No claims
+
+ST4 no introduce nueva seguridad criptográfica.
+
+Incremental reuse no convierte una root en prueba de provenance/frescura y no
+autoriza mutaciones fuera del dominio same-length/append.
 
 ## 9. Manifest V1
 

@@ -47,6 +47,7 @@ def leaf_node(profile: TreeProfileV1, index: int, offset: int, leaf: bytes) -> T
 
 
 def combine_nodes(profile: TreeProfileV1, left: TreeNode, right: TreeNode, *, require_equal_perfect: bool = False) -> TreeNode:
+    """Combine canonical child summaries; digest provenance is a caller concern."""
     if left.end_leaf != right.start_leaf:
         raise ValueError("tree nodes are not adjacent")
     if left.byte_length != left.leaf_count * profile.chunk_size:
@@ -87,6 +88,7 @@ class TreeBuilder:
 
     @property
     def frontier(self) -> TreeFrontier:
+        """Return completed-leaf frontier only; any buffered tail is excluded."""
         return TreeFrontier(tuple(self._nodes))
 
     @property

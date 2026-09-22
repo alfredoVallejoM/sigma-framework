@@ -170,7 +170,7 @@ Fuzz:
 PASS sólo si:
 1. ninguna KAT v2.2/v3 cambia;
 2. referencia e implementación productiva coinciden;
-3. corpus estructural aleatorio >= 100k casos sin divergencia;
+3. descomposición estructural exhaustiva >= 100k contadores de hojas y >= 2k casos diferenciales aleatorios sin divergencia;
 4. parser fuzz y mutation tests cubren errores críticos;
 5. complejidad observada no contradice el contrato.
 

@@ -13,6 +13,8 @@ CHUNK = 65_536
 ALGORITHMS = (1, 2, 3, 4)
 DOMAIN_MAGIC = b"SIGTRDS1"
 PROFILE_MAGIC = b"SIGTPRF1"
+NODE_MAGIC = b"SIGTNODE"
+FRONTIER_MAGIC = b"SIGTFRNT"
 
 
 def u16(x: int) -> bytes:
@@ -57,6 +59,11 @@ def profile_bytes() -> bytes:
     return record(PROFILE_MAGIC, ((1, u16(1)), (2, u32(CHUNK)), (3, algs)))
 
 
+def items(values):
+    values = tuple(values)
+    return u16(len(values)) + b"".join(u32(len(v)) + v for v in values)
+
+
 def leaf(index: int, raw: bytes):
     digests = []
     for a in ALGORITHMS:
@@ -92,7 +99,16 @@ def parent(left, right):
     for a, x, y in zip(ALGORITHMS, ld, rd):
         frame = record(
             b"SIGTJOIN",
-            ((1, profile_bytes()), (2, u16(a)), (3, u32(height)), (4, u64(ls)), (5, u64(count)), (6, u64(length)), (7, x), (8, y)),
+            (
+                (1, profile_bytes()),
+                (2, u16(a)),
+                (3, u32(height)),
+                (4, u64(ls)),
+                (5, u64(count)),
+                (6, u64(length)),
+                (7, x),
+                (8, y),
+            ),
         )
         out.append(h(a, domain(2) + frame))
     return (ls, count, length, height, tuple(out))
@@ -106,32 +122,75 @@ def empty():
     return tuple(out)
 
 
+def _leaves(data: bytes):
+    return [
+        leaf(i, data[i * CHUNK : (i + 1) * CHUNK])
+        for i in range((len(data) + CHUNK - 1) // CHUNK)
+    ]
+
+
+def _root_range(leaves, lo: int, hi: int):
+    n = hi - lo
+    if n == 1:
+        return leaves[lo]
+    split = 1 << ((n - 1).bit_length() - 1)
+    return parent(
+        _root_range(leaves, lo, lo + split),
+        _root_range(leaves, lo + split, hi),
+    )
+
+
 def reduce_leaves(leaves):
     if not leaves:
         return (0, 0, empty())
-
-    def root_range(lo: int, hi: int):
-        n = hi - lo
-        if n == 1:
-            return leaves[lo]
-        split = 1 << ((n - 1).bit_length() - 1)
-        return parent(root_range(lo, lo + split), root_range(lo + split, hi))
-
-    node = root_range(0, len(leaves))
+    node = _root_range(leaves, 0, len(leaves))
     return (sum(x[2] for x in leaves), len(leaves), node[4])
 
 
 def build(data: bytes):
-    leaves = [
-        leaf(i, data[i * CHUNK : (i + 1) * CHUNK])
-        for i in range((len(data) + CHUNK - 1) // CHUNK)
-    ]
-    return reduce_leaves(leaves)
+    return reduce_leaves(_leaves(data))
 
 
-def items(values):
-    values = tuple(values)
-    return u16(len(values)) + b"".join(u32(len(v)) + v for v in values)
+def node_wire(node) -> bytes:
+    start, count, length, height, digests = node
+    return record(
+        NODE_MAGIC,
+        (
+            (1, u64(start)),
+            (2, u64(count)),
+            (3, u64(length)),
+            (4, u32(height)),
+            (5, items(digests)),
+        ),
+    )
+
+
+def frontier(data: bytes):
+    leaves = _leaves(data)
+    count = len(leaves)
+    if count == 0:
+        return ()
+    nodes = []
+    cursor = 0
+    for height in range(count.bit_length() - 1, -1, -1):
+        if not (count & (1 << height)):
+            continue
+        width = 1 << height
+        nodes.append(_root_range(leaves, cursor, cursor + width))
+        cursor += width
+    if cursor != count:
+        raise AssertionError("reference frontier decomposition failed")
+    return tuple(nodes)
+
+
+def frontier_wire(data: bytes) -> bytes:
+    return record(
+        FRONTIER_MAGIC,
+        (
+            (1, profile_bytes()),
+            (2, items(node_wire(node) for node in frontier(data))),
+        ),
+    )
 
 
 def root_wire(data: bytes) -> bytes:

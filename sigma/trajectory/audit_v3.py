@@ -394,106 +394,106 @@ def _full_round_evidence(
     state = evaluation.states[index]
 
     if isinstance(evaluation, HistoryWideOnceEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        history = evaluation.histories[index]
-        round_binding = RoundBindingV3(binding, history)
-        state_frame = HistoryRoundFrame(
-            context, round_binding, layout, index, state
+        history_layout = evaluation.round_layouts[index]
+        history_value = evaluation.histories[index]
+        history_binding = RoundBindingV3(binding, history_value)
+        history_wide_frame = HistoryRoundFrame(
+            context, history_binding, history_layout, index, state
         )
-        return state_frame.to_bytes(), (), (), b"", round_binding.to_bytes()
+        return history_wide_frame.to_bytes(), (), (), b"", history_binding.to_bytes()
 
     if isinstance(evaluation, HistoryDeepEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        history = evaluation.histories[index]
-        round_binding = RoundBindingV3(binding, history)
-        state_frame = HistoryRoundFrame(
-            context, round_binding, layout, index, state
+        history_deep_layout = evaluation.round_layouts[index]
+        history_deep_value = evaluation.histories[index]
+        history_deep_binding = RoundBindingV3(binding, history_deep_value)
+        history_deep_frame = HistoryRoundFrame(
+            context, history_deep_binding, history_deep_layout, index, state
         )
-        branch_outputs = evaluation.branch_outputs[index]
-        branch_frames = tuple(
+        history_deep_outputs = evaluation.branch_outputs[index]
+        history_deep_frames = tuple(
             HistoryDeepBranchFrame(
                 context,
                 index,
                 position,
                 algorithm,
-                state_frame,
+                history_deep_frame,
             ).to_bytes()
             for position, algorithm in enumerate(context.joint_algorithms)
         )
-        fold_frame = HistoryDeepFoldFrame(
-            context, index, branch_outputs
+        history_deep_fold = HistoryDeepFoldFrame(
+            context, index, history_deep_outputs
         ).to_bytes()
         return (
-            state_frame.to_bytes(),
-            branch_frames,
-            branch_outputs,
-            fold_frame,
-            round_binding.to_bytes(),
+            history_deep_frame.to_bytes(),
+            history_deep_frames,
+            history_deep_outputs,
+            history_deep_fold,
+            history_deep_binding.to_bytes(),
         )
 
     if isinstance(evaluation, HistoryDeepVectorEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        history = evaluation.histories[index]
-        round_binding = RoundBindingV3(binding, history)
-        state_frame = HistoryVectorRoundFrame(
-            context, round_binding, layout, index, state
+        history_vector_layout = evaluation.round_layouts[index]
+        history_vector_value = evaluation.histories[index]
+        history_vector_binding = RoundBindingV3(binding, history_vector_value)
+        history_vector_frame = HistoryVectorRoundFrame(
+            context, history_vector_binding, history_vector_layout, index, state
         )
-        branch_outputs = evaluation.branch_outputs[index]
-        branch_frames = tuple(
+        history_vector_outputs = evaluation.branch_outputs[index]
+        history_vector_frames = tuple(
             HistoryDeepBranchFrame(
                 context,
                 index,
                 position,
                 algorithm,
-                state_frame,
+                history_vector_frame,
             ).to_bytes()
             for position, algorithm in enumerate(context.joint_algorithms)
         )
         return (
-            state_frame.to_bytes(),
-            branch_frames,
-            branch_outputs,
+            history_vector_frame.to_bytes(),
+            history_vector_frames,
+            history_vector_outputs,
             b"",
-            round_binding.to_bytes(),
+            history_vector_binding.to_bytes(),
         )
 
     if isinstance(evaluation, WideOnceEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        state_frame = RoundFrame(context, binding, layout, index, state)
-        return state_frame.to_bytes(), (), (), b"", b""
+        wide_layout = evaluation.round_layouts[index]
+        wide_frame = RoundFrame(context, binding, wide_layout, index, state)
+        return wide_frame.to_bytes(), (), (), b"", b""
 
     if isinstance(evaluation, DeepEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        state_frame = RoundFrame(context, binding, layout, index, state)
-        branch_outputs = evaluation.branch_outputs[index]
-        branch_frames = tuple(
+        deep_layout = evaluation.round_layouts[index]
+        deep_frame = RoundFrame(context, binding, deep_layout, index, state)
+        deep_outputs = evaluation.branch_outputs[index]
+        deep_frames = tuple(
             DeepBranchFrame(
                 context,
                 index,
                 position,
                 algorithm,
-                state_frame,
+                deep_frame,
             ).to_bytes()
             for position, algorithm in enumerate(context.joint_algorithms)
         )
-        fold_frame = DeepFoldFrame(context, index, branch_outputs).to_bytes()
-        return state_frame.to_bytes(), branch_frames, branch_outputs, fold_frame, b""
+        deep_fold = DeepFoldFrame(context, index, deep_outputs).to_bytes()
+        return deep_frame.to_bytes(), deep_frames, deep_outputs, deep_fold, b""
 
     if isinstance(evaluation, DeepVectorEvaluationV3):
-        layout = evaluation.round_layouts[index]
-        state_frame = VectorRoundFrame(context, binding, layout, index, state)
-        branch_outputs = evaluation.branch_outputs[index]
-        branch_frames = tuple(
+        vector_layout = evaluation.round_layouts[index]
+        vector_frame = VectorRoundFrame(context, binding, vector_layout, index, state)
+        vector_outputs = evaluation.branch_outputs[index]
+        vector_frames = tuple(
             DeepBranchFrame(
                 context,
                 index,
                 position,
                 algorithm,
-                state_frame,
+                vector_frame,
             ).to_bytes()
             for position, algorithm in enumerate(context.joint_algorithms)
         )
-        return state_frame.to_bytes(), branch_frames, branch_outputs, b"", b""
+        return vector_frame.to_bytes(), vector_frames, vector_outputs, b"", b""
 
     raise TypeError("evaluation must be a Sigma v3 evaluation")
 
@@ -591,153 +591,215 @@ def _expected_round_artifacts(
     state = audit.states[index]
 
     if context.trajectory_profile is TrajectoryProfileIdV3.HISTORY_FEEDBACK:
-        history = HistoryCommitmentV3.from_bytes(audit.histories[index])
-        round_binding = RoundBindingV3(binding, history)
-        layout = derive_history_layout_v3(
+        history_value = HistoryCommitmentV3.from_bytes(audit.histories[index])
+        history_binding = RoundBindingV3(binding, history_value)
+        history_layout = derive_history_layout_v3(
             context,
-            round_binding,
+            history_binding,
             round_index=index,
             base_length=len(state),
         )
+
         if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
-            state_frame = HistoryVectorRoundFrame(
-                context, round_binding, layout, index, state
+            history_state_frame_vector = HistoryVectorRoundFrame(
+                context, history_binding, history_layout, index, state
             )
-        else:
-            state_frame = HistoryRoundFrame(
-                context, round_binding, layout, index, state
+            history_state_frame_bytes = history_state_frame_vector.to_bytes()
+            history_branch_frames = tuple(
+                HistoryDeepBranchFrame(
+                    context,
+                    index,
+                    position,
+                    algorithm,
+                    history_state_frame_vector,
+                ).to_bytes()
+                for position, algorithm in enumerate(context.joint_algorithms)
             )
-        state_frame_bytes = state_frame.to_bytes()
-        if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
-            successor = hash_bytes(
-                context.state_algorithm,
-                DomainIdV3.HISTORY_ROUND_FRAME,
-                state_frame_bytes,
+            history_branch_outputs = tuple(
+                hash_bytes(
+                    algorithm,
+                    DomainIdV3.HISTORY_DEEP_BRANCH_FRAME,
+                    frame,
+                )
+                for algorithm, frame in zip(
+                    context.joint_algorithms,
+                    history_branch_frames,
+                    strict=True,
+                )
             )
             return (
-                layout.to_bytes(),
-                state_frame_bytes,
+                history_layout.to_bytes(),
+                history_state_frame_bytes,
+                history_branch_frames,
+                history_branch_outputs,
+                b"",
+                history_binding.to_bytes(),
+                b"".join(history_branch_outputs),
+            )
+
+        history_state_frame_scalar = HistoryRoundFrame(
+            context, history_binding, history_layout, index, state
+        )
+        history_state_frame_bytes = history_state_frame_scalar.to_bytes()
+        if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
+            history_successor = hash_bytes(
+                context.state_algorithm,
+                DomainIdV3.HISTORY_ROUND_FRAME,
+                history_state_frame_bytes,
+            )
+            return (
+                history_layout.to_bytes(),
+                history_state_frame_bytes,
                 (),
                 (),
                 b"",
-                round_binding.to_bytes(),
-                successor,
+                history_binding.to_bytes(),
+                history_successor,
             )
 
-        branch_frames = tuple(
+        history_branch_frames = tuple(
             HistoryDeepBranchFrame(
                 context,
                 index,
                 position,
                 algorithm,
-                state_frame,
+                history_state_frame_scalar,
             ).to_bytes()
             for position, algorithm in enumerate(context.joint_algorithms)
         )
-        branch_outputs = tuple(
+        history_branch_outputs = tuple(
             hash_bytes(
                 algorithm,
                 DomainIdV3.HISTORY_DEEP_BRANCH_FRAME,
                 frame,
             )
             for algorithm, frame in zip(
-                context.joint_algorithms, branch_frames, strict=True
+                context.joint_algorithms,
+                history_branch_frames,
+                strict=True,
             )
         )
-        if context.round_profile is RoundProfileIdV3.DEEP:
-            fold_frame = HistoryDeepFoldFrame(
-                context, index, branch_outputs
-            ).to_bytes()
-            successor = hash_bytes(
-                context.state_algorithm,
-                DomainIdV3.HISTORY_DEEP_FOLD,
-                fold_frame,
-            )
-        else:
-            fold_frame = b""
-            successor = b"".join(branch_outputs)
+        history_fold_frame = HistoryDeepFoldFrame(
+            context, index, history_branch_outputs
+        ).to_bytes()
+        history_successor = hash_bytes(
+            context.state_algorithm,
+            DomainIdV3.HISTORY_DEEP_FOLD,
+            history_fold_frame,
+        )
         return (
-            layout.to_bytes(),
-            state_frame_bytes,
-            branch_frames,
-            branch_outputs,
-            fold_frame,
-            round_binding.to_bytes(),
-            successor,
+            history_layout.to_bytes(),
+            history_state_frame_bytes,
+            history_branch_frames,
+            history_branch_outputs,
+            history_fold_frame,
+            history_binding.to_bytes(),
+            history_successor,
         )
 
-    layout = derive_layout_v3(
+    nonhistory_layout = derive_layout_v3(
         context,
         binding,
         kind=LayoutKindV3.ROUND,
         round_index=index,
         base_length=len(state),
     )
-    if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
-        state_frame_nonhistory = VectorRoundFrame(
-            context, binding, layout, index, state
-        )
-    else:
-        state_frame_nonhistory = RoundFrame(
-            context, binding, layout, index, state
-        )
-    state_frame_bytes = state_frame_nonhistory.to_bytes()
 
-    if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
-        successor = hash_bytes(
-            context.state_algorithm,
-            DomainIdV3.ROUND_FRAME,
-            state_frame_bytes,
+    if context.round_profile is RoundProfileIdV3.DEEP_VECTOR:
+        nonhistory_vector_frame = VectorRoundFrame(
+            context, binding, nonhistory_layout, index, state
+        )
+        nonhistory_state_frame_bytes = nonhistory_vector_frame.to_bytes()
+        nonhistory_branch_frames = tuple(
+            DeepBranchFrame(
+                context,
+                index,
+                position,
+                algorithm,
+                nonhistory_vector_frame,
+            ).to_bytes()
+            for position, algorithm in enumerate(context.joint_algorithms)
+        )
+        nonhistory_branch_outputs = tuple(
+            hash_bytes(
+                algorithm,
+                DomainIdV3.DEEP_BRANCH_FRAME,
+                frame,
+            )
+            for algorithm, frame in zip(
+                context.joint_algorithms,
+                nonhistory_branch_frames,
+                strict=True,
+            )
         )
         return (
-            layout.to_bytes(),
-            state_frame_bytes,
-            (),
-            (),
+            nonhistory_layout.to_bytes(),
+            nonhistory_state_frame_bytes,
+            nonhistory_branch_frames,
+            nonhistory_branch_outputs,
             b"",
             b"",
-            successor,
+            b"".join(nonhistory_branch_outputs),
         )
 
-    branch_frames = tuple(
+    nonhistory_scalar_frame = RoundFrame(
+        context, binding, nonhistory_layout, index, state
+    )
+    nonhistory_state_frame_bytes = nonhistory_scalar_frame.to_bytes()
+    if context.round_profile is RoundProfileIdV3.WIDE_ONCE:
+        nonhistory_successor = hash_bytes(
+            context.state_algorithm,
+            DomainIdV3.ROUND_FRAME,
+            nonhistory_state_frame_bytes,
+        )
+        return (
+            nonhistory_layout.to_bytes(),
+            nonhistory_state_frame_bytes,
+            (),
+            (),
+            b"",
+            b"",
+            nonhistory_successor,
+        )
+
+    nonhistory_branch_frames = tuple(
         DeepBranchFrame(
             context,
             index,
             position,
             algorithm,
-            state_frame_nonhistory,
+            nonhistory_scalar_frame,
         ).to_bytes()
         for position, algorithm in enumerate(context.joint_algorithms)
     )
-    branch_outputs = tuple(
+    nonhistory_branch_outputs = tuple(
         hash_bytes(
             algorithm,
             DomainIdV3.DEEP_BRANCH_FRAME,
             frame,
         )
         for algorithm, frame in zip(
-            context.joint_algorithms, branch_frames, strict=True
+            context.joint_algorithms,
+            nonhistory_branch_frames,
+            strict=True,
         )
     )
-    if context.round_profile is RoundProfileIdV3.DEEP:
-        fold_frame = DeepFoldFrame(context, index, branch_outputs).to_bytes()
-        successor = hash_bytes(
-            context.state_algorithm,
-            DomainIdV3.DEEP_FOLD,
-            fold_frame,
-        )
-    else:
-        fold_frame = b""
-        successor = b"".join(branch_outputs)
-
+    nonhistory_fold_frame = DeepFoldFrame(
+        context, index, nonhistory_branch_outputs
+    ).to_bytes()
+    nonhistory_successor = hash_bytes(
+        context.state_algorithm,
+        DomainIdV3.DEEP_FOLD,
+        nonhistory_fold_frame,
+    )
     return (
-        layout.to_bytes(),
-        state_frame_bytes,
-        branch_frames,
-        branch_outputs,
-        fold_frame,
+        nonhistory_layout.to_bytes(),
+        nonhistory_state_frame_bytes,
+        nonhistory_branch_frames,
+        nonhistory_branch_outputs,
+        nonhistory_fold_frame,
         b"",
-        successor,
+        nonhistory_successor,
     )
 
 def verify_trajectory_audit_structure_v3(audit: TrajectoryAuditV3) -> bool:

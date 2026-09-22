@@ -14,6 +14,7 @@ from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3
 from sigma.trajectory import (
     TrajectoryAuditModeV3,
+    TrajectoryAuditV3,
     audit_from_evaluation_v3,
     verify_trajectory_audit_structure_v3,
 )
@@ -66,6 +67,8 @@ def run_ledger(*, repeats: int) -> dict[str, object]:
             "state_size": context.state_size,
         }
 
+        compact_wire_bytes = 0
+        full_wire_bytes = 0
         for mode in (
             TrajectoryAuditModeV3.COMPACT,
             TrajectoryAuditModeV3.FULL,
@@ -76,6 +79,8 @@ def run_ledger(*, repeats: int) -> dict[str, object]:
                 ),
                 repeats,
             )
+            if not isinstance(audit_obj, TrajectoryAuditV3):
+                raise AssertionError("SV0 benchmark returned wrong audit type")
             wire = audit_obj.to_bytes()
             verified, replay_ns, replay_peak = _measure(
                 lambda audit_obj=audit_obj: verify_trajectory_audit_structure_v3(
@@ -91,10 +96,12 @@ def run_ledger(*, repeats: int) -> dict[str, object]:
             row[f"{prefix}_build_peak_bytes"] = build_peak
             row[f"{prefix}_replay_median_ns"] = replay_ns
             row[f"{prefix}_replay_peak_bytes"] = replay_peak
+            if mode is TrajectoryAuditModeV3.COMPACT:
+                compact_wire_bytes = len(wire)
+            else:
+                full_wire_bytes = len(wire)
 
-        row["full_over_compact_ratio"] = (
-            row["full_wire_bytes"] / row["compact_wire_bytes"]
-        )
+        row["full_over_compact_ratio"] = full_wire_bytes / compact_wire_bytes
         rows.append(row)
 
     return {

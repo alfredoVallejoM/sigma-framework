@@ -96,15 +96,25 @@ AUDIT-MUT-003	SV0	T4	Round/layout/frame corruption	structural replay	layout/fram
 AUDIT-DEEP-001	SV0	T3	Deep fidelity	independent_v3	R12/R12.5 Deep suites	branch outputs + scalar fold exact	BLOCKING
 AUDIT-VEC-001	SV0	T3	DeepVector fidelity	independent_v3	R12/R12.5 DeepVector suites	full vector concatenation exact, no fold	BLOCKING
 AUDIT-COMPACT-001	SV0	T3	Compact vs full audit	SigmaDigestV3 projection	random cross-suite evaluations	same digest/states/histories/layouts	BLOCKING
-TCHK-DIFF-001	SV1	T3	Trajectory resume	direct v3 evaluation	all valid i on corpus	same suffix/digest	BLOCKING
-TCHK-ADV-001	SV1	T4	Wrong P_X	none	cross-input checkpoint	reject	BLOCKING
-TCHK-ADV-002	SV1	T4	Wrong round index	none	rewind/skip	reject	BLOCKING
-TCHK-FUZZ-001	SV1	T5	Checkpoint codec	round-trip invariant	mutated wires	no crash; invalid rejects	BLOCKING
-POL-PROP-001	SV2	T2	Policy determinism	same verifier	random normalized policies	same decision	BLOCKING
-POL-PROP-002	SV2	T2	Defined monotonicity	reference relation	strict/weak pairs	strict accept => weak accept	REQUIRED
-POL-ADV-001	SV2	T4	Legacy default	none	v2.2 artifact	reject unless opt-in	BLOCKING
-POL-ADV-002	SV2	T4	Resource precheck	work counter	oversized declarations	reject before expensive work	BLOCKING
-POL-ADV-003	SV2	T4	Unsupported future profile	none	unknown IDs	Unsupported	BLOCKING
+TCHK-SOURCE-001	SV1	T3	Checkpoint source rebind	direct evaluate_v3	correct and wrong source	correct accept; wrong reject	BLOCKING
+TCHK-WINDOW-001	SV1	T2	Window-prefix minimality	direct public window	indices before/inside/end window	len=max(0,i-t), exact S_t..S_(i-1)	BLOCKING
+TCHK-DIGEST-001	SV1	T3	Final digest identity	independent_v3	all valid i	exact SigmaDigestV3	BLOCKING
+TCHK-CODEC-001	SV1	T5	Checkpoint canonical wire	independent encoder	all valid i + structural TLV mutations	byte-identical or reject	BLOCKING
+TCHK-DIFF-001	SV1	T7	All-index trajectory continuation	independent_v3 + independent checkpoint encoder	all valid i across all 6 suites	exact checkpoint wire, suffix states/histories and final digest	BLOCKING
+TCHK-ADV-001	SV1	T4	Binding/context immutability	checkpoint constructor/parser	cross-suite context, mutated t/k or binding	reject	BLOCKING
+TCHK-ADV-002	SV1	T4	Round index exactness	advance API	negative/after-final/skip attempts	reject	BLOCKING
+TCHK-FUZZ-001	SV1	T5	Checkpoint codec	strict TLV round-trip	missing/duplicate/reorder/unknown + mutated state/history	reject or changed final digest	BLOCKING
+POL-KAT-001	SV2	T1	Normalized policy identity	frozen policy vectors	default/strict/weak/legacy-opt-in	exact wire length + policy_id SHA-256	BLOCKING
+POL-DEC-001	SV2	T2	Four-way decision exhaustiveness	decision enum	accepted/rejected/inconclusive/unsupported	exact one kind	BLOCKING
+POL-PARSE-001	SV2	T4	Parse vs accept separation	closed evidence parser	valid disallowed v3 suite	parse succeeds, policy rejects	BLOCKING
+POL-CODEC-001	SV2	T5	Policy canonical codec	strict TLV	missing/duplicate/reorder/unknown	reject	BLOCKING
+POL-CAP-001	SV2	T4	Future Artifact requirements	VerificationCapabilitiesV1	Tree/DUAL/signature/provenance/symlink/metadata	deterministic reject/inconclusive/accept	BLOCKING
+POL-SOURCE-001	SV2	T3	Message-binding requirement	v3 full verifier	missing/correct/wrong source	Inconclusive/Accepted/Rejected	BLOCKING
+POL-PROP-001	SV2	T2	Policy determinism	repeat verifier	>=400 generated normalized policies	same semantic decision	BLOCKING
+POL-PROP-002	SV2	T2	Defined monotonicity	reference restriction relation	>=100 strict/weak accepted pairs	strict accept => weak accept	BLOCKING
+POL-ADV-001	SV2	T4	Legacy default/opt-in	v2.2 verifier	valid v2.2 evidence	default reject; explicit opt-in accept	BLOCKING
+POL-ADV-002	SV2	T4	Resource precheck	bomb source/verifier	oversized declarations	reject before expensive work	BLOCKING
+POL-ADV-003	SV2	T4	Unsupported future profile	closed parser	unknown magic/profile	Unsupported	BLOCKING
 RCPT-MUT-001	SV3	T4	Receipt binding	receipt verifier	mutate artifact/policy/result	reject signature or identity	BLOCKING
 BATCH-DIFF-001	SV3	T3	Batch pointwise equality	single verify	random mixed inputs	exact per-item equality	BLOCKING
 BATCH-FAULT-001	SV3	T4	Item isolation	single verify	one failing item	others unaffected	BLOCKING

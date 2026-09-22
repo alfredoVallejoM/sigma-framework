@@ -20,6 +20,7 @@ ellas no implica compatibilidad ni estabilidad.
 | verificador KDF wire | `2` | registro público `SIGMAKVR2` sin clave |
 | PoW wire | `3` | aplicación `SIGMAPOW3` ligada a suite v2.2 |
 | compromiso firmado wire | `2` | contenedor autenticado `SIGMASIG` |
+| Sigma Tree wire | `1` | capa estructural independiente `SIGT*`; no es suite v2/v3 |
 | baseline estable de regresión | `v2-2` | semántica histórica congelada |
 | familia de investigación | `v3-r12`, `v3-r12.5` | candidatos incompatibles, sin security freeze |
 
@@ -40,6 +41,9 @@ ejes wire, familias activas/transitorias, commit, tag y estado del árbol.
   congelados. `security_reviewed` permanece falso hasta la revisión externa.
 - Parsear una estructura sólo prueba que el wire es canónico. Su aceptación
   semántica exige validarla contra una suite registrada y una política local.
+- Sigma Tree V1 posee un eje wire propio. Cambiar framing, dominios o semántica
+  estructural requiere una nueva versión de Tree; nunca se reinterpreta como
+  una suite v2/v3 ni viceversa.
 - Una publicación auditable exige un checkout limpio en un tag exacto mediante
   `scripts/release_artifacts.py --require-clean-tag`.
 

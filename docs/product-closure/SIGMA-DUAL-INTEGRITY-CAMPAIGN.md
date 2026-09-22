@@ -771,72 +771,309 @@ COMPLETE requiere:
 
 ## 7. ST4 — Delta and Append
 
+### Objetivo
+
+Cerrar la primera capa realmente incremental de Sigma Tree V1:
+
+- ST4A — same-length replacement;
+- ST4B — append.
+
+El objetivo no es evitar el coste inicial de construir un índice. El contrato es:
+
+    build index once: O(mB)
+    local update afterwards: proportional al cambio + ancestor closure
+
+sin rehacer silenciosamente O(B) para un cambio local.
+
+### Implementación
+
+- `sigma/tree/delta.py`
+  - RebuildRequired;
+  - TreeEditV1;
+  - TreeDeltaIndex;
+  - TreeUpdateTelemetryV1;
+  - TreeUpdateResultV1;
+  - normalize_tree_edits.
+- `reference/tree_delta_v1.py`
+  - normalización independiente;
+  - full-rebuild delta oracle;
+  - append oracle;
+  - affected-leaf y ancestor-closure oracle.
+- `scripts/product_closure/st4_gate.py`
+  - cumulative local updates;
+  - append campaign;
+  - failure injection;
+  - independent differential corpus;
+  - locality work gate.
+- `scripts/product_closure/st4_benchmark.py`
+  - sweep 1 leaf / 0.1% / 1% / 10% / 100%;
+  - incremental vs full rebuild;
+  - allocations/RSS/work counters;
+  - append reuse ledger.
+- `scripts/product_closure/generate_st4_vectors.py`
+  - frozen semantic KAT.
+- unit/property/differential/vector tests.
+
+No persistent TreeDeltaIndex wire se define en ST4. Persistencia/index layout/fallback
+son ST5/SA3.
+
 ### ST4A — Same-length replacement
 
-Obligaciones:
+#### ST4-O01 — Delta equivalence
 
-ST4-O01 — Delta equivalence
+Para todo delta soportado:
 
-    update(tree(X), Δ) = tree(apply(X,Δ))
+    index(X).apply_delta(Δ).root
+      = tree(apply_same_length(X,Δ))
 
-ST4-O02 — Affected-leaf completeness  
-Toda leaf que intersecta Δ se recomputa.
+#### ST4-O02 — Affected-leaf completeness
 
-ST4-O03 — Unaffected subtree preservation  
-Subárbol disjunto conserva root.
+Toda leaf cuya byte interval interseca un edit normalizado se recomputa una vez.
 
-ST4-O04 — Ancestor closure completeness  
-Todos y sólo los ancestros requeridos se invalidan.
+La telemetría publica exactamente:
 
-ST4-O05 — Overlap normalization  
-Ranges superpuestos tienen forma canónica antes de ejecutar.
+    affected_leaves.
 
-ST4-O06 — Transactionality  
-No se publica root parcial.
+#### ST4-O03 — Unaffected subtree preservation
 
-ST4-O07 — Rebuild boundary  
-Edits que desplazan chunk boundaries devuelven RebuildRequired.
+Todo subtree canónico disjunto del affected set puede conservar exactamente su
+TreeNode previo.
+
+La batería incluye una comprobación por identidad de objeto, no sólo igualdad de
+digests.
+
+#### ST4-O04 — Ancestor closure completeness/minimality
+
+Los node keys recomputados deben ser exactamente el cierre ancestral canónico de
+las leaves afectadas:
+
+    recomputed_nodes
+      = affected leaves union ancestors required by ST0 geometry.
+
+Un oracle independiente calcula la misma closure.
+
+#### ST4-O05 — Overlap normalization
+
+Edits:
+- se ordenan;
+- se validan;
+- overlaps compatibles se fusionan;
+- adyacentes se fusionan;
+- overlaps contradictorios se rechazan.
+
+La salida normalizada no depende del orden de entrada.
+
+Durante revisión se eliminó una deuda accidental O(k^2): los edits normalizados
+ahora se particionan a leaves en un único pase y cada leaf consume sólo sus
+segmentos.
+
+#### ST4-O06 — Transactionality
+
+Todo hashing/composición sucede antes de publicar.
+
+Además, el commit final mantiene rollback journal sobre:
+- leaf bytes tocados;
+- leaf nodes;
+- cache nodes;
+- root/length.
+
+Se inyectan fallos:
+1. durante combine antes de commit;
+2. dentro de la publicación de `dict.update`.
+
+En ambos:
+
+    state_after = state_before.
+
+#### ST4-O07 — Rebuild boundary
+
+Si:
+
+    delete_length != len(replacement)
+
+se devuelve:
+
+    RebuildRequired
+
+antes de iniciar el camino incremental.
+
+No hay support silencioso de insertion/interior deletion.
 
 ### ST4B — Append
 
-ST4-O08 — Append equivalence
+#### ST4-O08 — Append equivalence
 
-    append(tree(X),Y) = tree(X || Y)
+    index(X).append(Y).root = tree(X || Y)
 
-ST4-O09 — Frontier reuse  
-El trabajo previo válido no se rehace salvo lo exigido por tail/frontier.
+incluyendo:
+- Y vacío;
+- 1 byte;
+- 1 chunk;
+- múltiples chunks;
+- old tail parcial.
 
-### Tests
+#### ST4-O09 — Frontier/subtree reuse
 
-- one-byte replacement;
-- changes on chunk edges;
-- multiple disjoint ranges;
-- overlapping ranges;
-- full-file replacement;
-- append 0/1/chunk/multiple chunks;
-- random differential vs full rebuild.
+Append conserva todos los subárboles antiguos que:
+1. eran canónicos en la Tree previa;
+2. siguen enteramente dentro del prefijo full-leaf no modificado.
+
+Si la Tree previa acaba en tail parcial, sólo esa leaf previa se vuelve a hashear.
+
+La telemetría publica:
+
+    frontier_nodes_reused
+    reused_nodes
+    leaf_payload_bytes_rehashed.
+
+La cache puede contener geometrías históricas, pero sólo se reutiliza una key si
+`_is_canonical_key(..., old_leaf_count)` confirma que pertenecía a la Tree
+inmediatamente anterior.
+
+### Correctness gate
+
+`st4_gate.py` exige:
+
+- >=5,000 delta cases acumulativos;
+- >=1,000 append cases acumulativos;
+- sampled direct full rebuilds durante ambas campañas;
+- >=500 fresh independent differential cases;
+- canonical overlap normalization;
+- RebuildRequired boundary;
+- exact ancestor closure;
+- fault injection delta;
+- fault injection append;
+- one-leaf locality gate sobre 128 leaves.
+
+Ejecución semántica aislada con los algoritmos ST0/ST4 exactos:
+
+- delta cases: **5,000 PASS**;
+- append cases: **1,000 PASS**;
+- independent differential cases: **500 PASS**;
+- max recomputed nodes para pequeños deltas: **12**;
+- max leaf payload rehashed para pequeños deltas: **131,072 bytes**
+  (casos que cruzan dos chunks);
+- append frontier reuse events: **3,496**;
+- one-leaf locality tree: 128 leaves;
+- one-leaf recomputed nodes: **8**;
+- one-leaf rehashed payload: **65,536 bytes**;
+- unaffected 64-leaf subtree preserved by object identity.
+
+Streams:
+
+    delta:
+    2c039f135ba2667166aaf4575d698e2436f50f1dcaa4ac9224de146a685fa511
+
+    append:
+    4bdf145f39d4dd0fa31a6ae00b63fd7a8f43a8c9c68f97d7c793000981a02c20
+
+    independent differential:
+    a284023f7d3d083b7078cb2e94eabd15e48e18517e8b3868823734bb2d108b61
+
+La ejecución correctness principal fue del orden de ~18 s en el entorno aislado.
+
+### Frozen semantic vectors
+
+Corpus:
+
+    specification/test-vectors/sigma-tree-v1-st4.json
+
+SHA-256:
+
+    ed94e768dd52c71039b938eec9eafdd8330465a974b4636c3a2a975129178999
+
+Casos:
+- one-byte delta;
+- cross-chunk delta;
+- consistent overlapping delta;
+- full-file same-length replacement;
+- append to partial tail;
+- append full chunk + tail.
 
 ### Performance gate
 
-Medir:
-- N;
-- k affected leaves;
-- B_delta;
-- ancestor count;
-- bytes read;
-- bytes hashed;
-- wall time;
-- peak RSS;
-- allocations.
+El ledger grande usa:
 
-Sweeps:
-- 1 leaf;
-- 0.1%;
-- 1%;
-- 10%;
-- 100%.
+    N = 1,000 leaves
+    B = 65,536,000 bytes
 
-ST4 no se cierra si la implementación denominada incremental hace trabajo aproximadamente O(B) en los casos locales soportados sin justificarlo.
+de forma que:
+
+    1 leaf = exactamente 0.1%.
+
+El benchmark separa construcción inicial del índice del update incremental.
+
+Resultado local con hashing ST0 exacto y rollback-journal overhead modelado:
+
+| régimen | leaves | payload rehashed | recomputed nodes | speedup vs rebuild |
+|---|---:|---:|---:|---:|
+| one leaf | 1 | 65,536 B | 11 | ~342x |
+| 0.1% | 1 | 65,536 B | 11 | ~369x |
+| 1% | 10 | 655,360 B | 85 | ~49x |
+| 10% | 100 | 6,553,600 B | 524 | ~6.0x |
+| 100% | 1,000 | 65,536,000 B | 1,999 | ~0.71x |
+
+Interpretación obligatoria:
+
+- el régimen local es fuertemente sublineal respecto a B;
+- 100% converge al rebuild y puede ser más lento por overhead del índice;
+- el slowdown 100% es un resultado aceptado/publicado, no se oculta.
+
+Peak Python allocations observadas aproximadamente:
+
+- 1 leaf: 0.27 MiB;
+- 1%: 0.84 MiB;
+- 10%: 6.8 MiB;
+- 100%: 64.7 MiB.
+
+El script registra también process RSS high-water; esa cifra debe tomarse de un
+proceso limpio para publicación porque el high-water es acumulativo.
+
+### Append performance
+
+Sobre el mismo índice de gran escala, una ejecución aislada obtuvo aproximadamente:
+
+| suffix | frontier nodes reused | speedup vs rebuild |
+|---|---:|---:|
+| 1 byte | 6 | ~2,224x |
+| 1 chunk | 6 | ~757x |
+| 4 chunks + tail | 7 | ~187x |
+
+Estas cifras son evidencia engineering local, no cross-host publication claims.
+
+### Complexity contract
+
+Después de index construction:
+
+    T_delta =
+      O(B_delta
+        + bytes_de_leaves_afectadas
+        + m |Anc(A)|)
+
+con cota:
+
+    O(B_delta + m k log N).
+
+Append:
+
+    O(old_tail + appended_bytes + m * bridge_nodes).
+
+No hay término O(B_old) en el camino append.
+
+### Criterio de cierre
+
+COMPLETE requiere:
+1. ST4-O01..O09 con evidencia exacta;
+2. independent full-rebuild oracle zero divergences;
+3. normalization/adversarial suite PASS;
+4. transactionality failure injection antes y dentro de commit PASS;
+5. performance local no aproximadamente O(B);
+6. sweep 1 leaf/0.1%/1%/10%/100% publicado;
+7. 100% slowdown, si existe, conservado;
+8. append frontier reuse demostrado;
+9. KAT ST4 frozen;
+10. ST0/ST2/ST3 semantics sin drift;
+11. post-candidate adversarial review PASS.
 
 ## 8. ST5 — Tree performance and scale closure
 

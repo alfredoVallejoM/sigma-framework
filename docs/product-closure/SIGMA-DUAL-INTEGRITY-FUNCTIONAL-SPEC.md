@@ -400,50 +400,101 @@ El ledger empírico debe contrastar esta predicción.
 
 ### 9.1. Objetivo
 
-Comprometer directorios, releases, datasets y colecciones de artefactos sin depender del path absoluto del host.
+Comprometer directorios, releases, datasets y colecciones de artefactos sin depender
+del path absoluto, traversal order ni metadata volátil del host.
 
 ### 9.2. ManifestEntry
 
-Campos mínimos:
-
+Campos V1:
 - canonical_relative_path;
 - entry_type;
+- metadata_profile;
 - byte_length;
-- TreeRoot;
-- optional SigmaDigestV3;
-- metadata profile.
+- TreeRoot V1;
+- optional SigmaDigestV3 wire.
 
-Entry types V1:
-
+Entry types:
 - regular file;
 - directory;
-- symbolic link sólo si la policy lo permite explícitamente.
+- symbolic link sólo bajo policy explícita.
+
+La semántica del TreeRoot por tipo es:
+- regular file: TreeRoot de sus bytes;
+- directory: canonical empty TreeRoot;
+- symbolic link: TreeRoot del target textual NFC/UTF-8, sin seguirlo.
+
+De este modo un directorio vacío queda comprometido y un symlink no se convierte
+implícitamente en lectura del objeto apuntado.
 
 ### 9.3. Canonical path
 
-- UTF-8 válido;
+- Unicode serializable como UTF-8 estricto;
 - relativo;
-- separador /;
+- separador lógico `/`;
 - sin NUL;
 - sin componentes vacíos;
-- sin .;
-- sin ..;
+- sin `.`;
+- sin `..`;
+- sin drive/UNC de Windows;
+- normalización Unicode NFC;
 - no case folding;
-- orden por bytes UTF-8 canónicos.
+- máximo 4096 bytes UTF-8;
+- orden lexicográfico por bytes UTF-8 NFC.
+
+Si dos nombres distintos colapsan al mismo path tras NFC, el manifest se rechaza
+por duplicate path.
 
 ### 9.4. Metadata profile base
 
-No incluye por defecto:
+`BASE = 0x0001`.
 
+No incluye:
 - mtime;
 - ctime;
 - uid;
 - gid;
-- inode.
+- inode;
+- executable bit.
 
-Puede incluir executable bit mediante un profile ID separado.
+Un futuro profile que incluya executable bit necesita un profile ID distinto.
 
-### 9.5. Leyes
+### 9.5. Symlink policy
+
+Default: REJECT.
+
+TEXT mode:
+- lee `os.readlink`;
+- normaliza el texto a NFC;
+- no resuelve el target;
+- no sigue `..`, absolute targets ni loops;
+- compromete exactamente el texto mediante TreeRoot.
+
+### 9.6. Wire
+
+ManifestEntry V1 usa magic `SIGTENT1` y TLV:
+1. path;
+2. entry type;
+3. metadata profile;
+4. byte_length;
+5. TreeRoot wire;
+6. optional trajectory digest wire.
+
+Manifest V1 usa magic `SIGTMNF1` y TLV:
+1. manifest profile;
+2. sequence de entries ordenada canónicamente.
+
+Límites V1:
+- máximo 65,535 entries por count field;
+- máximo 1 MiB por entry wire;
+- máximo 8 MiB por manifest record.
+
+### 9.7. Trajectory binding boundary
+
+Si una entry regular incluye un SigmaDigestV3, ST1 compromete exactamente sus bytes.
+ST1 sólo exige el magic estructural `SIGMA3DG`: no convierte esa presencia en una
+afirmación de validez o message binding. Esa verificación pertenece a SV/SA.
+
+### 9.8. Leyes
 
 Traversal independence:
 
@@ -455,7 +506,25 @@ Root independence:
 
 Content sensitivity:
 
-    si una entrada cambia su TreeRoot o SigmaDigest incluido, cambia el manifest canónico.
+    cambiar TreeRoot, path, entry type o SigmaDigest incluido cambia el manifest
+    canónico salvo colisión subyacente en el componente comprometido.
+
+Cross-platform canonicality:
+
+    LogicalTree_Linux = LogicalTree_macOS
+      => Manifest_Linux = Manifest_macOS
+
+para nombres representables bajo el profile V1.
+
+### 9.9. Complejidad
+
+Para B bytes leídos y F entries:
+
+    T_manifest = O(m B + F log F)
+    IO_manifest = O(B + F)
+    M_manifest = O(F) + max_file O(chunk + m log N_file)
+
+con m=4 y path length acotado por profile.
 
 ## 10. Familia B — Sigma Trajectory Product Surface
 

@@ -29,18 +29,18 @@ ST1-O07	ST	ST1	Content change changes manifest	differential fixtures	CANDIDATE	Y
 ST1-O08	ST	ST1	Optional trajectory digest is exactly bound	manifest mutation tests	CANDIDATE	NO
 ST1-O09	ST	ST1	Canonical ordering by UTF-8 bytes	property tests	CANDIDATE	YES
 ST1-O10	ST	ST1	Manifest complexity contract	scale benchmark	CANDIDATE	NO
-ST2-O01	ST	ST2	Inclusion proof reconstructs root	property + independent verifier	PLANNED	YES
-ST2-O02	ST	ST2	Leaf position is bound	single-field mutation	PLANNED	YES
-ST2-O03	ST	ST2	Left/right orientation is bound	sibling swap tests	PLANNED	YES
-ST2-O04	ST	ST2	Length/count metadata is bound	mutation tests	PLANNED	YES
-ST2-O05	ST	ST2	Tree profile is bound	cross-profile negative tests	PLANNED	YES
-ST2-O06	ST	ST2	Independent proof verifier exists	reference consumer	PLANNED	YES
-ST2-O07	ST	ST2	Inclusion proof size O(m log N)	scale ledger	PLANNED	NO
-ST2-O08	ST	ST2	Range proof binds exact interval	property tests	PLANNED	YES
-ST2-O09	ST	ST2	Range cover is canonical	exhaustive small-tree proof + properties	PLANNED	YES
-ST2-O10	ST	ST2	Partial edge chunks are exact	boundary fixtures	PLANNED	YES
-ST2-O11	ST	ST2	Range verification needs no rest-of-object	I/O instrumentation	PLANNED	YES
-ST2-O12	ST	ST2	Invalid ranges reject before expensive hashing	negative + instrumentation	PLANNED	YES
+ST2-O01	ST	ST2	Inclusion proof reconstructs root	property + independent verifier	ACTIVE	YES
+ST2-O02	ST	ST2	Leaf position is bound	single-field mutation	ACTIVE	YES
+ST2-O03	ST	ST2	Left/right orientation is bound	sibling swap tests	ACTIVE	YES
+ST2-O04	ST	ST2	Length/count metadata is bound	mutation tests	ACTIVE	YES
+ST2-O05	ST	ST2	Tree profile is bound	cross-profile negative tests	ACTIVE	YES
+ST2-O06	ST	ST2	Independent proof verifier exists	reference consumer	ACTIVE	YES
+ST2-O07	ST	ST2	Inclusion proof size O(m log N)	scale ledger	ACTIVE	NO
+ST2-O08	ST	ST2	Range proof binds exact interval	property tests	ACTIVE	YES
+ST2-O09	ST	ST2	Range cover is canonical	exhaustive small-tree proof + properties	ACTIVE	YES
+ST2-O10	ST	ST2	Partial edge chunks are exact	boundary fixtures	ACTIVE	YES
+ST2-O11	ST	ST2	Range verification needs no rest-of-object	I/O instrumentation	ACTIVE	YES
+ST2-O12	ST	ST2	Invalid ranges reject before expensive hashing	negative + instrumentation	ACTIVE	YES
 ST3-O01	ST	ST3	Resume equals direct build	random split differential	PLANNED	YES
 ST3-O02	ST	ST3	Checkpoint frontier normalized	codec + property	PLANNED	YES
 ST3-O03	ST	ST3	Tail strictly below chunk size	boundary tests	PLANNED	YES

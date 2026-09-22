@@ -255,69 +255,250 @@ Con B bytes, N hojas y m = 4 branches:
 
 ### 5.1. Objeto
 
-Una prueba de inclusión contiene:
+Una prueba de inclusión es autocontenida respecto a la raíz declarada y contiene:
 
-- TreeProfile;
-- root identity;
-- total byte length;
-- total leaf count;
+- TreeProfile V1;
+- TreeRoot V1 completo;
 - target leaf index;
-- target byte offset;
-- target byte length;
-- path geometry;
-- sibling digest vectors.
+- target leaf byte length;
+- secuencia leaf-to-root de InclusionStepV1.
 
-La geometría se almacena una vez y cada sibling transporta un vector de cuatro digests.
+Cada InclusionStepV1 contiene:
 
-### 5.2. Contrato
+- side = LEFT o RIGHT, que indica dónde se sitúa el sibling respecto al nodo
+  reconstruido;
+- un TreeNode V1 sibling completo: start_leaf, leaf_count, byte_length, height y
+  vector de cuatro digests.
 
-    prove_leaf(tree_index, i) -> InclusionProof
+El target byte offset no se serializa: se deriva de forma única como
 
-    verify_leaf(root, leaf_bytes, proof) -> VerifiedLeaf | Rejected
+    leaf_index * 65,536
 
-VerifiedLeaf incluye root reconstruido, leaf identity y proof identity.
+para evitar una segunda autoridad de geometría.
 
-### 5.3. Ley principal
+### 5.2. Wire
 
-Para toda hoja válida i:
+InclusionStep magic:
 
-    verify_leaf(root(T), leaf_i, prove_leaf(T, i)) = Verified
+    SIGTPST1
 
-### 5.4. Complejidad
+Campos:
+1. side:u16;
+2. sibling TreeNode V1 wire.
 
-- proof size: O(m log N);
-- generation con index: O(m log N);
-- verification: O(m log N);
-- verification memory puede mantenerse O(m) más parser.
+InclusionProof magic:
+
+    SIGTIPF1
+
+Campos:
+1. TreeProfile V1;
+2. TreeRoot V1;
+3. leaf_index:u64;
+4. leaf_byte_length:u32;
+5. secuencia canónica de InclusionStep wires.
+
+El constructor/parser valida toda la geometría antes de hacer hashing:
+- path length exacta;
+- side exacto en cada nivel;
+- sibling start/count/length/height exactos;
+- leaf length derivada de TreeRoot;
+- profile/root profile idénticos.
+
+### 5.3. Contrato
+
+Con un índice efímero ya construido:
+
+    index.prove_leaf(i) -> InclusionProofV1
+
+One-shot:
+
+    prove_leaf(data, i) -> InclusionProofV1
+
+Verificación:
+
+    verify_inclusion(leaf_bytes, proof) -> bool
+
+El proof contiene la TreeRoot contra la que se reconstruye. Un consumidor que
+quiera imponer una root externa compara además proof.root con su identidad esperada.
+
+### 5.4. Ley principal
+
+Para toda hoja válida i de X:
+
+    verify_inclusion(
+      leaf_i,
+      TreeProofIndex(X).prove_leaf(i)
+    ) = true
+
+La verificación comienza reconstruyendo la leaf frame exacta y aplica cada sibling
+en su orientación declarada mediante la misma ley canónica Parent de ST0.
+
+### 5.5. Binding
+
+Cambiar cualquiera de:
+- leaf bytes;
+- leaf index;
+- leaf length;
+- sibling orientation;
+- sibling geometry;
+- sibling digest vector;
+- TreeRoot;
+- TreeProfile;
+
+produce rechazo salvo la correspondiente colisión criptográfica subyacente.
+
+### 5.6. Complejidad
+
+Sea m=4 y N el número de hojas:
+
+    inclusion steps = O(log N)
+    proof size      = O(m log N)
+    verification    = O(m log N)
+
+TreeProofIndex es un artefacto efímero de generación, no identidad ni wire.
+Construirlo desde bytes cuesta O(mB); una vez construido, generar el camino cuesta
+O(log N) sobre nodos cacheados.
+
+En el profile V1 actual, cada nivel añadido incrementa el wire de inclusión en
+378 bytes; el sweep 1..128 hojas muestra exactamente esa pendiente.
 
 ## 6. RangeProof V1
 
 ### 6.1. Alcance
 
-Sólo rangos contiguos [a,b) dentro de un objeto inmutable.
+Sólo rangos no vacíos contiguos:
 
-Se distinguen:
+    [start, start + length)
 
-- partial first leaf;
-- perfect covered subtrees;
-- partial final leaf;
-- complement frontier necesaria para reconstruir root.
+dentro de un objeto no vacío.
 
-### 6.2. Contrato
+La proof acredita exactamente ese intervalo y reconstruye la misma TreeRoot V1
+sin leer el resto del objeto.
 
-    prove_range(index, start, length) -> RangeProof
+### 6.2. Objeto
 
-    verify_range(root, start, data, proof) -> VerifiedRange | Rejected
+RangeProofV1 contiene:
 
-### 6.3. Ley
+- TreeProfile V1;
+- TreeRoot V1;
+- start:u64;
+- length:u64;
+- prefix bytes omitidos del primer edge leaf;
+- suffix bytes omitidos del último edge leaf;
+- witness nodes del complemento.
 
-Para un rango extraído exactamente de X:
+Wire magic:
 
-    verify_range(root(Tree(X)), a, X[a:b], prove_range(Tree(X), a, b-a)) = Verified
+    SIGTRPF1
 
-### 6.4. No claims
+Campos:
+1. TreeProfile;
+2. TreeRoot;
+3. start;
+4. length;
+5. prefix;
+6. suffix;
+7. secuencia de TreeNode witnesses.
 
-Una range proof no acredita frescura, propiedad, timestamp ni trayectoria v3.
+### 6.3. Canonical complement cover
+
+Sea L=[first_leaf,last_leaf) el span de hojas que intersecta el rango.
+
+El witness cover es la única colección de subárboles canónicos maximales que
+cubre exactamente las hojas fuera de L.
+
+Definición recursiva para un subtree canonical C:
+- si C es disjunto de L, incluir C y no descender;
+- si C es singleton intersectando L, no incluirlo;
+- si C intersecta parcialmente L, dividir por la canonical largest-power split
+  de ST0 y continuar en ambos hijos.
+
+Esto produce un cover único y de cardinalidad O(log N), con a lo sumo dos
+boundary paths.
+
+### 6.4. Partial edge honesty
+
+El verificador recibe sólo:
+
+    range_bytes + RangeProofV1
+
+Para poder reconstruir las hojas de borde:
+- prefix contiene exactamente los bytes anteriores a start dentro del first leaf;
+- suffix contiene exactamente los bytes posteriores al final dentro del last leaf.
+
+Sus longitudes se derivan de start/length/TreeRoot y se validan antes de hashing.
+
+Por tanto el verifier reconstruye exactamente:
+
+    prefix || range_bytes || suffix
+
+sobre el span de hojas tocado, vuelve a hashear esas hojas con sus índices/offsets
+canónicos, añade los witness subtrees y reconstruye la raíz.
+
+### 6.5. Contrato
+
+Con índice efímero:
+
+    index.prove_range(start, length) -> RangeProofV1
+
+One-shot:
+
+    prove_range(data, start, length) -> RangeProofV1
+
+Verificación:
+
+    verify_range(range_bytes, proof) -> bool
+
+verify_range no recibe source/path/file handle. Por construcción API no puede leer
+bytes fuera de range_bytes y proof.
+
+### 6.6. Ley
+
+Para todo rango válido [a,b) de X:
+
+    verify_range(
+      X[a:b],
+      TreeProofIndex(X).prove_range(a, b-a)
+    ) = true
+
+### 6.7. Cheap rejection
+
+El helper one-shot valida tipo, positividad, overflow u64 y bounds del rango antes
+de construir TreeProofIndex o ejecutar hashing.
+
+El parser RangeProofV1 valida bounds, edge lengths y witness geometry antes de
+reconstruir leaves.
+
+### 6.8. Complejidad
+
+Witness nodes:
+
+    O(log N)
+
+Witness digest material:
+
+    O(m log N)
+
+Edge complement bytes:
+
+    <= 2 * (chunk_size - 1)
+
+Por tanto el wire total es:
+
+    O(m log N + chunk_size)
+
+donde chunk_size=65,536 es constante del profile V1.
+
+Verification I/O:
+
+    O(length + edge complements + proof wire)
+
+sin acceso al resto del objeto.
+
+### 6.9. No claims
+
+Una range proof acredita integridad estructural respecto a TreeRoot V1.
+No acredita frescura, propiedad, timestamp, provenance ni trayectoria v3.
 
 ## 7. TreeResumeCheckpoint V1
 

@@ -1,0 +1,84 @@
+test_id	stage	class	subject	oracle_or_reference	parameters	expected_result	closure_role
+TREE-KAT-001	ST0	T1	Tree empty/reference	KAT fixture	B=0	exact root match	BLOCKING
+TREE-KAT-002	ST0	T1	Chunk boundaries	functional reference	B={1,65535,65536,65537}	exact root match	BLOCKING
+TREE-PROP-001	ST0	T2	Read partition invariance	one-shot reference	random read partitions	same TreeRoot	BLOCKING
+TREE-DIFF-001	ST0	T3	Optimized vs pure TreeCore	pure functional reference	random bytes and sizes	byte-identical root/frontier	BLOCKING
+TREE-DIFF-002	ST0	T3	Worker/backend neutrality	serial reference	workers={1,2,3,4,8}	byte-identical root	BLOCKING
+TREE-ADV-001	ST0	T4	Invalid node adjacency	none	random invalid children	reject	BLOCKING
+TREE-ADV-002	ST0	T4	Duplicate frontier heights	none	random malformed frontier	reject	BLOCKING
+TREE-FUZZ-001	ST0	T5	Tree codecs	round-trip invariant	>=100k mutations	no crash; invalid rejects	BLOCKING
+TREE-MUT-001	ST0	T5	Codec checks	mutation tool/schema corpus	remove/reorder/duplicate fields	mutations detected	BLOCKING
+TREE-SCALE-001	ST0	T6	Build scaling	complexity model	B geometric sweep	time ~ O(B), frontier memory ~ O(log N)	BLOCKING
+TREE-LEGACY-001	ST0	T3	v2.2 TreeWide compatibility	frozen v2.2 corpus	all historical fixtures	exact historical root under legacy adapter	BLOCKING
+MAN-PROP-001	ST1	T2	Traversal permutation	canonical manifest	random entry orders	same bytes	BLOCKING
+MAN-PROP-002	ST1	T2	Absolute root relocation	canonical manifest	same logical tree in different root	same bytes	BLOCKING
+MAN-META-001	ST1	T2	Base metadata policy	canonical manifest	mtime-only mutation	same base manifest	REQUIRED
+MAN-META-002	ST1	T2	Executable profile	canonical manifest	executable bit mutation	changes only declared profile	REQUIRED
+MAN-ADV-001	ST1	T4	Path traversal	none	../, absolute, NUL	reject	BLOCKING
+MAN-ADV-002	ST1	T4	Symlink loop	none	cyclic symlinks	reject/no-follow by default	BLOCKING
+MAN-UNICODE-001	ST1	T2	UTF-8 byte ordering	reference sorter	multilingual paths	deterministic order	BLOCKING
+MAN-SCALE-001	ST1	T6	Manifest scaling	complexity model	F geometric sweep	O(B+F log F) compatible	REQUIRED
+PRF-PROP-001	ST2	T2	Inclusion proof	production TreeRoot	random trees/leaves	verify true	BLOCKING
+PRF-MUT-001	ST2	T4	Sibling corruption	production verifier	single bit per sibling	reject	BLOCKING
+PRF-MUT-002	ST2	T4	Position corruption	production verifier	leaf_index changes	reject	BLOCKING
+PRF-MUT-003	ST2	T4	Orientation corruption	production verifier	left/right swap	reject	BLOCKING
+PRF-DIFF-001	ST2	T7	Independent proof verifier	stdlib-only reference	random proof corpus	zero divergence	BLOCKING
+PRF-SCALE-001	ST2	T6	Proof size	slope model	N geometric sweep	O(log N) compatible	REQUIRED
+RNG-PROP-001	ST2	T2	Range proof	production TreeRoot	random valid ranges	verify true	BLOCKING
+RNG-EDGE-001	ST2	T1	Boundary ranges	production verifier	first/last/cross-chunk/exact-chunk	verify true	BLOCKING
+RNG-ADV-001	ST2	T4	Out of bounds	none	start/length overflow	reject early	BLOCKING
+RNG-ADV-002	ST2	T4	Mixed-tree proof	none	proof from root A data from B	reject	BLOCKING
+RNG-IO-001	ST2	T4	No rest-of-object read	I/O spy	random range	reads only supplied range + proof	BLOCKING
+RES-PROP-001	ST3	T2	Resume equivalence	direct Tree build	random prefix/suffix splits	same root	BLOCKING
+RES-PROP-002	ST3	T2	Repeated resume	direct Tree build	multiple checkpoint cycles	same root	BLOCKING
+RES-ADV-001	ST3	T4	Wrong profile	none	checkpoint/profile mismatch	reject	BLOCKING
+RES-ADV-002	ST3	T4	Corrupt frontier	none	single-field mutations	reject	BLOCKING
+RES-FAULT-001	ST3	T4	Atomic checkpoint persistence	previous checkpoint	failure injection	old checkpoint remains valid	BLOCKING
+RES-SCALE-001	ST3	T6	Restore complexity	model	N sweep	O(log N) compatible	REQUIRED
+DELTA-DIFF-001	ST4	T3	Same-length delta	full rebuild	random local edits	same root	BLOCKING
+DELTA-DIFF-002	ST4	T3	Append	full rebuild	random suffixes	same root	BLOCKING
+DELTA-PROP-001	ST4	T2	Unaffected subtree reuse	instrumented reference	random local edits	unaffected roots unchanged	BLOCKING
+DELTA-PROP-002	ST4	T2	Ancestor closure	instrumented reference	random local edits	exact ancestor invalidation	BLOCKING
+DELTA-ADV-001	ST4	T4	Boundary-shifting edit	none	insert/delete interior	RebuildRequired	BLOCKING
+DELTA-FAULT-001	ST4	T4	Atomic update	old index/root	failure injection	no partial publication	BLOCKING
+DELTA-SCALE-001	ST4	T6	Local update cost	full rebuild baseline	k={1,0.1%,1%,10%,100%}	expected sublinear local regime	BLOCKING
+ST5-PERF-001	ST5	T6	Tree build baseline	reference implementation	B geometric sweep	ledger frozen	BLOCKING
+ST5-PERF-002	ST5	T6	Proof verification	complexity model	N sweep	ledger frozen	REQUIRED
+ST5-PERF-003	ST5	T6	Memory/RSS	resource model	B sweep	ledger frozen	REQUIRED
+AUDIT-DIFF-001	SV0	T3	Audit vs v3 core	independent_v3	R12.5 corpus	exact projection/replay	BLOCKING
+AUDIT-MUT-001	SV0	T4	H_i corruption	v3 replay	single bit	reject	BLOCKING
+AUDIT-MUT-002	SV0	T4	S_i corruption	v3 replay	single bit	reject	BLOCKING
+AUDIT-MUT-003	SV0	T4	Round reorder	v3 replay	permutation	reject	BLOCKING
+AUDIT-DEEP-001	SV0	T3	Deep fidelity	independent_v3	Deep suite	branch/fold identities exact	BLOCKING
+AUDIT-VEC-001	SV0	T3	DeepVector fidelity	independent_v3	DeepVector suite	full vector chain exact	BLOCKING
+AUDIT-COMPACT-001	SV0	T3	Compact vs full audit	v3 digest	random inputs	same projected digest	BLOCKING
+TCHK-DIFF-001	SV1	T3	Trajectory resume	direct v3 evaluation	all valid i on corpus	same suffix/digest	BLOCKING
+TCHK-ADV-001	SV1	T4	Wrong P_X	none	cross-input checkpoint	reject	BLOCKING
+TCHK-ADV-002	SV1	T4	Wrong round index	none	rewind/skip	reject	BLOCKING
+TCHK-FUZZ-001	SV1	T5	Checkpoint codec	round-trip invariant	mutated wires	no crash; invalid rejects	BLOCKING
+POL-PROP-001	SV2	T2	Policy determinism	same verifier	random normalized policies	same decision	BLOCKING
+POL-PROP-002	SV2	T2	Defined monotonicity	reference relation	strict/weak pairs	strict accept => weak accept	REQUIRED
+POL-ADV-001	SV2	T4	Legacy default	none	v2.2 artifact	reject unless opt-in	BLOCKING
+POL-ADV-002	SV2	T4	Resource precheck	work counter	oversized declarations	reject before expensive work	BLOCKING
+POL-ADV-003	SV2	T4	Unsupported future profile	none	unknown IDs	Unsupported	BLOCKING
+RCPT-MUT-001	SV3	T4	Receipt binding	receipt verifier	mutate artifact/policy/result	reject signature or identity	BLOCKING
+BATCH-DIFF-001	SV3	T3	Batch pointwise equality	single verify	random mixed inputs	exact per-item equality	BLOCKING
+BATCH-FAULT-001	SV3	T4	Item isolation	single verify	one failing item	others unaffected	BLOCKING
+ART-KAT-001	SA0	T1	Artifact identity	KAT fixture	TREE/TRAJECTORY/DUAL	stable ArtifactId	BLOCKING
+ART-FUZZ-001	SA0	T5	Artifact codec	round-trip invariant	mutated wires	no crash; invalid rejects	BLOCKING
+ART-MUT-001	SA0	T4	Profile/evidence mismatch	none	missing/extra evidence	reject	BLOCKING
+ART-PARENT-001	SA0	T2	Parent binding	identity function	parent mutations	ArtifactId changes	REQUIRED
+DUAL-DIFF-001	SA1	T3	Dual logical conjunction	separate Tree/v3 verifiers	random artifacts	exact AND semantics	BLOCKING
+DUAL-FAIL-001	SA1	T4	Tree fail attribution	separate verifiers	corrupt Tree side	Tree failure preserved	BLOCKING
+DUAL-FAIL-002	SA1	T4	Trajectory fail attribution	separate verifiers	corrupt v3 side	Trajectory failure preserved	BLOCKING
+DUAL-POL-001	SA1	T3	Policy integration	policy verifier	TREE/TRAJECTORY/DUAL modes	exact requirement	BLOCKING
+PROV-ADV-001	SA2	T4	Unknown claim handling	none	unknown type	explicit reject/future mode only	BLOCKING
+SIG-KAT-001	SA2	T1	Artifact signature	standard Ed25519 verifier	frozen fixture	verify true	BLOCKING
+SIG-MUT-001	SA2	T4	Signature scope	standard verifier	mutate canonical record	reject	BLOCKING
+REL-COMPAT-001	REL0	T3	v2.2 regression	frozen corpus	full suite	byte exact	BLOCKING
+REL-COMPAT-002	REL0	T3	v3 R12 regression	frozen corpus	full suite	byte exact	BLOCKING
+REL-COMPAT-003	REL0	T3	v3 R12.5 regression	frozen corpus	full suite	byte exact	BLOCKING
+REL-REF-001	REL1	T7	Independent Tree/artifact consumer	product corpus	all new wires	zero divergence	BLOCKING
+REL-WHEEL-001	REL2	T8	Isolated wheel consumer	installed package	core workflows	pass	BLOCKING
+REL-DOC-001	REL2	T8	Executable docs	installed package	all examples	pass	BLOCKING
+REL-ADV-001	REL3	T4	Adversarial release review	obligations ledger	all blocking obligations	manual PASS	BLOCKING

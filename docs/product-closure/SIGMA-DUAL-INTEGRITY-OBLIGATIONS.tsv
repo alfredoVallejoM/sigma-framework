@@ -112,3 +112,93 @@ REL2-O01	REL	REL2	Clean wheel works outside checkout	isolated install smoke	PLAN
 REL2-O02	REL	REL2	SBOM/package data complete	release artifact audit	PLANNED	YES
 REL2-O03	REL	REL2	Documentation examples execute	doctest/example runner	PLANNED	YES
 REL3-O01	REL	REL3	Manual adversarial release review closes all blocking obligations	obligation-by-obligation review	PLANNED	YES
+PX0-O01	PX	PX0	Persistent index never changes TreeRoot or ArtifactId	index/no-index identity differential	PLANNED	YES
+PX0-O02	PX	PX0	Persistent proof/delta/append results equal existing references	proof/delta differential corpus	PLANNED	YES
+PX0-O03	PX	PX0	Stale or corrupt sidecar is detected before trusted use	mutation + stale-source tests	PLANNED	YES
+PX0-O04	PX	PX0	Index publication is atomic and resource-bounded	failure injection + mmap/RSS ledger	PLANNED	YES
+PX1-O01	PX	PX1	Store recomputes canonical ArtifactId before publication	wrong-key/ID negative tests	PLANNED	YES
+PX1-O02	PX	PX1	Repeated put of identical artifact is idempotent	dedup/concurrency tests	PLANNED	YES
+PX1-O03	PX	PX1	Crash cannot publish partial artifact/store metadata	failure injection	PLANNED	YES
+PX1-O04	PX	PX1	Garbage collection preserves all artifacts reachable from declared roots	graph/GC property tests	PLANNED	YES
+PX2-O01	PX	PX2	Lineage graph reflects identity-bound parent ArtifactIds exactly	artifact/graph differential	PLANNED	YES
+PX2-O02	PX	PX2	Cycles and cycle policy are explicit	cycle adversarial tests	PLANNED	YES
+PX2-O03	PX	PX2	Parents/children/ancestor queries are deterministic	query property tests	PLANNED	YES
+PX2-O04	PX	PX2	Unresolved external parents remain explicit, never silently dropped	strict/external policy tests	PLANNED	YES
+PX3-O01	PX	PX3	Local and remote stores preserve byte-identical canonical artifacts	backend differential	PLANNED	YES
+PX3-O02	PX	PX3	Retry and duplicate remote writes are idempotent	fault/retry injection	PLANNED	YES
+PX3-O03	PX	PX3	Resumed downloads/uploads verify integrity before publication	interrupted-transfer tests	PLANNED	YES
+PX3-O04	PX	PX3	Credentials, cache state and remote object metadata do not alter ArtifactId	identity boundary tests	PLANNED	YES
+PX4-O01	PX	PX4	Gateway decisions and receipts equal local library API	HTTP/local differential	PLANNED	YES
+PX4-O02	PX	PX4	Request/resource limits reject before expensive hashing or buffering	instrumented bomb-body tests	PLANNED	YES
+PX4-O03	PX	PX4	Cancellation/timeouts isolate requests without corrupting shared state	concurrency/failure tests	PLANNED	YES
+PX4-O04	PX	PX4	Secrets and raw credentials never enter receipts or structured logs	log/receipt redaction audit	PLANNED	YES
+PX5-O01	PX	PX5	Same DSL source compiles deterministically to same PolicyId	compiler KAT + repeatability	PLANNED	YES
+PX5-O02	PX	PX5	Unknown keys and semantic conflicts reject explicitly	negative parser/semantic tests	PLANNED	YES
+PX5-O03	PX	PX5	Units and limits normalize canonically	unit normalization properties	PLANNED	YES
+PX5-O04	PX	PX5	Decompile/inspect preserves normalized policy meaning	compile-decompile differential	PLANNED	YES
+IX0-O01	IX	IX0	OCI/ORAS push-pull round-trip preserves Sigma artifact bytes	registry round-trip fixtures	PLANNED	YES
+IX0-O02	IX	IX0	OCI digest and Sigma ArtifactId remain distinct identities	identity API/docs tests	PLANNED	YES
+IX0-O03	IX	IX0	Registry metadata never enters ArtifactId	metadata mutation differential	PLANNED	YES
+IX0-O04	IX	IX0	Pulled artifact can be verified offline after canonical extraction	offline verification fixtures	PLANNED	YES
+IX1-O01	IX	IX1	Sigstore signing/bundle attachment does not change ArtifactId	adapter differential	PLANNED	YES
+IX1-O02	IX	IX1	Issuer and subject identity requirements are explicit policy inputs	identity-policy tests	PLANNED	YES
+IX1-O03	IX	IX1	Rekor inclusion is a separate policy fact from artifact validity	claim-boundary tests	PLANNED	YES
+IX1-O04	IX	IX1	Sigma receipt signatures and Sigstore signatures remain distinguishable	cross-signature negative tests	PLANNED	YES
+IX2-O01	IX	IX2	Sigma artifacts map canonically to in-toto subjects/materials	adapter schema corpus	PLANNED	YES
+IX2-O02	IX	IX2	Unsupported in-toto/SLSA semantics remain explicit	unsupported-field tests	PLANNED	YES
+IX2-O03	IX	IX2	SLSA level is never inferred from opaque provenance bytes	claim audit + negative tests	PLANNED	YES
+IX2-O04	IX	IX2	External attestation digests never replace ArtifactId	identity boundary differential	PLANNED	YES
+IX3-O01	IX	IX3	TUF metadata verification precedes Sigma target verification	ordered verifier instrumentation	PLANNED	YES
+IX3-O02	IX	IX3	TUF freshness/rollback/freeze claims remain TUF-specific	claim boundary review	PLANNED	YES
+IX3-O03	IX	IX3	Sigma references in TUF target metadata round-trip canonically	target metadata fixtures	PLANNED	YES
+IX4-O01	IX	IX4	All signing backends receive the same canonical signing input	mock backend differential	PLANNED	YES
+IX4-O02	IX	IX4	Private key material is never serialized into artifact/receipt/log output	secret-leak audit	PLANNED	YES
+IX4-O03	IX	IX4	Signature algorithm allowlist is closed and explicit	unsupported algorithm tests	PLANNED	YES
+IX4-O04	IX	IX4	Backend failure never silently falls back to another key/backend	failure injection	PLANNED	YES
+IX5-O01	IX	IX5	Transparency inclusion is separate from semantic artifact validity	claim/result schema tests	PLANNED	YES
+IX5-O02	IX	IX5	Log inclusion and consistency proofs verify against explicit checkpoints	log proof differential	PLANNED	YES
+IX5-O03	IX	IX5	Log timestamps remain log-specific claims, not trusted product time	docs/API audit	PLANNED	YES
+IX5-O04	IX	IX5	Transparency receipts are auxiliary and never change ArtifactId	identity differential	PLANNED	YES
+ML0-O01	ML	ML0	Data/ML metadata profiles are explicitly versioned	codec/profile KAT	PLANNED	YES
+ML0-O02	ML	ML0	Identity-bound and advisory metadata fields are disjoint by schema	schema audit + mutations	PLANNED	YES
+ML0-O03	ML	ML0	Advisory/mutable metadata changes do not alter ArtifactId	identity differential	PLANNED	YES
+ML0-O04	ML	ML0	Unknown metadata profiles return Unsupported explicitly	negative parser tests	PLANNED	YES
+ML1-O01	ML	ML1	Format inspection never executes arbitrary model/user code	malicious fixture tests	PLANNED	YES
+ML1-O02	ML	ML1	Tensor/column/chunk inventories are deterministic	format differential fixtures	PLANNED	YES
+ML1-O03	ML	ML1	Logical object ranges map exactly to physical byte ranges	mapping property tests	PLANNED	YES
+ML1-O04	ML	ML1	Generated Tree range proofs verify the mapped physical regions	proof/adapter differential	PLANNED	YES
+ML2-O01	ML	ML2	Top-level sharded artifact binds ordered shard ArtifactIds	shard-order mutation tests	PLANNED	YES
+ML2-O02	ML	ML2	Missing and duplicate shards reject explicitly	negative shard corpus	PLANNED	YES
+ML2-O03	ML	ML2	Partial shard verification policy is explicit	policy matrix tests	PLANNED	YES
+ML2-O04	ML	ML2	Changed shard updates preserve unaffected shard identities/integrity	incremental shard differential	PLANNED	YES
+ML3-O01	ML	ML3	Registry push/pull preserves canonical Sigma artifact/evidence bytes	integration round-trip corpus	PLANNED	YES
+ML3-O02	ML	ML3	External registry metadata does not change ArtifactId	metadata mutation tests	PLANNED	YES
+ML3-O03	ML	ML3	Pulled cache entries verify before trusted reuse	cache corruption tests	PLANNED	YES
+ML3-O04	ML	ML3	Lineage/evidence attachments round-trip without changing core identity	adapter differential	PLANNED	YES
+NR0-O01	NR	NR0	Rust core reproduces every frozen Tree/Artifact/Policy/Receipt KAT	cross-language KAT gate	PLANNED	YES
+NR0-O02	NR	NR0	Rust parser accept/reject semantics match Python/reference corpus	parser differential/fuzz	PLANNED	YES
+NR0-O03	NR	NR0	Unsafe Rust is absent or separately justified and reviewed	code audit	PLANNED	YES
+NR0-O04	NR	NR0	Native implementation cannot alter existing wire/ID semantics	full corpus regression	PLANNED	YES
+NR1-O01	NR	NR1	Pure-Python and Rust-backed Python APIs produce identical bytes/results	backend differential	PLANNED	YES
+NR1-O02	NR	NR1	Exceptions, policy limits and unsupported cases remain semantically equivalent	negative backend differential	PLANNED	YES
+NR1-O03	NR	NR1	Native backend fallback/availability is explicit, never silent semantic downgrade	backend selection tests	PLANNED	YES
+NR1-O04	NR	NR1	Performance claims are published only after conformance closure	ledger/review gate	PLANNED	NO
+NR2-O01	NR	NR2	Go SDK parses/serializes canonical wires byte-identically	cross-language corpus	PLANNED	YES
+NR2-O02	NR	NR2	Go verification results match reference consumer where supported	verifier differential	PLANNED	YES
+NR2-O03	NR	NR2	Unsupported full Trajectory evaluation is explicit until implemented	capability tests	PLANNED	YES
+NR3-O01	NR	NR3	JS/WASM parses and serializes canonical wires byte-identically	browser/node KAT corpus	PLANNED	YES
+NR3-O02	NR	NR3	JS/WASM Tree proof verification matches reference verifier	proof differential	PLANNED	YES
+NR3-O03	NR	NR3	WASM/browser memory ceilings and large-input failures are explicit	memory/adversarial tests	PLANNED	YES
+NR3-O04	NR	NR3	Node and browser/WASM supported operations agree semantically	cross-runtime differential	PLANNED	YES
+AX0-O01	AX	AX0	RangeProof V1 bytes and semantics remain unchanged	frozen ST2 corpus regression	PLANNED	YES
+AX0-O02	AX	AX0	Subchunk proof geometry has a separate profile/version	codec/design audit	PLANNED	YES
+AX0-O03	AX	AX0	Disclosure bound is derived exactly for each registered subchunk profile	boundary/exhaustive tests	PLANNED	YES
+AX0-O04	AX	AX0	Proof-size/verification/disclosure tradeoff has a complexity ledger	scale benchmark	PLANNED	YES
+AX1-O01	AX	AX1	Selective-disclosure statement language is explicit and versioned	statement codec/spec review	PLANNED	YES
+AX1-O02	AX	AX1	Threat model and trusted-setup assumptions are explicit	security design review	PLANNED	YES
+AX1-O03	AX	AX1	No custom zero-knowledge primitive is introduced	primitive/dependency audit	PLANNED	YES
+AX1-O04	AX	AX1	Privacy and soundness claims are scoped to selected proof system/statement	external-reference + claim review	PLANNED	YES
+AX2-O01	AX	AX2	Untrusted cache/peer cannot alter locally accepted verification result	cache poisoning adversarial suite	PLANNED	YES
+AX2-O02	AX	AX2	Distributed cache/proof keys are content-addressed	key determinism tests	PLANNED	YES
+AX2-O03	AX	AX2	Received artifacts/proofs are always verified locally before trust	instrumentation tests	PLANNED	YES
+AX2-O04	AX	AX2	Backpressure/cancellation/resource limits are explicit under remote load	protocol load/failure tests	PLANNED	YES

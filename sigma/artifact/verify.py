@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hmac
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 from sigma.outputs.digest_v3 import SigmaDigestV3, digest_from_evaluation_v3
@@ -545,9 +545,7 @@ def verify_artifact_v1(
     artifact: SigmaArtifactV1,
     *,
     policy: VerificationPolicyV1 | None = None,
-    capabilities: VerificationCapabilitiesV1 = field(
-        default_factory=VerificationCapabilitiesV1
-    ),
+    capabilities: VerificationCapabilitiesV1 | None = None,
 ) -> ArtifactVerificationResultV1:
     """Verify SA0 primary evidence with independent side attribution."""
 
@@ -556,14 +554,15 @@ def verify_artifact_v1(
     selected = policy if policy is not None else VerificationPolicyV1()
     if not isinstance(selected, VerificationPolicyV1):
         raise TypeError("policy must be VerificationPolicyV1")
-    if not isinstance(capabilities, VerificationCapabilitiesV1):
+    caps = capabilities if capabilities is not None else VerificationCapabilitiesV1()
+    if not isinstance(caps, VerificationCapabilitiesV1):
         raise TypeError("capabilities must be VerificationCapabilitiesV1")
     canonical_source = _coerce_source(source)
 
     preflight = _policy_preflight(
         artifact,
         selected,
-        capabilities,
+        caps,
         canonical_source,
     )
     if preflight is not None:

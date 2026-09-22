@@ -1,6 +1,6 @@
 # SV1 — Trajectory Checkpoint Implementation Evidence
 
-Status: **CANDIDATE — SEMANTIC IMPLEMENTATION/REVIEW COMPLETE; RUNTIME GATE PENDING**  
+Status: **COMPLETE — ALL-INDEX RUNTIME GATE + REVIEW PASSED**  
 Reviewed implementation baseline: `2c47a2fff90e1000b20e6917e574df29cb2dc238`  
 SV0 baseline: `03f8663c12187388c3e67de6958bd58921aaa45b`  
 Date: 2026-09-22
@@ -126,7 +126,7 @@ Tests cover:
 - missing/duplicate/reordered/unknown TLV fields;
 - state/history/window-prefix mutations.
 
-## 9. Gate prepared
+## 9. Executed closure gate
 
 `sv1_gate.py` requires:
 - >=60 independent evaluations;
@@ -142,7 +142,33 @@ For every index it requires:
 - exact final digest;
 - codec round-trip.
 
-The gate produces deterministic checkpoint/digest stream hashes.
+Executed on GitHub Actions run `35783661720` against commit
+`5fa4ddc38a159742866acc2ed6a81aa2bdbfa4d4`.
+
+Result:
+
+    passed = true
+    closure_eligible = true
+    evaluations = 60
+    all_index_cases = 1,214
+    directed_mutations = 1,946
+    source_rebinds = 30
+
+Frozen streams:
+
+    checkpoint:
+    5e4205ef191c7fd53553d88383ec617b3e8424f85ff33df0a246d8d0faf72ec6
+
+    continuation digest:
+    26f5f9d4ed8df5b51de0c7bb74c158c276acf7e9342c58ac790b1b05b1516fe9
+
+Frozen report:
+
+    SV1-GATE-REPORT.json
+
+Report SHA-256:
+
+    0c67644a01d0537999af18e2c0dbfec2e1748a0a86ecbaa180b8513fdbe4ccae
 
 ## 10. Complexity status
 
@@ -162,15 +188,15 @@ decision.
 
 ## 11. Obligation disposition
 
-SV1-O01 continuation equivalence — **CANDIDATE PASS**  
-SV1-O02 final digest identity — **CANDIDATE PASS**  
-SV1-O03 binding/context/parameters immutable — **CANDIDATE PASS**  
-SV1-O04 round index exactness — **CANDIDATE PASS**  
-SV1-O05 internal checkpoint distinct from source verification — **CANDIDATE PASS**  
-SV1-O06 checkpoint codec canonical — **CANDIDATE PASS**
+SV1-O01 continuation equivalence — **PASS**  
+SV1-O02 final digest identity — **PASS**  
+SV1-O03 binding/context/parameters immutable — **PASS**  
+SV1-O04 round index exactness — **PASS**  
+SV1-O05 internal checkpoint distinct from source verification — **PASS**  
+SV1-O06 checkpoint codec canonical — **PASS**
 
-These dispositions are based on implementation/reference/test review. Runtime
-promotion still requires executing the gate.
+These dispositions are now supported by the executed all-index gate and focused
+test suite.
 
 ## 12. Isolation review
 
@@ -186,17 +212,32 @@ SV1 does not modify:
 
 It is an additive trajectory product surface.
 
-## 13. Promotion requirement
+## 13. Runtime findings and final disposition
 
-Current correct state:
+The first full-chain execution exposed one real source-rebind edge case: a wrong
+source can derive a shorter trajectory, making the checkpoint index unavailable.
+The API initially raised ValueError.
 
-    SV1 CANDIDATE
+Remediation:
 
-Promotion to COMPLETE requires:
-1. SV0 COMPLETE;
-2. run `python -m scripts.product_closure.sv1_gate --report .sigma/sv1-gate.json`;
-3. focused SV1 tests PASS;
-4. post-execution O01..O06 review.
+    wrong source with shorter reevaluated trajectory -> false
 
-Empirical performance characterization may be added later and is not used here
-to overstate semantic closure.
+rather than exception.
+
+The subsequent isolated run passed:
+
+    compileall PASS
+    Ruff PASS
+    Mypy PASS
+    pytest 41 passed, 1 skipped
+    SV1 gate PASS
+
+Manual post-execution review:
+
+    SV1-O01..SV1-O06 PASS
+
+Final status:
+
+    SV1 COMPLETE
+
+No empirical performance claim is introduced by this closure.

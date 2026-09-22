@@ -273,3 +273,47 @@ def test_wrong_source_is_rejected_after_policy_checks():
     )
     assert decision.kind is VerificationDecisionKindV1.REJECTED
     assert decision.code is VerificationDecisionCodeV1.VERIFICATION_FAILED
+
+
+def _policy_fields(encoded: bytes) -> list[tuple[int, bytes]]:
+    body_length = int.from_bytes(encoded[10:14], "big")
+    assert body_length == len(encoded) - 14
+    offset = 14
+    fields = []
+    while offset < len(encoded):
+        tag = int.from_bytes(encoded[offset : offset + 2], "big")
+        length = int.from_bytes(encoded[offset + 2 : offset + 6], "big")
+        offset += 6
+        fields.append((tag, encoded[offset : offset + length]))
+        offset += length
+    return fields
+
+
+def _policy_record(template: bytes, fields: list[tuple[int, bytes]]) -> bytes:
+    body = b"".join(
+        tag.to_bytes(2, "big") + len(value).to_bytes(4, "big") + value
+        for tag, value in fields
+    )
+    return template[:10] + len(body).to_bytes(4, "big") + body
+
+
+def test_policy_codec_rejects_missing_duplicate_reordered_unknown_fields():
+    encoded = VerificationPolicyV1().to_bytes()
+    fields = _policy_fields(encoded)
+    mutations = []
+    for index, field in enumerate(fields):
+        mutations.append(_policy_record(encoded, fields[:index] + fields[index + 1 :]))
+        mutations.append(
+            _policy_record(
+                encoded,
+                fields[: index + 1] + [field] + fields[index + 1 :],
+            )
+        )
+    reordered = list(fields)
+    reordered[0], reordered[1] = reordered[1], reordered[0]
+    mutations.append(_policy_record(encoded, reordered))
+    mutations.append(_policy_record(encoded, fields + [(0xFFFF, b"")]))
+
+    for mutated in mutations:
+        with pytest.raises(ValueError):
+            VerificationPolicyV1.from_bytes(mutated)

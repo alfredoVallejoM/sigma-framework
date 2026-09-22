@@ -7,15 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from reference.artifact_v1 import (
-    PROFILE_DUAL,
-    PROFILE_TRAJECTORY,
-    PROFILE_TREE,
-    artifact_wire as reference_artifact_wire,
-    descriptor_wire as reference_descriptor_wire,
-    identity_wire as reference_identity_wire,
-    manifest_id as reference_manifest_id,
-)
+from reference import artifact_v1 as artifact_reference
 from sigma.artifact import (
     ArtifactDescriptorV1,
     ArtifactProfileV1,
@@ -74,16 +66,16 @@ def _case(
     )
 
     reference_profile = {
-        ArtifactProfileV1.TREE: PROFILE_TREE,
-        ArtifactProfileV1.TRAJECTORY: PROFILE_TRAJECTORY,
-        ArtifactProfileV1.DUAL: PROFILE_DUAL,
+        ArtifactProfileV1.TREE: artifact_reference.PROFILE_TREE,
+        ArtifactProfileV1.TRAJECTORY: artifact_reference.PROFILE_TRAJECTORY,
+        ArtifactProfileV1.DUAL: artifact_reference.PROFILE_DUAL,
     }[profile]
-    descriptor_ref = reference_descriptor_wire(
+    descriptor_ref = artifact_reference.descriptor_wire(
         logical_name=logical_name,
         media_type=media_type,
     )
-    manifest_ref = b"" if manifest is None else reference_manifest_id(manifest.to_bytes())
-    identity_ref = reference_identity_wire(
+    manifest_ref = b"" if manifest is None else artifact_reference.manifest_id(manifest.to_bytes())
+    identity_ref = artifact_reference.identity_wire(
         profile=reference_profile,
         descriptor=descriptor_ref,
         tree_root=b"" if profile is ArtifactProfileV1.TRAJECTORY else tree.to_bytes(),
@@ -91,7 +83,7 @@ def _case(
         manifest_id=manifest_ref,
         parent_artifact_ids=parents,
     )
-    artifact_ref = reference_artifact_wire(
+    artifact_ref = artifact_reference.artifact_wire(
         identity=identity_ref,
         trajectory_audit=b"" if audit is None else audit.to_bytes(),
     )

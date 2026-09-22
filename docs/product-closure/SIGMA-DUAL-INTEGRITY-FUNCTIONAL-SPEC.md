@@ -1679,6 +1679,28 @@ TrajectoryAudit:
 
 FULL contiene más evidencia inspeccionable, no más fuerza criptográfica nominal.
 
+### 11.15. Disclosure boundary
+
+TrajectoryAudit no es una superficie de privacidad.
+
+COMPACT expone:
+- PersistentBinding;
+- todos los states S_i;
+- todos los histories H_i cuando existen;
+- layouts.
+
+FULL expone además:
+- round bindings;
+- state-frame wires;
+- branch-frame wires;
+- branch outputs;
+- fold frames.
+
+Por tanto un Artifact/Receipt posterior no debe adjuntar Audit por defecto si sólo
+necesita SigmaDigestV3. Publicar Audit es una decisión explícita de disclosure.
+
+SV0 no afirma que estos intermedios sean secretos; sólo evita afirmar lo contrario.
+
 ## 12. TrajectoryCheckpoint V1
 
 ### 12.1. Alcance

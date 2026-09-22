@@ -28,7 +28,7 @@ ALL_SUITES = (
 def test_all_indices_match_independent_checkpoint_encoder():
     rng = random.Random(0x53563144494646)
     for suite_id in ALL_SUITES:
-        for case in range(5):
+        for _case in range(5):
             message = rng.randbytes(rng.randrange(0, 49))
             salt = rng.randbytes(rng.randrange(0, 9))
             challenge = rng.randbytes(rng.randrange(0, 9))

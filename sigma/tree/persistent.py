@@ -6,6 +6,7 @@ TreeNode summaries plus optional operational source hints.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import mmap
@@ -706,10 +707,8 @@ def write_persistent_index_atomic(
         finally:
             os.close(directory_fd)
     finally:
-        try:
+        with contextlib.suppress(FileNotFoundError):
             temporary.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def read_persistent_index(
@@ -724,16 +723,18 @@ def read_persistent_index(
             source.read_bytes(),
             max_nodes=max_nodes,
         )
-    with source.open("rb") as handle:
-        with mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as mapped:
-            view = memoryview(mapped)
-            try:
-                return TreePersistentIndexV1._from_buffer(
-                    view,
-                    max_nodes=max_nodes,
-                )
-            finally:
-                view.release()
+    with (
+        source.open("rb") as handle,
+        mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as mapped,
+    ):
+        view = memoryview(mapped)
+        try:
+            return TreePersistentIndexV1._from_buffer(
+                view,
+                max_nodes=max_nodes,
+            )
+        finally:
+            view.release()
 
 
 __all__ = [

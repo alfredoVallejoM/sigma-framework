@@ -234,3 +234,31 @@ def test_manifest_rejects_entry_count_above_wire_limit():
 def test_manifest_path_length_limit_is_explicit():
     with pytest.raises(ValueError):
         canonical_relative_path("a" * 4097)
+
+
+def test_default_file_open_does_not_follow_racing_symlink(tmp_path: Path, monkeypatch):
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "symlink"):
+        pytest.skip("race-hardening test requires POSIX O_NOFOLLOW")
+    import sigma.tree.manifest as manifest_module
+
+    root = tmp_path / "tree"
+    root.mkdir()
+    victim = root / "victim"
+    victim.write_bytes(b"inside")
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"outside")
+
+    real_open = os.open
+    raced = False
+
+    def racing_open(path, flags, *args, **kwargs):
+        nonlocal raced
+        if Path(path) == victim and not raced:
+            raced = True
+            victim.unlink()
+            os.symlink("../outside", victim)
+        return real_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(manifest_module.os, "open", racing_open)
+    with pytest.raises((OSError, RuntimeError, ValueError)):
+        build_directory_manifest(root)

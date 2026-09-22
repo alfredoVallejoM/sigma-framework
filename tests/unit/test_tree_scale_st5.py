@@ -195,3 +195,19 @@ def test_manifest_file_reader_requests_at_most_one_tree_chunk(tmp_path, monkeypa
     assert manifest.entries
     assert requests
     assert max(requests) <= 65_536
+
+
+def test_streaming_range_generation_has_logarithmic_auxiliary_state():
+    block = bytes((i * 17 + 5) % 251 for i in range(65_536))
+    data = block * 128
+    start = 3
+    length = len(data) - 7
+
+    tracemalloc.start()
+    proof = prove_range_streaming(data, start, length)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    full = TreeProofIndex(data).prove_range(start, length)
+    assert proof.to_bytes() == full.to_bytes()
+    assert peak < 4 * 65_536

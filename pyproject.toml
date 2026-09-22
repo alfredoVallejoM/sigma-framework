@@ -33,6 +33,7 @@ mutation = ["mutmut>=3"]
 signatures = ["cryptography>=44"]
 
 [project.scripts]
+sigma = "sigma.product_cli:main"
 sigmahash = "sigma.cli_v2:main"
 sigmahash-v2 = "sigma.cli_v2:main"
 

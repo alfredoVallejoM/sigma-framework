@@ -9,16 +9,16 @@ DI-INV-007	BASE	BASE	Cheap validation precedes expensive work	parser/policy inst
 DI-INV-008	BASE	BASE	Positive verification returns reconstructible evidence	API contract tests	PLANNED	NO
 DI-INV-009	BASE	BASE	No unnecessary new cryptographic primitive	manual dependency/design audit	PLANNED	YES
 DI-INV-010	BASE	BASE	Every operation has complexity ledger	benchmark ledger	PLANNED	YES
-ST0-O01	ST	ST0	Deterministic chunking	unit + property	CANDIDATE	YES
-ST0-O02	ST	ST0	Leaf framing injectivity	structural proof + mutation tests	CANDIDATE	YES
-ST0-O03	ST	ST0	Node framing injectivity	structural proof + mutation tests	CANDIDATE	YES
-ST0-O04	ST	ST0	Unique normalized frontier	decomposition proof + exhaustive small n	CANDIDATE	YES
-ST0-O05	ST	ST0	Combine locality	unit + differential	CANDIDATE	NO
-ST0-O06	ST	ST0	Backend neutrality	differential scheduler tests	CANDIDATE	YES
-ST0-O07	ST	ST0	Unique empty root	KAT + negative tests	CANDIDATE	YES
-ST0-O08	ST	ST0	Legacy v2.2 isolation	legacy corpus + type/API tests	CANDIDATE	YES
-ST0-O09	ST	ST0	Resource-bounded parser	adversarial size tests + fuzz	CANDIDATE	YES
-ST0-O10	ST	ST0	Tree build/frontier complexity	complexity derivation + scale benchmark	CANDIDATE	YES
+ST0-O01	ST	ST0	Deterministic chunking	unit + property	COMPLETE	YES
+ST0-O02	ST	ST0	Leaf framing injectivity	structural proof + mutation tests	COMPLETE	YES
+ST0-O03	ST	ST0	Node framing injectivity	structural proof + mutation tests	COMPLETE	YES
+ST0-O04	ST	ST0	Unique normalized frontier	decomposition proof + exhaustive small n	COMPLETE	YES
+ST0-O05	ST	ST0	Combine locality	unit + differential	COMPLETE	NO
+ST0-O06	ST	ST0	Backend neutrality	differential scheduler tests	COMPLETE	YES
+ST0-O07	ST	ST0	Unique empty root	KAT + negative tests	COMPLETE	YES
+ST0-O08	ST	ST0	Legacy v2.2 isolation	legacy corpus + type/API tests	COMPLETE	YES
+ST0-O09	ST	ST0	Resource-bounded parser	adversarial size tests + fuzz	COMPLETE	YES
+ST0-O10	ST	ST0	Tree build/frontier complexity	complexity derivation + scale benchmark	COMPLETE	YES
 ST1-O01	ST	ST1	Canonical relative paths	path property tests	PLANNED	YES
 ST1-O02	ST	ST1	Traversal independence	metamorphic traversal permutations	PLANNED	YES
 ST1-O03	ST	ST1	Absolute root-path independence	cross-directory fixtures	PLANNED	YES

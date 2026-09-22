@@ -2893,6 +2893,268 @@ Esa ley pertenece a SA1.
 
 Tampoco suma nominalmente bits de seguridad.
 
+### 16.17. SA1 verification result schema
+
+SA1 introduce un resultado de verificación **no colapsado**:
+
+    ArtifactVerificationResultV1
+
+con:
+
+    artifact_id
+    profile
+    tree: ArtifactSideResultV1
+    trajectory: ArtifactSideResultV1
+    policy: ArtifactPolicyResultV1.
+
+Cada side result conserva:
+- status;
+- reason code;
+- reason text;
+- expected wire cuando existe;
+- actual recomputed wire cuando existe.
+
+Estados de side:
+
+    NOT_APPLICABLE
+    NOT_RUN
+    VERIFIED
+    FAILED
+    ERROR.
+
+Por tanto una verificación positiva o negativa conserva evidencia reconstruible
+de qué se comprobó en cada familia.
+
+### 16.18. Tree side
+
+Para un artifact con Tree evidence:
+
+1. comprobar byte_length antes de hashing;
+2. reconstruir TreeRoot con la única autoridad TreeBuilder;
+3. comparar el wire canónico exacto.
+
+Resultado:
+
+    tree.verified
+      iff
+    Tree(source).to_bytes()
+      =
+    artifact.tree_root.to_bytes().
+
+Source errors pertenecen al side Tree y no se reinterpretan como fallo
+Trajectory.
+
+### 16.19. Trajectory side
+
+Para un artifact con SigmaDigestV3:
+
+1. comprobar cardinality/byte_length;
+2. ejecutar evaluate_v3 usando el context del digest;
+3. reconstruir SigmaDigestV3;
+4. exigir igualdad byte por byte.
+
+Si el artifact adjunta TrajectoryAuditV3:
+- se reconstruye un Audit del mismo mode;
+- también debe ser byte-idéntico.
+
+Por tanto un audit auxiliar incoherente puede hacer fallar el side Trajectory,
+aunque su digest embebido sea correcto.
+
+### 16.20. Ley DUAL
+
+Para:
+
+    profile = DUAL
+
+se define:
+
+    dual_conjunction
+      =
+    tree.verified
+      AND
+    trajectory.verified.
+
+Y:
+
+    VerifyDual(X,A)
+      =
+    VerifyTree(X,A.tree)
+      AND
+    VerifyTrajectory(X,A.trajectory)
+
+antes de aplicar requirements adicionales de policy.
+
+No existe:
+- XOR;
+- fallback de un side al otro;
+- aceptación por "al menos uno";
+- score agregado;
+- security-bit addition.
+
+### 16.21. Failure attribution
+
+Casos distintos permanecen distintos:
+
+Tree-only failure:
+
+    tree = FAILED
+    trajectory = VERIFIED.
+
+Trajectory-only failure:
+
+    tree = VERIFIED
+    trajectory = FAILED.
+
+Both failure:
+
+    tree = FAILED
+    trajectory = FAILED.
+
+La decisión final de policy puede además ser REJECTED, pero nunca borra estos
+side results.
+
+### 16.22. Policy integration
+
+SA1 consume VerificationPolicyV1 sin cambiar su wire ni PolicyId.
+
+Artifact-level preflight aplica antes de hashing caro:
+- require_dual_evidence;
+- require_tree_evidence;
+- allow_tree_only_artifacts;
+- require_audit;
+- suite allowlist;
+- history-feedback requirement;
+- input-byte bound;
+- trajectory-round bound;
+- descriptor/metadata profile;
+- signature/provenance capabilities;
+- symlink capability;
+- Tree-proof size bound;
+- working-memory bound.
+
+Policy short-circuit produce:
+
+    side.status = NOT_RUN
+
+para evidencia que deliberadamente no se evalúa.
+
+TREE sólo puede aceptarse como Tree-only si:
+
+    allow_tree_only_artifacts = true
+
+y no contradice requirements explícitos como DUAL/Audit.
+
+TRAJECTORY se rechaza si policy exige Tree.
+
+DUAL se rechaza si policy exige condiciones adicionales que no están satisfechas.
+
+### 16.23. Source requirement
+
+SA1 es full message-binding verification.
+
+Sin source:
+
+    ArtifactPolicyResultV1.kind = Inconclusive
+    code = SOURCE_REQUIRED.
+
+No convierte un Artifact canónico en una verificación positiva sólo por ser
+parseable.
+
+### 16.24. Selective manifest trajectory criticality
+
+SA1 define tres modos explícitos:
+
+    TREE_ONLY
+    DECLARED
+    REQUIRE_ALL_FILES.
+
+TREE_ONLY:
+- verificar TreeRoot de cada regular file;
+- no verificar trajectory digests aunque estén adjuntos.
+
+DECLARED:
+- siempre verificar TreeRoot;
+- verificar Trajectory únicamente en entries que declaran trajectory_digest.
+
+REQUIRE_ALL_FILES:
+- toda regular-file entry debe declarar trajectory_digest;
+- ausencia de digest es un fallo explícito.
+
+Esto permite manifests mixtos sin inferencias ocultas.
+
+Directories/symlinks no se convierten implícitamente en trajectory-critical
+entries.
+
+### 16.25. Independent side oracle
+
+`reference/dual_verification_v1.py` no importa `sigma`.
+
+Tree:
+- usa `reference.tree_v1.root_wire`.
+
+Trajectory:
+- usa `reference.independent_v3.evaluate_suite`.
+
+La referencia devuelve separadamente:
+
+    tree_ok
+    trajectory_ok
+    tree_ok AND trajectory_ok.
+
+SA1 gate exige igualdad exacta con los side results productivos.
+
+### 16.26. Complexity contract
+
+Para B bytes de source:
+
+TREE side:
+
+    O(Tree(B)).
+
+Trajectory side:
+
+    O(SigmaV3(B)).
+
+DUAL full:
+
+    O(Tree(B) + SigmaV3(B))
+
+porque ambos commitments deben verificarse independientemente.
+
+Policy preflight:
+
+    O(policy/artifact metadata)
+
+antes de estos costes cuando puede decidir rechazo/inconclusive.
+
+Manifest selective verification:
+
+    O(sum Tree(file_i))
+      +
+    O(sum SigmaV3(file_j))
+
+sólo sobre los entries j marcados trajectory-critical por el modo explícito.
+
+SA1 no congela todavía throughput empírico.
+
+### 16.27. Claim boundary
+
+DUAL expresa conjunción de dos claims independientes.
+
+No se afirma:
+
+    security_bits(DUAL)
+      =
+    security_bits(Tree)
+      +
+    security_bits(Trajectory).
+
+El gate congela:
+
+    dual_security_width_addition_claim = false
+    tree_trajectory_claims_independent = true.
+
+
 ## 17. Provenance V1
 
 Claims iniciales:

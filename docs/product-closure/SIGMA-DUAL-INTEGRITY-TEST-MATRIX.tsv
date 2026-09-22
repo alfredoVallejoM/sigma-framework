@@ -3,7 +3,7 @@ TREE-KAT-001	ST0	T1	Tree empty/reference	KAT fixture	B=0	exact root match	BLOCKI
 TREE-KAT-002	ST0	T1	Chunk boundaries	functional reference	B={1,65535,65536,65537}	exact root match	BLOCKING
 TREE-PROP-001	ST0	T2	Read partition invariance	one-shot reference	random read partitions	same TreeRoot	BLOCKING
 TREE-DIFF-001	ST0	T3	Optimized vs pure TreeCore	pure functional reference	random bytes and sizes	byte-identical root/frontier	BLOCKING
-TREE-DIFF-002	ST0	T3	Worker/backend neutrality	serial reference	workers={1,2,3,4,8}	byte-identical root	BLOCKING
+TREE-DIFF-002	ST0	T3	Prehashed/backend reducer neutrality	direct Tree build	random canonical ordered prehashed leaves	byte-identical root	BLOCKING
 TREE-ADV-001	ST0	T4	Invalid node adjacency	none	random invalid children	reject	BLOCKING
 TREE-ADV-002	ST0	T4	Duplicate frontier heights	none	random malformed frontier	reject	BLOCKING
 TREE-FUZZ-001	ST0	T5	Tree codecs	round-trip invariant	>=100k mutations	no crash; invalid rejects	BLOCKING

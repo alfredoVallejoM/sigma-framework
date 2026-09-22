@@ -3107,3 +3107,46 @@ SV3, SA2 y ST5 pueden cerrarse antes del lanzamiento si no amenazan el calendari
 8. Cerrar cada bloque antes de abrir el siguiente dependiente.
 9. No mezclar evidencia científica R15 con evidencia de ingeniería de producto.
 10. Cada feature debe mejorar una demo o workflow real, no sólo ampliar una lista de capacidades.
+
+## Product Expansion Program
+
+El cierre Dual Integrity ya no es el límite del producto. Se registra una fase de
+expansión paralela, no bloqueante para REL3:
+
+    PX — Platform Core
+    IX — Ecosystem Interoperability
+    ML — Data / ML
+    NR — Native Runtime / SDKs
+    AX — Advanced Proof / Distribution Research.
+
+Autoridad de planificación:
+
+    docs/product-expansion/SIGMA-PRODUCT-EXPANSION-ROADMAP.md
+
+Reglas:
+
+1. SA2 -> SA3 -> REL0..REL3 conserva prioridad de release.
+2. PX/IX/ML/NR/AX pueden ejecutarse en paralelo si sus dependencias están cerradas.
+3. Ninguna etapa de expansión puede reabrir TreeRoot, SigmaDigestV3, ArtifactId,
+   PolicyId o ReceiptId congelados.
+4. Cada stage nuevo está registrado en el Stage Registry y tiene obligaciones y
+   tests de cierre en los ledgers centrales.
+5. Interoperabilidad se implementa mediante adapters; no se reimplementan OCI,
+   Sigstore, Rekor, in-toto, SLSA, TUF o KMS.
+6. Performance/native work exige conformance byte-exacta antes de publicar mejoras.
+
+Priority Wave B:
+
+    PX0 Persistent Tree Index
+    PX1 Artifact CAS / Store
+    PX2 Lineage Graph
+    PX4 Verification Gateway
+    PX5 Policy DSL
+    IX0 OCI / ORAS
+    IX1 Sigstore / Rekor
+    IX2 in-toto / SLSA
+    ML0 Data / ML Profiles
+    NR0 Rust Canonical Core
+    NR1 Python Native Bindings
+
+El resto pertenece a las waves C/D definidas en el roadmap.

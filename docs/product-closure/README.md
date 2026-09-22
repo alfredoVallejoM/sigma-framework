@@ -71,4 +71,24 @@ Evidencia local:
   `abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83`.
 
 ST1 permanece CANDIDATE porque el gate bloqueante exige todavía un peer report
-macOS que reproduzca exactamente ese fixture hash. ST2 permanece PLANNED.
+macOS que reproduzca exactamente ese fixture hash.
+
+ST2 — Inclusion and Range Proofs — está **COMPLETE** tras revisión adversaria.
+
+Cierre ST2:
+- 100,000 inclusion proofs generadas;
+- 100,000 range proofs generadas;
+- 45,760 canonical-cover cases exhaustivos;
+- 500 differential cases contra verifier independiente;
+- 20,000 proof-wire mutations sin una mutación alterada todavía válida;
+- InclusionProof wire O(m log N), pendiente exacta 378 bytes/nivel en V1;
+- RangeProof verifica sólo con range bytes + proof;
+- invalid ranges se rechazan antes de construir/hash el Tree;
+- KAT ST2 SHA-256:
+  `dea26a2bfdfe4906acf176ab8b57c1963b895c567aab7d9b614a485c5b17d674`;
+- range edge disclosure documentado explícitamente: V1 no es zero-knowledge.
+
+Evidencia normativa de cierre:
+- ST2-IMPLEMENTATION-EVIDENCE.md
+
+ST3 permanece PLANNED.

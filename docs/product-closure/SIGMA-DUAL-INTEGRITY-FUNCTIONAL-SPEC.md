@@ -3299,3 +3299,36 @@ La capa Dual Integrity se considera funcionalmente cerrada cuando:
 12. La documentación mantiene separados los claims de Tree, v3 y Artifact.
 13. Un consumer limpio instalado desde wheel puede ejecutar los workflows principales.
 14. Ninguna feature requiere modificar el freeze científico R14/R15.
+
+## 24. Programa de expansión post-core
+
+Los no-objetivos de la primera campaña siguen vigentes para el cierre v1, pero
+algunos pasan a ser objetivos explícitos de etapas posteriores.
+
+La expansión se especifica en:
+
+    docs/product-expansion/SIGMA-PRODUCT-EXPANSION-ROADMAP.md
+
+Nuevos namespaces de planificación:
+
+    PX — platform/storage/gateway/policy
+    IX — ecosystem interoperability
+    ML — Data/ML artifact profiles
+    NR — native runtime and SDKs
+    AX — advanced proof/distribution research
+
+Principio de compatibilidad:
+
+    existing canonical identities/wires are immutable inputs to expansion.
+
+En particular:
+- persistent indexes son sidecars derivados;
+- storage backends no cambian ArtifactId;
+- external signatures/attestations no cambian ArtifactId;
+- Data/ML advisory metadata no cambia identidad salvo profile explícito;
+- Rust/Go/JS deben reproducir los mismos wires;
+- nuevos proof profiles no reinterpretan RangeProof V1;
+- transparency/log/provenance claims permanecen separados de content validity.
+
+Estas etapas están registradas en el Stage Registry central con
+`blocking_for_release=NO` salvo decisión futura explícita.

@@ -1,0 +1,48 @@
+name: temporary-sa1-closure
+
+on:
+  push:
+    branches:
+      - campaign/sigma-dual-integrity-product-closure
+    paths:
+      - ".github/workflows/temporary-sa1-closure.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sa1-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,quality]"
+      - name: Compile
+        run: |
+          python -m compileall -q             sigma/artifact             reference/dual_verification_v1.py             scripts/product_closure/sa1_gate.py
+      - name: Ruff
+        run: |
+          ruff check             sigma/artifact             reference/dual_verification_v1.py             scripts/product_closure/sa1_gate.py             tests/unit/test_artifact_sa0.py             tests/differential/test_artifact_reference_sa0.py             tests/vectors/test_artifact_sa0_vectors.py             tests/unit/test_artifact_verification_sa1.py             tests/differential/test_dual_verification_reference_sa1.py             tests/unit/test_verification_policy_sv2.py
+      - name: Mypy
+        run: |
+          mypy             sigma/artifact             reference/dual_verification_v1.py
+      - name: Pytest
+        run: |
+          pytest -q             tests/unit/test_artifact_sa0.py             tests/differential/test_artifact_reference_sa0.py             tests/vectors/test_artifact_sa0_vectors.py             tests/unit/test_artifact_verification_sa1.py             tests/differential/test_dual_verification_reference_sa1.py             tests/unit/test_verification_policy_sv2.py
+      - name: SA1 gate
+        run: |
+          mkdir -p reports
+          python -m scripts.product_closure.sa1_gate --report reports/sa1-gate.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sa1-closure-report
+          path: reports/sa1-gate.json
+          if-no-files-found: warn

@@ -1,4 +1,5 @@
 name: temporary-sa0-only
+# remediation-pass: 2
 
 on:
   push:

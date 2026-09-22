@@ -69,6 +69,17 @@ DELTA-PROP-002	ST4	T2	Ancestor closure	instrumented reference	random local edits
 DELTA-ADV-001	ST4	T4	Boundary-shifting edit	none	insert/delete interior	RebuildRequired	BLOCKING
 DELTA-FAULT-001	ST4	T4	Atomic update	old index/root	failure injection	no partial publication	BLOCKING
 DELTA-SCALE-001	ST4	T6	Local update cost	full rebuild baseline	k={1,0.1%,1%,10%,100%}	expected sublinear local regime	BLOCKING
+ST5-REF-001	ST5	T7	Optimized Tree wire preservation	stdlib Tree V1 reference	>=1000 random/boundary builds	zero byte divergence	BLOCKING
+ST5-REF-002	ST5	T7	FULL vs STREAMING proof equivalence	full index + independent verifier	>=500 inclusion/range corpora	byte-identical proofs, zero divergence	BLOCKING
+ST5-COPY-001	ST5	T6	ProofIndex payload duplication	tracemalloc + memoryview identity	multi-MiB source	no second B-sized payload copy	BLOCKING
+ST5-COPY-002	ST5	T6	Range verification hidden copy	tracemalloc	near-full multi-MiB range	bounded edge/logarithmic auxiliary memory	BLOCKING
+ST5-COPY-003	ST5	T6	Streaming range generation state	tracemalloc	near-full multi-MiB range	O(log N) auxiliary state + proof output	BLOCKING
+ST5-MEM-001	ST5	T6	Streaming builder memory	tracemalloc	32 MiB via repeated fixed chunk	peak extra memory independent of B	BLOCKING
+ST5-POL-001	ST5	T4	Index budget decisions	TreeScalePolicyV1	generous/tiny budgets	FULL/STREAMING/REJECT explicit	BLOCKING
+ST5-POL-002	ST5	T4	Delta over-budget rejection	constructor bomb	budget below estimate	reject before TreeDeltaIndex construction	BLOCKING
+ST5-POL-003	ST5	T6	Conservative index estimator	measured tracemalloc peak	proof and delta audit fixtures	estimate >= measured peak	REQUIRED
+ST5-MAN-001	ST5	T6	Manifest file read bound	os.read spy	multi-chunk file	read request <= 65536 bytes	REQUIRED
+ST5-LEDGER-001	ST5	T6	Frozen scale ledger	ST5-PERFORMANCE-LEDGER.json	build/proof/resume/delta/append/manifest	ledger schema frozen and reviewed	BLOCKING
 ST5-PERF-001	ST5	T6	Tree build baseline	reference implementation	B geometric sweep	ledger frozen	BLOCKING
 ST5-PERF-002	ST5	T6	Proof verification	complexity model	N sweep	ledger frozen	REQUIRED
 ST5-PERF-003	ST5	T6	Memory/RSS	resource model	B sweep	ledger frozen	REQUIRED

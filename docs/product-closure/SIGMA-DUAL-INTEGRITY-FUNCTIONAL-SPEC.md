@@ -515,32 +515,201 @@ trayectoria v3.
 
 ## 7. TreeResumeCheckpoint V1
 
-### 7.1. Objeto
+### 7.1. Objetivo
 
-Contiene:
+Reanudar una construcción Sigma Tree V1 sin serializar estados internos opacos de
+`hashlib` y sin volver a hashear el prefijo ya comprometido.
 
-- TreeProfile;
-- completed_bytes;
-- completed_leaf_count;
+El checkpoint sólo conserva estructura canónica ST0:
+
+- TreeProfile V1;
+- número total de bytes ya consumidos;
+- número de hojas completas ya comprometidas;
+- canonical frontier de esas hojas completas;
+- tail raw de longitud estrictamente menor que 65,536 bytes;
+- source hint operativo opcional.
+
+### 7.2. Wire V1
+
+Magic:
+
+    SIGTCHK1
+
+Campos TLV:
+1. TreeProfile V1;
+2. completed_bytes:u64;
+3. completed_leaf_count:u64;
+4. TreeFrontier V1;
+5. tail bytes;
+6. optional TreeSourceHintV1 wire o vacío.
+
+SourceHint magic:
+
+    SIGTSRC1
+
+Campos:
+1. size:u64;
+2. mtime_ns:u64;
+3. inode:u64;
+4. device:u64.
+
+El source hint forma parte del checkpoint record para reproducibilidad operacional,
+pero no participa en TreeRoot ni en la semántica criptográfica de continuación.
+
+### 7.3. Invariantes canónicos
+
+La frontier de checkpoint sólo puede contener hojas completas:
+
+    frontier.byte_length
+      = completed_leaf_count * 65,536
+
+La tail satisface:
+
+    0 <= len(tail) < 65,536
+
+y:
+
+    completed_bytes
+      = frontier.byte_length + len(tail)
+
+por tanto:
+
+    completed_bytes mod 65,536 = len(tail).
+
+La frontier conserva la descomposición binaria única de ST0. No se acepta un
+TreeFrontier estructuralmente válido que contenga un rightmost short subtree:
+esa representación corresponde a una root finalizada, no a un checkpoint
+reanundable.
+
+### 7.4. Snapshot y restauración
+
+`TreeBuilder.checkpoint_state()` devuelve:
+
+    frontier, tail, completed_bytes, completed_leaf_count
+
+sin exponer estado de ninguna primitive hash.
+
+`TreeBuilder.from_checkpoint_state(frontier,tail)` reconstruye el builder con:
 - canonical frontier;
-- tail bytes de longitud < chunk_size;
-- optional source identity hint.
+- next leaf index = frontier.leaf_count;
+- raw tail;
+- byte counter exacto.
 
-No serializa estados internos opacos de hashlib.
+No rehace hash alguno del prefijo.
 
-### 7.2. Ley de reanudación
+API pública:
 
-Para X = P || S:
+    checkpoint_builder(builder) -> TreeResumeCheckpointV1
+    checkpoint_bytes(prefix) -> TreeResumeCheckpointV1
+    restore_builder(checkpoint) -> TreeBuilder
+    resume_tree(checkpoint,suffix) -> TreeRoot
 
-    finalize(resume(checkpoint(P), S)) = build_tree(P || S)
+### 7.5. Ley principal
+
+Para todo:
+
+    X = P || S
+
+y todo checkpoint canónico producido tras consumir P:
+
+    resume_tree(checkpoint(P), S)
+      = build_tree(P || S)
 
 byte por byte.
 
-### 7.3. Source identity
+Además, para cualquier partición:
 
-mtime, inode y file size pueden registrarse como hints operativos, pero no son evidencia criptográfica.
+    P = P0 || P1 || ... || Pk
 
-Opcionalmente se puede guardar una raíz de prefijo o digest auxiliar estándar para detectar fuente equivocada antes de continuar.
+se puede repetir:
+
+    checkpoint
+      -> restore
+      -> update(Pi)
+      -> checkpoint
+
+sin modificar la raíz final.
+
+### 7.6. Source hint honesty
+
+TreeSourceHintV1 es una heurística de UX/operación.
+
+Puede detectar cambios comunes de:
+- size;
+- mtime_ns;
+- inode;
+- device.
+
+No demuestra que una fuente actual tenga el mismo prefijo comprometido.
+
+En particular:
+
+    hint_match = true
+
+NO implica:
+
+    current_prefix == checkpoint_prefix.
+
+La única semántica fuerte de `resume_tree` es continuidad desde el estado
+comprometido dentro del checkpoint.
+
+Una futura API de source rebind/verificación fuerte deberá comparar evidencia
+criptográfica del prefijo y pertenece a una etapa separada.
+
+### 7.7. Persistencia transaccional
+
+`write_checkpoint_atomic(path,checkpoint)`:
+
+1. serializa el record completo;
+2. crea temporal en el mismo directorio;
+3. escribe y `fsync` el temporal;
+4. publica mediante `os.replace`;
+5. intenta `fsync` del directorio;
+6. elimina cualquier temporal residual.
+
+Si falla antes del replace:
+
+    checkpoint_after = checkpoint_before
+
+para un destino ya existente.
+
+No se publica un checkpoint parcial.
+
+### 7.8. Complejidad
+
+Sea N el número de hojas completas y m=4.
+
+La frontier tiene:
+
+    O(log N)
+
+nodos, cada uno con m digests.
+
+Con tail acotada por el chunk fijo:
+
+    checkpoint wire = O(m log N + chunk_size)
+    decode          = O(m log N + tail)
+    restore         = O(m log N + tail)
+
+Como chunk_size=65,536 es constante del profile V1:
+
+    restore = O(m log N)
+
+respecto al tamaño lógico del árbol.
+
+El prefijo P no se vuelve a leer ni rehashear durante restore.
+
+### 7.9. CLI provisional
+
+    sigma checkpoint-tree FILE --offset N --output state.chk
+    sigma resume-tree state.chk FILE [--require-hint-match] [--output root.bin]
+
+`--require-hint-match` es sólo una barrera operacional heurística. La salida
+JSON marca explícitamente:
+
+    source_hint_security_evidence = false
+
+para impedir convertir esa comprobación en una claim de seguridad.
 
 ## 8. TreeDelta V1
 

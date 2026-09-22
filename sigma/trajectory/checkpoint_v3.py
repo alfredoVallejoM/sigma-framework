@@ -507,6 +507,8 @@ def verify_trajectory_checkpoint_source_v3(
     if not isinstance(checkpoint, TrajectoryCheckpointV1):
         raise TypeError("checkpoint must be TrajectoryCheckpointV1")
     evaluation = evaluate_v3(checkpoint.context, source)
+    if checkpoint.round_index >= len(evaluation.states):
+        return False
     expected = checkpoint_from_evaluation_v3(evaluation, checkpoint.round_index)
     return hmac.compare_digest(expected.to_bytes(), checkpoint.to_bytes())
 

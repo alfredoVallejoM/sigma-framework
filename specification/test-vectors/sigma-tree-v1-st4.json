@@ -1,0 +1,84 @@
+{
+  "schema": "sigma-tree-v1-st4-kat",
+  "cases": [
+    {
+      "name": "delta-one-byte",
+      "operation": "delta",
+      "source": "three_chunks_tail",
+      "source_length": 196627,
+      "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
+      "edit_count": 1,
+      "normalized_count": 1,
+      "normalized_intervals": [[65543, 1]],
+      "affected_leaves": [1],
+      "ancestor_nodes": 3,
+      "result_sha256": "fe18717b5bdda152ccd87cfe61227e22301e65c6069b69bcf12721baaca1db55",
+      "root_wire_sha256": "420db6254cc974723a82fb74a5a5b22acc4ad9ba95edb27189691e252a72ef43"
+    },
+    {
+      "name": "delta-cross-chunk",
+      "operation": "delta",
+      "source": "three_chunks_tail",
+      "source_length": 196627,
+      "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
+      "edit_count": 1,
+      "normalized_count": 1,
+      "normalized_intervals": [[65534, 4]],
+      "affected_leaves": [0, 1],
+      "ancestor_nodes": 4,
+      "result_sha256": "760e3c215b0fdf4a7e87f1dbfdd8f6c848f1979ece82525ecb6b8645e1381823",
+      "root_wire_sha256": "fe637e4d8fec7890bd86aae6643ee53751a33e2edcd1399b460dc3f55ca6a8ea"
+    },
+    {
+      "name": "delta-overlap",
+      "operation": "delta",
+      "source": "three_chunks_tail",
+      "source_length": 196627,
+      "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
+      "edit_count": 4,
+      "normalized_count": 1,
+      "normalized_intervals": [[0, 10]],
+      "affected_leaves": [0],
+      "ancestor_nodes": 3,
+      "result_sha256": "a9c96a3438cce2d55ba01c08f9aeb13521e61bf106033ecc7f0b5c66c926ff7c",
+      "root_wire_sha256": "0173e70482cefeafbb406933c6af89b03c93ef25ed7f1b01a680b9d692e9f9b7"
+    },
+    {
+      "name": "delta-full-file",
+      "operation": "delta",
+      "source": "five_chunks",
+      "source_length": 327680,
+      "source_sha256": "b08bf1a95e3cc4a77b5e448d05e0ddcc69a8b10a9ef382d3a4413e821c80c8e0",
+      "edit_count": 1,
+      "normalized_count": 1,
+      "normalized_intervals": [[0, 327680]],
+      "affected_leaves": [0, 1, 2, 3, 4],
+      "ancestor_nodes": 9,
+      "replacement_sha256": "f2fe7d5281b80c4340dcd52e9c07d67c79c8613caabf42739befa593c56aac2d",
+      "result_sha256": "f2fe7d5281b80c4340dcd52e9c07d67c79c8613caabf42739befa593c56aac2d",
+      "root_wire_sha256": "68010d64ab0cb48bdfe36be628d900ab1396615e09d1d7d0e1f56fbf02ba4da7"
+    },
+    {
+      "name": "append-tail",
+      "operation": "append",
+      "source": "seven_chunks_tail",
+      "source_length": 458775,
+      "source_sha256": "5698e81f9dbdccc69dda3624ae7a8a44a897ff4152ffb24a11d0754bf3e9523b",
+      "suffix_length": 6,
+      "suffix_sha256": "a1b7c6f1aa933f882745c9a905739790931b7fb9a01e49b44d2b4d19e1bf8e39",
+      "result_sha256": "de1d98331fdd266115ed8ded4bc5e9ff320171884a3aeccc4420906f6962af59",
+      "root_wire_sha256": "9624b2ca98b9041b61e7559f7bf484a6d5fea12df2094116594b26456f0763e8"
+    },
+    {
+      "name": "append-chunk-tail",
+      "operation": "append",
+      "source": "five_chunks",
+      "source_length": 327680,
+      "source_sha256": "b08bf1a95e3cc4a77b5e448d05e0ddcc69a8b10a9ef382d3a4413e821c80c8e0",
+      "suffix_length": 65553,
+      "suffix_sha256": "5abdb57f351043d92824ab66db221aead3dce1a772ae2b3efa7efba712b24458",
+      "result_sha256": "91deaf278935ea214b2c5c8ec12a3cb75d3bb396d9cf1404f738f0d251fd7fc1",
+      "root_wire_sha256": "d4eaea1e148ec4615997094b39beaf973fd1e321ba18f9a491fc67de96b3565d"
+    }
+  ]
+}

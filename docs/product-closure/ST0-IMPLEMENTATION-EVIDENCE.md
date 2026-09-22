@@ -1,7 +1,7 @@
 # ST0 — Implementation Evidence
 
 Status: **CANDIDATE FOR ADVERSARIAL REVIEW**  
-Candidate head before review: `74f03d0ad56d7b9750f79a38c6597ef869d4d6f0`  
+Reviewed source baseline before final adversarial review: `7d7acceb3e8470050ec5cc41f9e0fdb18802c1d7`  
 Date: 2026-09-22
 
 ## 1. Scope actually implemented
@@ -25,10 +25,7 @@ Implemented:
 - reproducible ST0 structural gate
 - reproducible ST0 complexity benchmark
 
-The only existing non-document source outside `sigma/tree/` changed by ST0 is
-`sigma/version.py`, where `TREE_WIRE_VERSION = 1` is registered as an
-independent version axis. `sigma/tree/ids.py` imports that value rather than
-duplicating the version authority.
+The existing non-document files outside `sigma/tree/` changed by ST0 are limited to version/release integration: `sigma/version.py` registers `TREE_WIRE_VERSION = 1`, `scripts/release_artifacts.py` records that axis in SBOM metadata, and `tests/unit/test_versioning.py` checks the new axis. No existing hashing, binding, layout, round, digest or application semantics were changed. `sigma/tree/ids.py` imports the version value rather than duplicating the authority.
 
 ## 2. Semantic structure
 
@@ -89,6 +86,15 @@ candidate status:
 8. **Reference oracle strength.** The independent implementation now
    reconstructs the complete TreeRoot wire, not only the four digest
    components.
+
+9. **Nominal-type aliasing.** Because `IntEnum` values compare equal to plain
+   integers, the profile now explicitly requires an immutable tuple of
+   `TreeAlgorithmId` members; digest/frontier containers are likewise required
+   to be immutable typed tuples.
+
+10. **Version/release drift.** The Tree wire is a first-class package version
+    axis and is included in version policy, the existing versioning unit test
+    and release SBOM metadata.
 
 ## 4. Focused executable evidence
 

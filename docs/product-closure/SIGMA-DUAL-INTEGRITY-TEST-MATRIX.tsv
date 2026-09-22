@@ -13,11 +13,17 @@ TREE-LEGACY-001	ST0	T3	v2.2 TreeWide compatibility	frozen v2.2 corpus	all histor
 MAN-PROP-001	ST1	T2	Traversal permutation	canonical manifest	random entry orders	same bytes	BLOCKING
 MAN-PROP-002	ST1	T2	Absolute root relocation	canonical manifest	same logical tree in different root	same bytes	BLOCKING
 MAN-META-001	ST1	T2	Base metadata policy	canonical manifest	mtime-only mutation	same base manifest	REQUIRED
-MAN-META-002	ST1	T2	Executable profile	canonical manifest	executable bit mutation	changes only declared profile	REQUIRED
+MAN-META-002	ST1	T2	Base executable-bit omission	canonical manifest	chmod/executable-bit-only mutation	same BASE_V1 manifest	REQUIRED
 MAN-ADV-001	ST1	T4	Path traversal	none	../, absolute, NUL	reject	BLOCKING
 MAN-ADV-002	ST1	T4	Symlink loop	none	cyclic symlinks	reject/no-follow by default	BLOCKING
 MAN-UNICODE-001	ST1	T2	UTF-8 byte ordering	reference sorter	multilingual paths	deterministic order	BLOCKING
 MAN-SCALE-001	ST1	T6	Manifest scaling	complexity model	F geometric sweep	O(B+F log F) compatible	REQUIRED
+MAN-DIFF-001	ST1	T7	Independent manifest oracle	stdlib-only reference	random logical manifests + filesystem fixture	byte-identical wire	BLOCKING
+MAN-DIR-001	ST1	T2	Empty directory binding	canonical manifest	add/remove empty directory	manifest changes	BLOCKING
+MAN-SYM-001	ST1	T4	Symlink TEXT no-follow	independent scanner	loop and ../ target	bind target text without traversal	BLOCKING
+MAN-TRAJ-001	ST1	T4	Optional trajectory exact binding	canonical manifest	single-byte trajectory-wire mutation	manifest changes	REQUIRED
+MAN-FUZZ-001	ST1	T5	Manifest/entry codecs	round-trip invariant	>=50k deterministic bit mutations + structural TLV mutations	no semantic aliases	BLOCKING
+MAN-XPLAT-001	ST1	T7	Cross-platform fixture	matching peer reports	Linux + macOS logical fixture	identical manifest SHA-256	BLOCKING
 PRF-PROP-001	ST2	T2	Inclusion proof	production TreeRoot	random trees/leaves	verify true	BLOCKING
 PRF-MUT-001	ST2	T4	Sibling corruption	production verifier	single bit per sibling	reject	BLOCKING
 PRF-MUT-002	ST2	T4	Position corruption	production verifier	leaf_index changes	reject	BLOCKING

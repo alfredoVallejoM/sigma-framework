@@ -181,3 +181,52 @@ def test_signed_receipt_cannot_be_signed_again():
     signed = sign_receipt_ed25519_v1(receipt, seed, b"key")
     with pytest.raises(ValueError, match="already signed"):
         sign_receipt_ed25519_v1(signed, seed, b"key")
+
+
+def _record_fields(encoded: bytes) -> list[tuple[int, bytes]]:
+    body_length = int.from_bytes(encoded[10:14], "big")
+    assert body_length == len(encoded) - 14
+    fields = []
+    offset = 14
+    while offset < len(encoded):
+        tag = int.from_bytes(encoded[offset : offset + 2], "big")
+        length = int.from_bytes(encoded[offset + 2 : offset + 6], "big")
+        offset += 6
+        fields.append((tag, encoded[offset : offset + length]))
+        offset += length
+    return fields
+
+
+def _rebuild_record(template: bytes, fields: list[tuple[int, bytes]]) -> bytes:
+    body = b"".join(
+        tag.to_bytes(2, "big") + len(value).to_bytes(4, "big") + value
+        for tag, value in fields
+    )
+    return template[:10] + len(body).to_bytes(4, "big") + body
+
+
+def test_receipt_codec_rejects_missing_duplicate_reordered_unknown_fields():
+    policy, decision = _accepted_decision()
+    encoded = receipt_from_decision_v1(
+        b"artifact:codec",
+        policy,
+        decision,
+    ).to_bytes()
+    fields = _record_fields(encoded)
+    mutations = []
+    for index, field in enumerate(fields):
+        mutations.append(_rebuild_record(encoded, [*fields[:index], *fields[index + 1 :]]))
+        mutations.append(
+            _rebuild_record(
+                encoded,
+                [*fields[: index + 1], field, *fields[index + 1 :]],
+            )
+        )
+    reordered = list(fields)
+    reordered[0], reordered[1] = reordered[1], reordered[0]
+    mutations.append(_rebuild_record(encoded, reordered))
+    mutations.append(_rebuild_record(encoded, [*fields, (0xFFFF, b"")]))
+
+    for mutated in mutations:
+        with pytest.raises(ValueError):
+            VerificationReceiptV1.from_bytes(mutated)

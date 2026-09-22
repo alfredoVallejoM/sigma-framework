@@ -9,6 +9,7 @@ from enum import Enum, IntEnum
 from sigma.outputs.digest import SigmaDigestV2
 from sigma.outputs.digest_v3 import SigmaDigestV3, verify_full_v3
 from sigma.sources import BytesSource, CanonicalSource
+from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.encoding import (
     DecodeError,
     decode_tlv,
@@ -19,7 +20,6 @@ from sigma.spec.encoding import (
     encode_uint,
 )
 from sigma.spec.ids import DIGEST_MAGIC
-from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3, TrajectoryProfileIdV3
 from sigma.trajectory.audit_v3 import (
     TrajectoryAuditV3,

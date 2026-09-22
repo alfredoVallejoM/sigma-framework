@@ -1,0 +1,32 @@
+{
+  "closure_eligible": true,
+  "cross_platform_complete": true,
+  "differential_cases": 1000,
+  "differential_manifest_stream_sha256": "a5d1ff4b6578665be462cac3ded50c0adbf4d1c69e397041961f2074dee1efe4",
+  "elapsed_seconds": 13.571358539000016,
+  "fixture_manifest_sha256": "abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83",
+  "fuzz_cases": 50000,
+  "fuzz_changed_valid": 29077,
+  "fuzz_rejected": 20923,
+  "local_passed": true,
+  "mutation_stream_sha256": "88e98c9062e5bd50593697882373a2454b330b36ce389c5f746b1c1b543293c9",
+  "passed": true,
+  "path_cases": 50000,
+  "path_stream_sha256": "4f802fb653df818265581071c1b6ffb393834629da72723fd9f9e38369f9a6d9",
+  "permutation_cases": 1000,
+  "platform": "Linux",
+  "platform_reports": [
+    {
+      "fixture_manifest_sha256": "abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83",
+      "platform": "Linux"
+    },
+    {
+      "fixture_manifest_sha256": "abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83",
+      "platform": "Darwin"
+    }
+  ],
+  "python": "3.13.15",
+  "schema": "sigma-manifest-st1-gate-v1",
+  "schema_mutation_cases": 20,
+  "symlink_checks": "passed"
+}

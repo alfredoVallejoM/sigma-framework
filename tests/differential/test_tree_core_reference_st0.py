@@ -1,6 +1,6 @@
 import random
 
-from reference.tree_v1 import build as reference_build
+from reference.tree_v1 import build as reference_build, root_wire as reference_root_wire
 from sigma.tree import build_tree
 
 
@@ -15,3 +15,4 @@ def test_reference_matches_product_random_corpus():
         assert got.byte_length == ref_length
         assert got.leaf_count == ref_leaves
         assert got.digests == ref_digests
+        assert got.to_bytes() == reference_root_wire(data)

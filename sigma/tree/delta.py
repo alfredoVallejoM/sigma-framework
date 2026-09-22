@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from bisect import bisect_left
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from .core import combine_nodes, empty_root, leaf_node
@@ -177,6 +178,94 @@ class TreeDeltaIndex:
             node = self._node(0, len(self._leaves))
             self.root = TreeRoot(profile, self._byte_length, len(self._leaves), node.digests)
 
+    @classmethod
+    def from_precomputed_state(
+        cls,
+        data: bytes,
+        root: TreeRoot,
+        nodes: Mapping[tuple[int, int], TreeNode],
+        profile: TreeProfileV1 = DEFAULT_PROFILE,
+    ) -> "TreeDeltaIndex":
+        """Restore mutable ST4 state from a validated persistent summary index.
+
+        This path does not rehash unchanged leaves or internal nodes. The caller
+        remains responsible for proving that data is the source committed by root
+        before using the mutable index for trusted updates.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError("delta index source must be bytes")
+        if not isinstance(root, TreeRoot):
+            raise TypeError("root must be TreeRoot")
+        if profile != DEFAULT_PROFILE or root.profile != profile:
+            raise ValueError("unsupported or mismatched Tree profile")
+        if root.byte_length != len(data):
+            raise ValueError("precomputed TreeRoot byte length differs from source")
+        if not isinstance(nodes, Mapping):
+            raise TypeError("nodes must be a mapping")
+
+        expected_leaf_count = (
+            0
+            if not data
+            else (len(data) + profile.chunk_size - 1) // profile.chunk_size
+        )
+        if root.leaf_count != expected_leaf_count:
+            raise ValueError("precomputed TreeRoot leaf count differs from source")
+
+        copied_nodes: dict[tuple[int, int], TreeNode] = {}
+        for key, node in nodes.items():
+            if (
+                not isinstance(key, tuple)
+                or len(key) != 2
+                or any(
+                    isinstance(value, bool) or not isinstance(value, int)
+                    for value in key
+                )
+            ):
+                raise TypeError("precomputed node keys must be (int,int)")
+            if not isinstance(node, TreeNode):
+                raise TypeError("precomputed nodes must be TreeNode values")
+            copied_nodes[key] = node
+
+        leaves = [
+            data[offset : offset + profile.chunk_size]
+            for offset in range(0, len(data), profile.chunk_size)
+        ]
+        leaf_nodes: dict[int, TreeNode] = {}
+        for index, raw in enumerate(leaves):
+            key = (index, 1)
+            node = copied_nodes.get(key)
+            if node is None:
+                raise ValueError("precomputed state is missing a leaf node")
+            if (
+                node.start_leaf != index
+                or node.leaf_count != 1
+                or node.height != 0
+                or node.byte_length != len(raw)
+            ):
+                raise ValueError("precomputed leaf node geometry differs from source")
+            leaf_nodes[index] = node
+
+        if leaves:
+            root_node = copied_nodes.get((0, len(leaves)))
+            if root_node is None:
+                raise ValueError("precomputed state is missing the canonical root node")
+            if (
+                root_node.byte_length != root.byte_length
+                or root_node.leaf_count != root.leaf_count
+                or root_node.digests != root.digests
+            ):
+                raise ValueError("precomputed canonical root node differs from TreeRoot")
+        elif copied_nodes:
+            raise ValueError("empty TreeRoot must not have precomputed nodes")
+
+        instance = cls.__new__(cls)
+        instance.profile = profile
+        instance._byte_length = len(data)
+        instance._leaves = leaves
+        instance._leaf_nodes = leaf_nodes
+        instance._nodes = copied_nodes
+        instance.root = root
+        return instance
     @property
     def byte_length(self) -> int:
         return self._byte_length

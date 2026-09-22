@@ -1,0 +1,22 @@
+{
+  "artifact_id_includes_auxiliary_audit": false,
+  "artifact_id_stream_sha256": "93b8eba102bd9d980494a6db7c529fbc93a5d06590cb1f23fffa3ed77e2a8fac",
+  "artifact_wire_stream_sha256": "fac9be3524100bcc974fd3b46d75263bf7ea1951af48553a00c0465d268db068",
+  "audit_stability_cases": 200,
+  "closure_eligible": true,
+  "differential_cases": 600,
+  "empirical_performance_claims": false,
+  "external_signature_in_artifact_identity": false,
+  "frozen_vector_corpus_sha256": "60a0405516dd55b5ce52f14a442c12f836128357ac7b838a28f8d7b5eb748631",
+  "identity_mutation_stream_sha256": "59cda3e54e32d15683a9696da5de8b13b901c0f9fe4d4dd098b5ca1a1d8833ad",
+  "identity_mutations": 1800,
+  "passed": true,
+  "profile_counts": {
+    "DUAL": 200,
+    "TRAJECTORY": 200,
+    "TREE": 200
+  },
+  "schema": "sigma-sa0-canonical-artifact-gate-v1",
+  "security_width_claim": false,
+  "stored_id_parser_rejections": 600
+}

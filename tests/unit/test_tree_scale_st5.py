@@ -146,7 +146,8 @@ def test_index_estimator_is_monotone_and_delta_accounts_for_payload_copy():
 
 
 def test_zero_copy_proof_index_has_no_second_payload_sized_allocation():
-    data = bytes((i * 5 + 1) % 251 for i in range(8 * 65_536))
+    block = bytes((i * 5 + 1) % 251 for i in range(65_536))
+    data = block * 128
     tracemalloc.start()
     index = TreeProofIndex(data)
     _, peak = tracemalloc.get_traced_memory()
@@ -158,7 +159,8 @@ def test_zero_copy_proof_index_has_no_second_payload_sized_allocation():
 
 
 def test_large_range_verification_does_not_copy_entire_range():
-    data = bytes((i * 11 + 3) % 251 for i in range(8 * 65_536 + 19))
+    block = bytes((i * 11 + 3) % 251 for i in range(65_536))
+    data = block * 32 + block[:19]
     index = TreeProofIndex(data)
     start = 3
     length = len(data) - 7

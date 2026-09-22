@@ -374,3 +374,21 @@ Evidence:
 - `SA1-IMPLEMENTATION-EVIDENCE.md`.
 
 SA1 establishes conjunction, not additive security bits.
+
+## Programa de expansión
+
+Además de la ruta SA2/SA3/REL, existe ya una planificación ejecutable de expansión:
+
+- [Sigma Product Expansion Roadmap](../product-expansion/SIGMA-PRODUCT-EXPANSION-ROADMAP.md)
+- [Expansion index](../product-expansion/README.md)
+
+Tracks registrados:
+
+    PX0..PX5  Platform Core
+    IX0..IX5  Interoperability
+    ML0..ML3  Data/ML
+    NR0..NR3  Native/SDK
+    AX0..AX2  Advanced research
+
+Estas etapas no bloquean el release v1 por defecto y pueden desarrollarse en
+paralelo una vez satisfechas sus dependencias.

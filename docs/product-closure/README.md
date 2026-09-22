@@ -158,7 +158,7 @@ Evidence:
 No persistent index wire was introduced in ST5; only its logical layout/resource contract was closed.
 
 
-SV0 — Trajectory Audit — está **CANDIDATE** tras revisión adversaria de implementación.
+SV0 — Trajectory Audit — está **COMPLETE** tras gate runtime + revisión adversaria.
 
 Implementado:
 - TrajectoryAuditV3 COMPACT/FULL;
@@ -175,9 +175,16 @@ Implementado:
 
 No se ha modificado binding/layout/rounds/digest/suite/domain v3 ni ningún corpus congelado.
 
-SV0 permanece CANDIDATE porque el gate de cierre todavía debe ejecutarse desde un checkout real:
+SV0 closure ejecutado:
+- GitHub Actions run `35783099798`;
+- 600 differential cases;
+- 4,000 directed mutations;
+- 60 source replays;
+- 3 frozen R12.5 cases;
+- `closure_eligible=true`.
 
-    python -m scripts.product_closure.sv0_gate --report .sigma/sv0-gate.json
+Report:
+- `SV0-GATE-REPORT.json`
 
 Evidencia:
 - SV0-IMPLEMENTATION-EVIDENCE.md
@@ -185,7 +192,7 @@ Evidencia:
 SV1 permanece PLANNED.
 
 
-SV1 — Trajectory Checkpoint — está **CANDIDATE**.
+SV1 — Trajectory Checkpoint — está **COMPLETE**.
 
 Implementado:
 - internal TrajectoryCheckpointV1 separado de SigmaCheckpointV3;
@@ -198,11 +205,18 @@ Implementado:
 - canonical codec/adversarial tests;
 - semantic gate preparado.
 
-Cierre pendiente:
+Cierre ejecutado:
+- GitHub Actions run `35783661720`;
+- 60 evaluations;
+- 1,214 all-index cases;
+- 1,946 directed mutations;
+- 30 source rebinds;
+- `closure_eligible=true`.
 
-    python -m scripts.product_closure.sv1_gate --report .sigma/sv1-gate.json
+Report:
+- `SV1-GATE-REPORT.json`
 
-SV2 — Verification Policy — está **CANDIDATE**.
+SV2 — Verification Policy — está **COMPLETE**.
 
 Implementado:
 - canonical SIGPOLY1 wire/version 1;
@@ -217,10 +231,18 @@ Implementado:
 - deterministic/adversarial/property tests;
 - semantic gate preparado.
 
-Cierre pendiente:
+Cierre ejecutado:
+- GitHub Actions run `35783661720`;
+- 400 decision cases;
+- 100 monotonic cases;
+- 100 cheap-reject cases;
+- four-way coverage completa;
+- legacy default reject / explicit opt-in accept;
+- `closure_eligible=true`.
 
-    python -m scripts.product_closure.sv2_gate --report .sigma/sv2-gate.json
+Report:
+- `SV2-GATE-REPORT.json`
 
 Por decisión de campaña, benchmarks/timings empíricos de SV1/SV2 se difieren a una fase posterior.
 
-SV3 permanece PLANNED.
+SV3 permanece PLANNED. SV0–SV2 están ya cerrados semánticamente; sus benchmarks empíricos finos siguen deliberadamente diferidos.

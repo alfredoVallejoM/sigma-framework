@@ -1,6 +1,6 @@
 # SV0 — Trajectory Audit Implementation Evidence
 
-Status: **CANDIDATE — IMPLEMENTATION/ADVERSARIAL DESIGN REVIEW COMPLETE; RUNTIME GATE PENDING**  
+Status: **COMPLETE — RUNTIME GATE + ADVERSARIAL REVIEW PASSED**  
 Reviewed implementation baseline: `799332dac40e3bc11a6ec1e4b588b55a4331bbb6`  
 ST5 baseline: `e283a2630965656c1629c692899f2a0f620dac33`  
 Date: 2026-09-22
@@ -192,8 +192,37 @@ The gate produces deterministic stream hashes for:
 - FULL audit wires;
 - projected digests.
 
-Those hashes are intentionally not fabricated in this document: they become
-evidence only after the gate is executed.
+Executed on GitHub Actions run `35783099798` against commit
+`e6537e230867fad44ff1f825ffc9565f98a0533f`.
+
+Result:
+
+    passed = true
+    closure_eligible = true
+    differential_cases = 600
+    directed_mutations = 4,000
+    full_source_replays = 60
+    deep_vector_semantic_checks = 200
+    r125_frozen_cases = 3
+
+Frozen streams:
+
+    compact:
+    766351fdcb7f76bbaa96401401b2e5d88c82f551ec86ea37c0696b7bfae9533c
+
+    full:
+    7ad1307e0fb5e91e4a1e59a67c9bc2c0a3fdb25e5c70829548d76d9cc14b9acd
+
+    digest projection:
+    d585830db19c787d9d0fa1a7858ae2899525f36220efeb41cd0956206a7be4ac
+
+Frozen report:
+
+    SV0-GATE-REPORT.json
+
+Report SHA-256:
+
+    7a75f7a5459f13a850f1d1166c65bfa4291dc751591b0326937e1378d5e2994a
 
 ## 10. Mutation/adversarial coverage
 
@@ -277,26 +306,26 @@ disclosure policy.
 
 ### SV0-O01 — Audit projects exact SigmaDigestV3
 
-**CANDIDATE PASS.**
+**PASS.**
 
 The audit embeds the exact SigmaDigestV3 produced by
 `digest_from_evaluation_v3`. Product/reference and frozen corpus tests require
 byte equality.
 
-Runtime closure still requires executing sv0_gate.py.
+Runtime closure gate passed.
 
 ### SV0-O02 — Audit replays successfully
 
-**CANDIDATE PASS.**
+**PASS.**
 
 Structural and full-source replay APIs are implemented and their semantic roles
 are separated. Unit, differential and frozen-corpus tests are present.
 
-Runtime gate pending.
+Runtime gate passed.
 
 ### SV0-O03 — Round cardinality matches t/k
 
-**CANDIDATE PASS.**
+**PASS.**
 
 The constructor enforces:
 
@@ -307,14 +336,14 @@ and contiguous round indices.
 
 ### SV0-O04 — Historical causality H_i -> H_i+1 exact
 
-**CANDIDATE PASS.**
+**PASS.**
 
 Replay uses the existing `history_seed_v3` and `history_step_v3` authorities.
 History mutation tests and frozen R12.5 histories are wired into the suite.
 
 ### SV0-O05 — Audit links exact layout/frame identities
 
-**CANDIDATE PASS.**
+**PASS.**
 
 Layouts are exact existing wires.
 
@@ -323,7 +352,7 @@ identity scheme.
 
 ### SV0-O06 — Deep vs DeepVector semantics preserved
 
-**CANDIDATE PASS.**
+**PASS.**
 
 Scalar Deep requires fold-frame replay.
 
@@ -333,7 +362,7 @@ Both R12 and R12.5 suite families are included in differential coverage.
 
 ### SV0-O07 — COMPACT/FULL project same digest
 
-**CANDIDATE PASS.**
+**PASS.**
 
 Both modes are projections of the same immutable EvaluationV3 and share
 digest/states/histories/layouts by construction and tests.
@@ -383,41 +412,28 @@ No change to:
 
 This satisfies the SV0 design-side no-interference requirement.
 
-## 16. Why status is CANDIDATE, not COMPLETE
+## 16. Runtime closure and final disposition
 
-The implementation, reference, tests, gate, complexity ledger and adversarial
-design review are present.
+Focused SV0/SV1/SV2 quality/test run on GitHub Actions:
 
-However this execution environment does not expose a complete checkout and the
-container cannot resolve github.com. Therefore the required closure command has
-not been executed here:
+    compileall PASS
+    Ruff PASS
+    Mypy PASS
+    pytest 140 passed
 
-    python -m scripts.product_closure.sv0_gate \
-      --report .sigma/sv0-gate.json
-
-Nor has the resulting report been frozen and reviewed.
-
-Claiming COMPLETE without that execution would violate the campaign's own closure
-rule.
-
-Required promotion sequence:
-
-1. run sv0_gate.py from a real checkout;
-2. run the focused SV0 unit/differential/vector tests;
-3. retain the JSON gate report;
-4. review any divergence/failure;
-5. if PASS, change SV0-O01..O08 and SV0 to COMPLETE.
-
-## 17. Disposition
-
-Manual implementation/adversarial review:
+SV0 closure gate:
 
     PASS
 
-Runtime closure gate:
+No divergence was observed against the independent encoder or frozen R12.5
+corpus, and `security_width_claim=false` is present in the executed report.
 
-    PENDING
+Manual post-execution obligation review:
 
-Current correct status:
+    SV0-O01..SV0-O08 PASS
 
-    SV0 CANDIDATE
+Final status:
+
+    SV0 COMPLETE
+
+SV0 is now a valid dependency for SV1/SV2/SA0.

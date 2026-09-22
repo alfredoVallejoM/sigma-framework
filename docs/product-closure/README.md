@@ -47,7 +47,7 @@ El cierre demuestra que:
 5. el contrato de complejidad está instrumentado;
 6. el gate de cierre ejecuta >=100k mutaciones de codecs y mutaciones TLV estructurales explícitas.
 
-ST1 — Canonical Manifest — está **CANDIDATE**.
+ST1 — Canonical Manifest — está **COMPLETE**.
 
 Implementado:
 - canonical paths NFC/UTF-8 y ordering por bytes;
@@ -70,8 +70,7 @@ Evidencia local:
 - fixture Linux SHA-256:
   `abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83`.
 
-ST1 permanece CANDIDATE porque el gate bloqueante exige todavía un peer report
-macOS que reproduzca exactamente ese fixture hash.
+
 
 ST2 — Inclusion and Range Proofs — está **COMPLETE** tras revisión adversaria.
 
@@ -280,3 +279,61 @@ Reports/evidence:
 - `SV3-IMPLEMENTATION-EVIDENCE.md`.
 
 SV0–SV3 están ya cerrados semánticamente. Los benchmarks empíricos finos de SV1–SV3 siguen deliberadamente diferidos.
+
+
+ST1 — Canonical Manifest — está **COMPLETE** tras gate cross-platform real.
+
+Cierre final ST1:
+- GitHub Actions run `35789236301`;
+- macOS local gate PASS;
+- Linux gate + Darwin peer PASS;
+- 50,000 path cases;
+- 1,000 permutation cases;
+- 1,000 independent differential cases;
+- 50,000 codec mutations;
+- 20 structural TLV mutations;
+- symlink checks PASS;
+- Linux/Darwin fixture SHA-256 idéntico:
+  `abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83`;
+- `cross_platform_complete=true`;
+- `closure_eligible=true`.
+
+Reports/evidence:
+- `ST1-CROSS-PLATFORM-GATE-REPORT.json`;
+- `ST1-IMPLEMENTATION-EVIDENCE.md`.
+
+SA0 — Canonical Sigma Artifact — está **COMPLETE**.
+
+Implementado:
+- independent `ARTIFACT_WIRE_VERSION=1`;
+- `SIGADSC1` descriptor;
+- `SIGAIDN1` canonical identity;
+- `SIGARTF1` artifact envelope;
+- exact TREE / TRAJECTORY / DUAL primary-evidence profiles;
+- non-circular ArtifactId;
+- ManifestId binding;
+- parent ArtifactId binding;
+- optional COMPACT/FULL TrajectoryAudit without ArtifactId drift;
+- stdlib-only independent artifact oracle;
+- six-case frozen KAT corpus.
+
+Cierre ejecutado:
+- GitHub Actions run `35789466377`;
+- compile/Ruff/Mypy PASS;
+- pytest: 36 passed, including ST4 delta regression;
+- frozen-vector `--check` PASS;
+- 600 differential artifact cases;
+- 1,800 identity mutations;
+- 200 audit-stability cases;
+- 600 corrupted stored ArtifactIds rejected;
+- profile coverage: 200 TREE / 200 TRAJECTORY / 200 DUAL;
+- `closure_eligible=true`.
+
+Frozen corpus SHA-256:
+- `60a0405516dd55b5ce52f14a442c12f836128357ac7b838a28f8d7b5eb748631`.
+
+Reports/evidence:
+- `SA0-GATE-REPORT.json`;
+- `SA0-IMPLEMENTATION-EVIDENCE.md`.
+
+SA0 does not yet define the DUAL verification conjunction; that remains SA1.

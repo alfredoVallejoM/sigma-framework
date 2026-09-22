@@ -495,10 +495,23 @@ Verification I/O:
 
 sin acceso al resto del objeto.
 
-### 6.9. No claims
+### 6.9. Disclosure boundary
+
+RangeProof V1 no es una selective-disclosure proof privada ni zero-knowledge.
+
+Para un rango que empieza/termina dentro de chunks, prefix/suffix revelan los bytes
+restantes de esos edge leaves. El leakage adicional máximo es:
+
+    2 * (65,536 - 1) bytes.
+
+Evitar ese leakage requeriría una geometría interna por subchunk/byte distinta y
+pertenece a un profile/futura etapa separada; no se finge privacidad en V1.
+
+### 6.10. No claims
 
 Una range proof acredita integridad estructural respecto a TreeRoot V1.
-No acredita frescura, propiedad, timestamp, provenance ni trayectoria v3.
+No acredita frescura, propiedad, timestamp, provenance, confidencialidad ni
+trayectoria v3.
 
 ## 7. TreeResumeCheckpoint V1
 

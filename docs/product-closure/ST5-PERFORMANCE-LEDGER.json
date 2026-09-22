@@ -1,0 +1,195 @@
+{
+  "schema": "sigma-tree-st5-performance-ledger-v1",
+  "date": "2026-09-22",
+  "execution_scope": "isolated exact-semantic ST0-ST5 mirror; local engineering evidence",
+  "environment": {
+    "python": "3.13.5",
+    "implementation": "CPython",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "machine": "x86_64"
+  },
+  "semantic_gate": {
+    "build_differential_cases": 1000,
+    "build_stream_sha256": "18f439cb297bab461841384a6d02220c61794414061d40b5dc2aacca5ee9ce18",
+    "proof_differential_cases": 500,
+    "proof_stream_sha256": "f83f23c39aa28defb75dd88d7e34313d30ae4658bc931ba275881c3c38770b55",
+    "divergences": 0
+  },
+  "memory_gate": {
+    "proof_index_source_bytes": 16777216,
+    "proof_index_peak_allocated_bytes": 392534,
+    "proof_index_peak_to_source_ratio": 0.023396849632263184,
+    "proof_index_conservative_budget_bytes": 1114112,
+    "delta_index_source_bytes": 8388608,
+    "delta_index_peak_allocated_bytes": 8564890,
+    "delta_index_peak_to_source_ratio": 1.0210144519805908,
+    "delta_index_conservative_budget_bytes": 9043968,
+    "streaming_builder_input_bytes": 33554432,
+    "streaming_builder_peak_allocated_bytes": 23650,
+    "streaming_builder_peak_to_input_ratio": 0.0007048249244689941,
+    "near_full_range_bytes": 16777209,
+    "streaming_range_generation_peak_allocated_bytes": 22743,
+    "range_verification_peak_allocated_bytes": 138113
+  },
+  "build_baseline_vs_optimized": [
+    {
+      "bytes": 65536,
+      "optimized_ns": 833719,
+      "reference_ns": 1054993,
+      "speedup": 1.26540597011703,
+      "optimized_peak_bytes": 3140,
+      "reference_peak_bytes": 197697,
+      "optimized_throughput_mib_s": 74.96530605635712
+    },
+    {
+      "bytes": 262144,
+      "optimized_ns": 3251722,
+      "reference_ns": 3718496,
+      "speedup": 1.1435467115577531,
+      "optimized_peak_bytes": 3914,
+      "reference_peak_bytes": 264882,
+      "optimized_throughput_mib_s": 76.88234111034093
+    },
+    {
+      "bytes": 1048576,
+      "optimized_ns": 11301782,
+      "reference_ns": 12089942,
+      "speedup": 1.0697376749967396,
+      "optimized_peak_bytes": 4978,
+      "reference_peak_bytes": 271314,
+      "optimized_throughput_mib_s": 88.48162174779164
+    },
+    {
+      "bytes": 4194304,
+      "optimized_ns": 46842475,
+      "reference_ns": 52072416,
+      "speedup": 1.1116495445639882,
+      "optimized_peak_bytes": 6074,
+      "reference_peak_bytes": 297042,
+      "optimized_throughput_mib_s": 85.39258440122987
+    }
+  ],
+  "streaming_memory_sweep": [
+    {"chunks": 1, "input_bytes": 65536, "elapsed_ns": 1310260, "peak_bytes": 3264},
+    {"chunks": 4, "input_bytes": 262144, "elapsed_ns": 3388749, "peak_bytes": 4130},
+    {"chunks": 16, "input_bytes": 1048576, "elapsed_ns": 14170810, "peak_bytes": 5186},
+    {"chunks": 64, "input_bytes": 4194304, "elapsed_ns": 56828184, "peak_bytes": 6274},
+    {"chunks": 256, "input_bytes": 16777216, "elapsed_ns": 220226174, "peak_bytes": 7330},
+    {"chunks": 512, "input_bytes": 33554432, "elapsed_ns": 419342010, "peak_bytes": 8198}
+  ],
+  "proof_generation": [
+    {
+      "leaf_count": 9,
+      "source_bytes": 524307,
+      "index_build_ns": 6068765,
+      "index_peak_bytes": 14129,
+      "inclusion_steps": 4,
+      "full_inclusion_ns": 11607,
+      "streaming_inclusion_ns": 5757775,
+      "range_witnesses": 2,
+      "full_range_ns": 24507,
+      "streaming_range_ns": 5631024,
+      "range_verify_ns": 2984397,
+      "range_verify_peak_bytes": 69078
+    },
+    {
+      "leaf_count": 33,
+      "source_bytes": 2097171,
+      "index_build_ns": 25665560,
+      "index_peak_bytes": 45120,
+      "inclusion_steps": 6,
+      "full_inclusion_ns": 14552,
+      "streaming_inclusion_ns": 22675575,
+      "range_witnesses": 4,
+      "full_range_ns": 28894,
+      "streaming_range_ns": 24103701,
+      "range_verify_ns": 3254695,
+      "range_verify_peak_bytes": 69078
+    },
+    {
+      "leaf_count": 129,
+      "source_bytes": 8388627,
+      "index_build_ns": 94834859,
+      "index_peak_bytes": 173120,
+      "inclusion_steps": 8,
+      "full_inclusion_ns": 16224,
+      "streaming_inclusion_ns": 98429407,
+      "range_witnesses": 6,
+      "full_range_ns": 33100,
+      "streaming_range_ns": 100526224,
+      "range_verify_ns": 3475038,
+      "range_verify_peak_bytes": 69078
+    },
+    {
+      "leaf_count": 257,
+      "source_bytes": 16777235,
+      "index_build_ns": 190857361,
+      "index_peak_bytes": 343672,
+      "inclusion_steps": 9,
+      "full_inclusion_ns": 24467,
+      "streaming_inclusion_ns": 197392330,
+      "range_witnesses": 7,
+      "full_range_ns": 46300,
+      "streaming_range_ns": 205476268,
+      "range_verify_ns": 3401167,
+      "range_verify_peak_bytes": 69110
+    }
+  ],
+  "representative_other_operations": {
+    "resume": {
+      "prefix_bytes": 16777339,
+      "frontier_nodes": 1,
+      "tail_bytes": 123,
+      "restore_median_ns": 5027,
+      "restore_peak_bytes": 64342
+    },
+    "delta_one_byte": {
+      "source_bytes": 16777235,
+      "incremental_ns": 1957106,
+      "peak_bytes": 141818,
+      "recomputed_nodes": 10,
+      "leaf_payload_bytes_rehashed": 65536
+    },
+    "append_chunk_plus_17": {
+      "source_bytes_before_append": 16777235,
+      "appended_bytes": 65553,
+      "incremental_ns": 1207284,
+      "peak_bytes": 137946,
+      "recomputed_nodes": 4,
+      "leaf_payload_bytes_rehashed": 65572,
+      "frontier_nodes_reused": 1
+    },
+    "manifest_hashing_fixture": {
+      "files": 64,
+      "input_bytes": 4194304,
+      "elapsed_ns": 52017367,
+      "peak_bytes": 202170,
+      "file_read_request_max_bytes": 65536
+    }
+  },
+  "cpu_profile_summary": {
+    "profile_input_bytes": 1048576,
+    "dominant_cost": "hash primitive update calls",
+    "hashlib_hash_update_total_seconds": 0.007712651,
+    "blake2b_update_total_seconds": 0.001252904,
+    "leaf_hashing_cumulative_seconds": 0.009857672,
+    "parent_composition_cumulative_seconds": 0.000974431
+  },
+  "scale_policy": {
+    "default_max_index_bytes": 268435456,
+    "proof_over_budget": "STREAMING",
+    "delta_over_budget": "REJECT",
+    "proof_estimator": "65536 + 4096 * leaf_count",
+    "delta_estimator": "65536 + source_bytes + 4608 * leaf_count",
+    "estimator_scope": "conservative logical budget; not a portable RSS formula"
+  },
+  "interpretation": {
+    "timings": "local engineering measurements; not cross-host publication claims",
+    "optimized_build": "wire-identical to independent Tree V1 reference",
+    "proof_full_vs_streaming": "identical proof wires; streaming trades O(B) hashing time for bounded auxiliary memory",
+    "proof_index": "source retained once, leaf payload represented by memoryviews",
+    "delta_index": "one explicit mutable B-sized payload copy plus summaries",
+    "range_verification": "no selected-range-sized copy and O(log N) tree reconstruction state",
+    "manifest": "file reads bounded to one 65536-byte Tree chunk"
+  }
+}

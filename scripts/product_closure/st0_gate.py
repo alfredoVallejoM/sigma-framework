@@ -9,7 +9,7 @@ import random
 import time
 from pathlib import Path
 
-from reference.tree_v1 import build as reference_build
+from reference.tree_v1 import build as reference_build, root_wire as reference_root_wire
 from sigma.tree import TreeBuilder, TreeFrontier, TreeRoot, build_tree, build_tree_chunks
 from sigma.tree.model import canonical_frontier_heights
 
@@ -38,6 +38,8 @@ def run_gate(*, structural_cases: int, differential_cases: int, fuzz_cases: int)
         got = build_tree(data)
         if (got.byte_length, got.leaf_count, got.digests) != (ref_length, ref_leaves, ref_digests):
             raise AssertionError(f"reference divergence at differential case {index}")
+        if got.to_bytes() != reference_root_wire(data):
+            raise AssertionError(f"root-wire divergence at differential case {index}")
         chunks: list[bytes] = []
         cursor = 0
         while cursor < size:

@@ -49,15 +49,15 @@ ST3-O05	ST	ST3	Profile cannot change on restore	negative tests	COMPLETE	YES
 ST3-O06	ST	ST3	Checkpoint persistence transactional	failure injection	COMPLETE	YES
 ST3-O07	ST	ST3	Source hints are not security evidence	API/docs audit	COMPLETE	NO
 ST3-O08	ST	ST3	Restore cost O(m log N)	benchmark ledger	COMPLETE	NO
-ST4-O01	ST	ST4	Delta update equals full rebuild	random differential	PLANNED	YES
-ST4-O02	ST	ST4	All affected leaves recomputed	instrumented dependency tests	PLANNED	YES
-ST4-O03	ST	ST4	Unaffected subtrees reused	instrumented dependency tests	PLANNED	YES
-ST4-O04	ST	ST4	Ancestor invalidation complete	minimality/completeness tests	PLANNED	YES
-ST4-O05	ST	ST4	Overlapping ranges normalized canonically	property tests	PLANNED	YES
-ST4-O06	ST	ST4	Delta update transactional	failure injection	PLANNED	YES
-ST4-O07	ST	ST4	Boundary-shifting edits return RebuildRequired	negative tests	PLANNED	YES
-ST4-O08	ST	ST4	Append equals full rebuild	random differential	PLANNED	YES
-ST4-O09	ST	ST4	Append reuses frontier	work counter + benchmark	PLANNED	NO
+ST4-O01	ST	ST4	Delta update equals full rebuild	random differential	ACTIVE	YES
+ST4-O02	ST	ST4	All affected leaves recomputed	instrumented dependency tests	ACTIVE	YES
+ST4-O03	ST	ST4	Unaffected subtrees reused	instrumented dependency tests	ACTIVE	YES
+ST4-O04	ST	ST4	Ancestor invalidation complete	minimality/completeness tests	ACTIVE	YES
+ST4-O05	ST	ST4	Overlapping ranges normalized canonically	property tests	ACTIVE	YES
+ST4-O06	ST	ST4	Delta update transactional	failure injection	ACTIVE	YES
+ST4-O07	ST	ST4	Boundary-shifting edits return RebuildRequired	negative tests	ACTIVE	YES
+ST4-O08	ST	ST4	Append equals full rebuild	random differential	ACTIVE	YES
+ST4-O09	ST	ST4	Append reuses frontier	work counter + benchmark	ACTIVE	NO
 ST5-O01	ST	ST5	Optimized Tree preserves reference bytes	differential suite	PLANNED	YES
 ST5-O02	ST	ST5	No hidden large copies	allocation/I/O telemetry	PLANNED	NO
 ST5-O03	ST	ST5	Streaming memory bounded	scale RSS ledger	PLANNED	NO

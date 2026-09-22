@@ -1,0 +1,22 @@
+{
+  "closure_eligible": true,
+  "composition_stream_sha256": "82fa259392e63533a63ef513f775dc7167c62c01c9c8dd7196f5d43487bc8774",
+  "dual_cases": 300,
+  "dual_security_width_addition_claim": false,
+  "empirical_performance_claims": false,
+  "failure_attribution": {
+    "both_failure": 300,
+    "trajectory_only_failure": 300,
+    "tree_only_failure": 300
+  },
+  "independent_side_cases": 1200,
+  "manifest_cases": 100,
+  "manifest_declared_cases": 100,
+  "manifest_require_all_missing_cases": 100,
+  "passed": true,
+  "policy_cases": 200,
+  "schema": "sigma-sa1-dual-verification-gate-v1",
+  "trajectory_result_stream_sha256": "af0ea2e9b2b87f6feffc7bedb8d6793138adebf3b77309f8681c6889446154f7",
+  "tree_result_stream_sha256": "e5154d09e09d6bd9f773f62412fe4d3e7113c964e4d096898340acc50a6123c1",
+  "tree_trajectory_claims_independent": true
+}

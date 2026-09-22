@@ -189,9 +189,6 @@ Report:
 Evidencia:
 - SV0-IMPLEMENTATION-EVIDENCE.md
 
-SV1 permanece PLANNED.
-
-
 SV1 — Trajectory Checkpoint — está **COMPLETE**.
 
 Implementado:
@@ -245,4 +242,41 @@ Report:
 
 Por decisión de campaña, benchmarks/timings empíricos de SV1/SV2 se difieren a una fase posterior.
 
-SV3 permanece PLANNED. SV0–SV2 están ya cerrados semánticamente; sus benchmarks empíricos finos siguen deliberadamente diferidos.
+SV3 — Verification Receipts & Batch — está **COMPLETE**.
+
+Implementado:
+- canonical `SIGRCPT1` VerificationReceiptV1;
+- artifact/policy/verifier/evidence/result binding;
+- exact VerificationDecisionV1 projection;
+- explicit UNSIGNED receipts;
+- optional Ed25519 receipt signing;
+- claimed timestamp/provenance claim boundary;
+- canonical `SIGBCRI1` per-item batch results;
+- canonical `SIGBCHT1` batch results;
+- pointwise batch semantics;
+- isolated item failures;
+- deterministic input-order results;
+- serial/threaded byte equivalence;
+- stdlib-only independent receipt/batch encoder.
+
+Cierre ejecutado:
+- GitHub Actions run `35786646804`;
+- compile/Ruff/Mypy PASS;
+- pytest: 14 passed;
+- 200 receipt cases;
+- 1,000 signed-field mutations;
+- 100 batch cases;
+- 100 injected item failures;
+- pointwise/threaded equivalence true;
+- `closure_eligible=true`.
+
+Frozen streams:
+- receipt: `c8f889fc9a20c5c141ca9628cb5abec4b63478744f68e335100a3eddd978c261`;
+- signed receipt: `8d0f725e940b28a7ea9014cfa1f68bff03bbf12779149049d21513b31767d7e4`;
+- batch: `d06d75b39e2b5fed2b264a89b3092b66a6870ea93c1d43219f019fef8deca75b`.
+
+Reports/evidence:
+- `SV3-GATE-REPORT.json`;
+- `SV3-IMPLEMENTATION-EVIDENCE.md`.
+
+SV0–SV3 están ya cerrados semánticamente. Los benchmarks empíricos finos de SV1–SV3 siguen deliberadamente diferidos.

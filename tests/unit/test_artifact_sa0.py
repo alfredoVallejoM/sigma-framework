@@ -253,3 +253,76 @@ def test_create_rejects_manifest_and_manifest_id_together():
             manifest=ManifestV1(),
             manifest_id=bytes(32),
         )
+
+
+def _record_fields(encoded: bytes) -> list[tuple[int, bytes]]:
+    body_length = int.from_bytes(encoded[10:14], "big")
+    assert body_length == len(encoded) - 14
+    offset = 14
+    fields = []
+    while offset < len(encoded):
+        tag = int.from_bytes(encoded[offset : offset + 2], "big")
+        length = int.from_bytes(encoded[offset + 2 : offset + 6], "big")
+        offset += 6
+        fields.append((tag, encoded[offset : offset + length]))
+        offset += length
+    return fields
+
+
+def _rebuild_record(template: bytes, fields: list[tuple[int, bytes]]) -> bytes:
+    body = b"".join(
+        tag.to_bytes(2, "big") + len(value).to_bytes(4, "big") + value
+        for tag, value in fields
+    )
+    return template[:10] + len(body).to_bytes(4, "big") + body
+
+
+def test_artifact_codec_rejects_missing_duplicate_reordered_unknown_fields():
+    tree, digest, _ = _parts()
+    artifact = create_artifact_v1(
+        ArtifactProfileV1.DUAL,
+        tree_root=tree,
+        trajectory_digest=digest,
+    )
+    encoded = artifact.to_bytes()
+    fields = _record_fields(encoded)
+    mutations = []
+    for index, field in enumerate(fields):
+        mutations.append(_rebuild_record(encoded, [*fields[:index], *fields[index + 1 :]]))
+        mutations.append(
+            _rebuild_record(
+                encoded,
+                [*fields[: index + 1], field, *fields[index + 1 :]],
+            )
+        )
+    reordered = list(fields)
+    reordered[0], reordered[1] = reordered[1], reordered[0]
+    mutations.append(_rebuild_record(encoded, reordered))
+    mutations.append(_rebuild_record(encoded, [*fields, (0xFFFF, b"")]))
+
+    for mutated in mutations:
+        with pytest.raises(ValueError):
+            SigmaArtifactV1.from_bytes(mutated)
+
+
+def test_identity_parent_wire_reorder_rejects():
+    tree, _, _ = _parts()
+    parent_a = bytes.fromhex("11" * 32)
+    parent_b = bytes.fromhex("22" * 32)
+    identity = ArtifactIdentityV1(
+        ArtifactProfileV1.TREE,
+        ArtifactDescriptorV1(),
+        tree_root=tree,
+        parent_artifact_ids=(parent_a, parent_b),
+    )
+    encoded = identity.to_bytes()
+    fields = _record_fields(encoded)
+    parent_index = next(i for i, (tag, _) in enumerate(fields) if tag == 6)
+    parent_wire = fields[parent_index][1]
+    assert int.from_bytes(parent_wire[:2], "big") == 2
+    reversed_parents = parent_wire[:2] + parent_b + parent_a
+    mutated_fields = list(fields)
+    mutated_fields[parent_index] = (6, reversed_parents)
+    mutated = _rebuild_record(encoded, mutated_fields)
+    with pytest.raises(ValueError, match="sorted and unique"):
+        ArtifactIdentityV1.from_bytes(mutated)

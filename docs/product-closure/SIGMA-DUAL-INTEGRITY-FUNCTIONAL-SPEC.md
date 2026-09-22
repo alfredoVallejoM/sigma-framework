@@ -1387,40 +1387,297 @@ No redefine ninguna fórmula.
 
 ### 11.1. Objetivo
 
-Hacer visible y auditable la trayectoria calculada sin alterar el digest.
+Hacer visible y auditable la trayectoria Sigma v3 ya calculada sin modificar:
+- SigmaContextV3;
+- PersistentBinding;
+- derivación t/k;
+- layout;
+- HistoryCommitmentV3;
+- framing;
+- round dynamics;
+- SigmaDigestV3.
 
-### 11.2. Campos
+Audit es estrictamente downstream de `evaluate_v3()`.
 
-- context identity;
-- PersistentBinding identity o wire según modo;
-- t,k;
-- round count;
-- H_i para cada ronda;
-- S_i o hashes de S_i según audit profile;
-- layout plan identity;
-- round frame identity;
-- Deep branch/fold identities cuando corresponda;
-- resulting SigmaDigestV3.
+Ley de no interferencia:
 
-Se definen dos perfiles:
+    digest_from_evaluation_v3(E)
+      = project_digest_v3(audit_from_evaluation_v3(E))
 
-FULL:
-conserva intermedios necesarios para replay exhaustivo.
+y construir un Audit nunca participa en la evaluación que produce E.
+
+### 11.2. Wire
+
+Magic top-level:
+
+    SIG3AUD0
+
+Round record magic:
+
+    SIG3AUR0
+
+El envelope usa el record codec v3 existente:
+
+    magic[8] || record_version=3:u16 || body_length:u32 || strict TLV
+
+No se registra:
+- nueva suite;
+- nuevo DomainId criptográfico;
+- nueva primitive hash.
+
+### 11.3. Campos top-level
+
+TrajectoryAuditV3 contiene:
+
+1. mode;
+2. SigmaDigestV3 exacto;
+3. PersistentBinding exacto;
+4. init LayoutPlan wire;
+5. secuencia completa de states S_0..S_(t+k-1);
+6. secuencia H_0..H_(t+k-1), sólo para HISTORY_FEEDBACK;
+7. secuencia de round audit records, exactamente t+k-1.
+
+Por construcción:
+
+    len(states) = t + k
+    len(rounds) = t + k - 1
+
+y:
+
+    digest.window.states
+      = states[t:t+k].
+
+### 11.4. Round audit record
+
+Cada round record contiene:
+
+- round index;
+- canonical layout wire;
+- optional round-binding wire;
+- optional state-frame wire;
+- optional branch-frame sequence;
+- optional branch-output sequence;
+- optional fold-frame wire.
+
+Round indices son exactamente:
+
+    0,1,...,t+k-2.
+
+### 11.5. COMPACT
+
+COMPACT conserva únicamente lo necesario para reconstruir semánticamente la
+trayectoria:
+
+- digest;
+- persistent binding;
+- init layout;
+- states;
+- histories si existen;
+- round layouts.
+
+No serializa:
+- round binding redundante;
+- state-frame wire;
+- branch frames;
+- branch outputs;
+- fold frames.
+
+Todos ellos se derivan de context/binding/history/layout/state durante replay.
+
+COMPACT no almacena hashes sustitutivos de esos objetos: evita introducir una
+segunda primitive o identidad paralela.
+
+### 11.6. FULL
+
+FULL conserva además los wires canónicos exactos ya definidos por Sigma v3:
+
+WideOnce:
+- state frame.
+
+Deep:
+- state frame;
+- cada DeepBranchFrame;
+- cada branch output;
+- DeepFoldFrame.
+
+DeepVector:
+- vector state frame;
+- cada DeepBranchFrame;
+- cada branch output;
+- sin fold frame porque:
+
+    S_(i+1) = branch_0 || ... || branch_(m-1).
+
+History suites:
+- RoundBindingV3;
+- HistoryRoundFrame o HistoryVectorRoundFrame;
+- HistoryDeepBranchFrame;
+- HistoryDeepFoldFrame cuando corresponde.
+
+Por tanto FULL no inventa "frame IDs"; conserva el frame wire canónico exacto.
+
+### 11.7. Replay estructural
+
+API:
+
+    verify_trajectory_audit_structure_v3(audit) -> bool
+
+No recibe source.
+
+Verifica:
+- persistent binding/header/parameters consistency;
+- init layout exacto;
+- state count y widths;
+- public window projection;
+- H_0 = history_seed_v3(...) en history suites;
+- H_(i+1) = history_step_v3(...,H_i,i,S_i);
+- round layout derivado exactamente;
+- state frame derivado exactamente;
+- Deep branch frames/outputs;
+- scalar fold o vector concatenation;
+- S_(i+1) exacto;
+- FULL-only wires exactos cuando mode=FULL.
+
+Resultado positivo significa:
+
+    "esta trayectoria es internamente coherente con su binding/context".
+
+No significa todavía:
+
+    "el binding corresponde al source X".
+
+### 11.8. Verificación full contra source
+
+API:
+
+    verify_trajectory_audit_full_v3(source,audit) -> bool
+
+Procedimiento:
+1. ejecutar `evaluate_v3(audit.digest.context, source)`;
+2. construir un audit del mismo mode;
+3. exigir igualdad byte por byte del audit canónico.
+
+Por tanto:
+
+    verify_full(X,audit(X)) = true
+
+y cambiar X produce rechazo salvo igualdad completa de la evaluación subyacente.
+
+Esta API es la única de SV0 que realiza message-binding.
+
+### 11.9. Ley de proyección
+
+Para todo evaluation válido E:
+
+    project_digest_v3(audit_from_evaluation_v3(E))
+      = digest_from_evaluation_v3(E)
+
+byte por byte.
+
+COMPACT y FULL proyectan exactamente el mismo SigmaDigestV3:
+
+    project(COMPACT(E)) = project(FULL(E)).
+
+### 11.10. Causalidad history-feedback
+
+Para suites R12.5:
+
+    Z_i = (H_i,S_i)
+
+y el audit conserva todos los H_i y S_i.
+
+Replay exige:
+
+    H_0 = HistorySeed(C,P_X)
+
+    H_(i+1)
+      = HistoryStep(C,P_X,H_i,i,S_i)
+
+antes de aceptar la transición.
+
+Mutar H_i sin recomputar el suffix causal invalida replay.
+
+### 11.11. Deep vs DeepVector
+
+Audit conserva la diferencia existente; no la normaliza.
+
+Deep scalar:
+
+    branches_i = (b_i^0,...,b_i^(m-1))
+    S_(i+1) = Fold(branches_i)
+
+y FULL contiene fold frame.
+
+DeepVector:
+
+    S_(i+1) = b_i^0 || ... || b_i^(m-1)
+
+y FULL no contiene fold frame.
+
+La anchura del state sigue siendo:
+- 64 bytes para Deep;
+- 256 bytes para DeepVector en el profile actual.
+
+### 11.12. Codec canonicality
+
+Top-level y round records usan strict TLV v3.
+
+Secuencias:
+- count:u16;
+- cada item con length:u32;
+- máximo 64 items;
+- máximo 64 KiB por item.
+
+COMPACT rechaza cualquier evidencia FULL presente.
+
+FULL exige:
+- state frame por round;
+- branch count exacto para Deep/DeepVector;
+- fold frame exactamente cuando profile=DEEP;
+- round binding exactamente cuando trajectory=HISTORY_FEEDBACK.
+
+### 11.13. Complejidad
+
+Sea:
+
+    R = t + k - 1
+    s = state_size
+    m = número de joint algorithms.
+
+Construcción desde un Evaluation ya existente:
 
 COMPACT:
-conserva IDs/hashes suficientes para comparar contra una reevaluación, sin duplicar frames grandes.
 
-### 11.3. Ley de proyección
+    T = O(output_size)
+    M/output = O((R+1)s + R*layout + history)
 
-    project_digest(audit(X)) = SigmaV3(X)
+FULL añade serialización de frames ya derivables:
 
-### 11.4. Ley de replay
+    T = O(full_audit_size)
+    output = O(R * frame_material)
 
-    verify_audit(X, audit(X)) = Verified
+No vuelve a leer el source ni a recalcular el digest.
 
-### 11.5. Integridad de ronda
+Replay estructural:
 
-Alterar H_i, S_i, round index, layout identity o frame identity debe producir rechazo en replay salvo la correspondiente colisión criptográfica subyacente.
+    O(R * round_cost)
+
+sin source I/O.
+
+Full source verification:
+
+    O(cost(evaluate_v3(source)) + audit_size).
+
+### 11.14. Claim boundary
+
+TrajectoryAudit:
+- no añade nominalmente bits de seguridad;
+- no es un segundo hash del mensaje;
+- no convierte COMPACT en una prueba más débil ni FULL en una primitive más fuerte;
+- no prueba timestamp, provenance ni ejecución histórica real;
+- no reemplaza SigmaDigestV3.
+
+FULL contiene más evidencia inspeccionable, no más fuerza criptográfica nominal.
 
 ## 12. TrajectoryCheckpoint V1
 

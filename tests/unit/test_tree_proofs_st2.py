@@ -200,3 +200,20 @@ def test_range_verification_uses_no_source_io(monkeypatch):
 
     monkeypatch.setattr(builtins, "open", no_open)
     assert verify_range(data[start : start + length], proof)
+
+
+def test_one_shot_prove_range_rejects_before_index_build(monkeypatch):
+    import sigma.tree.proofs as proofs_module
+
+    built = False
+
+    class BombIndex:
+        def __init__(self, *args, **kwargs):
+            nonlocal built
+            built = True
+            raise AssertionError("TreeProofIndex constructed")
+
+    monkeypatch.setattr(proofs_module, "TreeProofIndex", BombIndex)
+    with pytest.raises(ValueError, match="source byte bounds"):
+        proofs_module.prove_range(b"abc", 3, 1)
+    assert not built

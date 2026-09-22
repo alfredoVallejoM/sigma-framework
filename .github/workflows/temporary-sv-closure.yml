@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - campaign/sigma-dual-integrity-product-closure
+    paths:
+      - ".github/workflows/temporary-sv-closure.yml"
 
 permissions:
   contents: read

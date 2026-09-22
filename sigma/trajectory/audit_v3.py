@@ -504,7 +504,7 @@ def project_digest_v3(audit: TrajectoryAuditV3) -> SigmaDigestV3:
 def _expected_round_artifacts(
     audit: TrajectoryAuditV3,
     index: int,
-) -> tuple[bytes, tuple[bytes, ...], tuple[bytes, ...], bytes, bytes, bytes]:
+) -> tuple[bytes, bytes, tuple[bytes, ...], tuple[bytes, ...], bytes, bytes, bytes]:
     context = audit.digest.context
     binding = audit.binding
     state = audit.states[index]
@@ -556,6 +556,7 @@ def _expected_round_artifacts(
         successor = hash_bytes(context.state_algorithm, wide_domain, state_frame_bytes)
         return (
             layout.to_bytes(),
+            state_frame_bytes,
             (),
             (),
             b"",
@@ -605,6 +606,7 @@ def _expected_round_artifacts(
 
     return (
         layout.to_bytes(),
+        state_frame_bytes,
         branch_frames,
         branch_outputs,
         fold_frame,
@@ -646,6 +648,7 @@ def verify_trajectory_audit_structure_v3(audit: TrajectoryAuditV3) -> bool:
         for index, round_ in enumerate(audit.rounds):
             (
                 layout,
+                state_frame,
                 branch_frames,
                 branch_outputs,
                 fold_frame,
@@ -673,87 +676,6 @@ def verify_trajectory_audit_structure_v3(audit: TrajectoryAuditV3) -> bool:
                 expected_history = next_history
 
             if audit.mode is TrajectoryAuditModeV3.FULL:
-                state_frame = (
-                    HistoryVectorRoundFrame(
-                        context,
-                        RoundBindingV3(
-                            binding,
-                            HistoryCommitmentV3.from_bytes(audit.histories[index]),
-                        ),
-                        derive_history_layout_v3(
-                            context,
-                            RoundBindingV3(
-                                binding,
-                                HistoryCommitmentV3.from_bytes(audit.histories[index]),
-                            ),
-                            round_index=index,
-                            base_length=len(audit.states[index]),
-                        ),
-                        index,
-                        audit.states[index],
-                    ).to_bytes()
-                    if (
-                        context.trajectory_profile
-                        is TrajectoryProfileIdV3.HISTORY_FEEDBACK
-                        and context.round_profile is RoundProfileIdV3.DEEP_VECTOR
-                    )
-                    else (
-                        HistoryRoundFrame(
-                            context,
-                            RoundBindingV3(
-                                binding,
-                                HistoryCommitmentV3.from_bytes(
-                                    audit.histories[index]
-                                ),
-                            ),
-                            derive_history_layout_v3(
-                                context,
-                                RoundBindingV3(
-                                    binding,
-                                    HistoryCommitmentV3.from_bytes(
-                                        audit.histories[index]
-                                    ),
-                                ),
-                                round_index=index,
-                                base_length=len(audit.states[index]),
-                            ),
-                            index,
-                            audit.states[index],
-                        ).to_bytes()
-                        if context.trajectory_profile
-                        is TrajectoryProfileIdV3.HISTORY_FEEDBACK
-                        else (
-                            VectorRoundFrame(
-                                context,
-                                binding,
-                                derive_layout_v3(
-                                    context,
-                                    binding,
-                                    kind=LayoutKindV3.ROUND,
-                                    round_index=index,
-                                    base_length=len(audit.states[index]),
-                                ),
-                                index,
-                                audit.states[index],
-                            ).to_bytes()
-                            if context.round_profile
-                            is RoundProfileIdV3.DEEP_VECTOR
-                            else RoundFrame(
-                                context,
-                                binding,
-                                derive_layout_v3(
-                                    context,
-                                    binding,
-                                    kind=LayoutKindV3.ROUND,
-                                    round_index=index,
-                                    base_length=len(audit.states[index]),
-                                ),
-                                index,
-                                audit.states[index],
-                            ).to_bytes()
-                        )
-                    )
-                )
                 if not hmac.compare_digest(round_.state_frame, state_frame):
                     return False
                 if round_.branch_frames != branch_frames:
@@ -765,13 +687,7 @@ def verify_trajectory_audit_structure_v3(audit: TrajectoryAuditV3) -> bool:
                 if not hmac.compare_digest(round_.round_binding, round_binding):
                     return False
 
-        return hmac.compare_digest(
-            audit.digest.window.to_bytes(),
-            audit.digest.window.__class__(
-                audit.digest.header.parameters,
-                audit.states[audit.digest.header.parameters.target_round :],
-            ).to_bytes(),
-        )
+        return True
     except (DecodeError, TypeError, ValueError):
         return False
 

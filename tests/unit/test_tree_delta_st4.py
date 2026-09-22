@@ -204,3 +204,28 @@ def test_random_small_delta_smoke():
         result = index.apply_delta([TreeEditV1(start, length, replacement)])
         expected[start : start + length] = replacement
         assert result.root == build_tree(bytes(expected))
+
+
+def test_append_failure_before_publish_preserves_state(monkeypatch):
+    import sigma.tree.delta as delta_module
+
+    data = _data(8, 17)
+    index = TreeDeltaIndex(data)
+    before_root = index.root
+    before_bytes = index.materialize()
+    original = delta_module.combine_nodes
+    calls = 0
+
+    def fail_once(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("injected append combine failure")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(delta_module, "combine_nodes", fail_once)
+    with pytest.raises(RuntimeError, match="injected append"):
+        index.append(b"suffix" * 100)
+
+    assert index.root == before_root
+    assert index.materialize() == before_bytes

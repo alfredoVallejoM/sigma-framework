@@ -82,11 +82,14 @@ Crear la autoridad única de geometría arbórea y un formato Sigma Tree V1 inde
 
 - sigma/tree/ids.py
 - sigma/tree/codec.py
-- sigma/tree/core.py
-- sigma/tree/frontier.py
-- sigma/tree/index.py
-- sigma/tree/legacy_v22.py
-- tests/tree/
+- sigma/tree/model.py — profile/node/root/frontier canónicos
+- sigma/tree/core.py — autoridad única de construcción/reducción
+- sigma/tree/legacy_v22.py — compatibilidad histórica sólo lectura
+- reference/tree_v1.py — oracle stdlib independiente
+- scripts/product_closure/st0_gate.py — gate reproducible de cierre
+- tests unit/property/differential/vectors de ST0
+
+No se crea un index persistente en ST0: pertenece a etapas posteriores de proofs/delta. La frontier vive en el modelo canónico; separar un archivo por nombre no constituye una obligación arquitectónica.
 
 ### Decisiones congeladas
 
@@ -116,7 +119,7 @@ ST0-O05 — Combine locality
 Combinar dos nodos válidos depende sólo de ambos nodos y del profile.
 
 ST0-O06 — Backend neutrality  
-Chunk read size, workers y scheduling no alteran root.
+Chunk read size no altera root. Cualquier backend paralelo es semánticamente neutro si produce la misma secuencia canónica ordenada de hojas prehasheadas; workers y scheduling deben normalizarse a esa secuencia antes de la reducción serial.
 
 ST0-O07 — Empty root uniqueness  
 El objeto vacío tiene una raíz canónica propia.
@@ -143,7 +146,8 @@ Unit:
 
 Property:
 - chunked reads equivalen a one-shot;
-- workers 1..N equivalen;
+- reducer de hojas prehasheadas ordenadas coincide con build directo;
+- cualquier backend con workers/scheduling debe normalizar a dicho orden antes de reducir;
 - frontier serializa/deserializa;
 - reconstrucción desde leaves coincide con build directo.
 
@@ -160,10 +164,12 @@ Adversarial:
 - truncated wire.
 
 Fuzz:
-- codec;
+- TreeProfile;
 - TreeNode;
 - TreeRoot;
-- TreeFrontier.
+- TreeFrontier;
+- >=100k mutaciones deterministas/reproducibles en el gate de cierre;
+- mutaciones estructurales missing/duplicate/reordered/unknown TLV.
 
 ### Gate ST0
 
@@ -171,7 +177,7 @@ PASS sólo si:
 1. ninguna KAT v2.2/v3 cambia;
 2. referencia e implementación productiva coinciden;
 3. descomposición estructural exhaustiva >= 100k contadores de hojas y >= 2k casos diferenciales aleatorios sin divergencia;
-4. parser fuzz y mutation tests cubren errores críticos;
+4. parser fuzz >= 100k y mutation tests estructurales cubren errores críticos;
 5. complejidad observada no contradice el contrato.
 
 ## 4. ST1 — Canonical Manifest

@@ -30,3 +30,26 @@ def test_frontier_rejects_gap():
     c = leaf_node(DEFAULT_PROFILE, 2, 2 * 65_536, b"c")
     with pytest.raises(ValueError):
         TreeFrontier((a, c))
+
+
+def test_profile_rejects_non_four_algorithm_count_before_construction():
+    from sigma.tree.codec import record, u16, u32
+    from sigma.tree.ids import TREE_PROFILE_MAGIC
+    from sigma.tree.model import TreeProfileV1
+
+    malformed = record(
+        TREE_PROFILE_MAGIC,
+        (
+            (1, u16(1)),
+            (2, u32(65_536)),
+            (3, u16(1) + u16(1)),
+        ),
+    )
+    with pytest.raises(TreeDecodeError, match="exactly four"):
+        TreeProfileV1.from_bytes(malformed)
+
+
+def test_root_rejects_impossible_byte_leaf_relation():
+    root = build_tree(b"abc")
+    with pytest.raises(ValueError, match="canonical chunking"):
+        TreeRoot(root.profile, 65_537, 1, root.digests)

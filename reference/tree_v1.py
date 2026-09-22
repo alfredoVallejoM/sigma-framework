@@ -58,12 +58,21 @@ def profile_bytes() -> bytes:
 
 
 def leaf(index: int, raw: bytes):
-    frame = record(
-        b"SIGTLEAF",
-        ((1, profile_bytes()), (2, u64(index)), (3, u64(index * CHUNK)), (4, u32(len(raw))), (5, raw)),
-    )
-    digests = tuple(h(a, domain(1) + frame) for a in ALGORITHMS)
-    return (index, 1, len(raw), 0, digests)
+    digests = []
+    for a in ALGORITHMS:
+        frame = record(
+            b"SIGTLEAF",
+            (
+                (1, profile_bytes()),
+                (2, u16(a)),
+                (3, u64(index)),
+                (4, u64(index * CHUNK)),
+                (5, u32(len(raw))),
+                (6, raw),
+            ),
+        )
+        digests.append(h(a, domain(1) + frame))
+    return (index, 1, len(raw), 0, tuple(digests))
 
 
 def parent(left, right):
@@ -71,8 +80,13 @@ def parent(left, right):
     rs, rc, rb, rh, rd = right
     if ls + lc != rs:
         raise ValueError("non-adjacent")
-    height = max(lh, rh) + 1
     count = lc + rc
+    canonical_left = 1 << ((count - 1).bit_length() - 1)
+    if lc != canonical_left:
+        raise ValueError("non-canonical split")
+    if lb != lc * CHUNK:
+        raise ValueError("short left subtree")
+    height = max(lh, rh) + 1
     length = lb + rb
     out = []
     for a, x, y in zip(ALGORITHMS, ld, rd):
@@ -113,3 +127,16 @@ def build(data: bytes):
         for i in range((len(data) + CHUNK - 1) // CHUNK)
     ]
     return reduce_leaves(leaves)
+
+
+def items(values):
+    values = tuple(values)
+    return u16(len(values)) + b"".join(u32(len(v)) + v for v in values)
+
+
+def root_wire(data: bytes) -> bytes:
+    length, count, digests = build(data)
+    return record(
+        b"SIGTROOT",
+        ((1, profile_bytes()), (2, u64(length)), (3, u64(count)), (4, items(digests))),
+    )

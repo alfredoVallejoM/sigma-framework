@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
+from itertools import pairwise
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -140,7 +141,7 @@ class ManifestV1:
         if len(self.entries) > MAX_MANIFEST_ENTRIES:
             raise ValueError("manifest contains too many entries")
         keys = tuple(entry.path_bytes for entry in self.entries)
-        if any(left >= right for left, right in zip(keys, keys[1:])):
+        if any(left >= right for left, right in pairwise(keys)):
             raise ValueError("manifest entries must have unique canonical UTF-8 ordering")
 
     def to_bytes(self) -> bytes:

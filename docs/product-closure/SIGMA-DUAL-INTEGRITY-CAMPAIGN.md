@@ -184,66 +184,179 @@ PASS sólo si:
 
 ### Objetivo
 
-Comprometer árboles de directorio, releases y datasets de forma reproducible.
+Comprometer árboles lógicos de directorio, releases y datasets de forma reproducible
+sin depender del path absoluto, del orden de traversal ni de metadata volátil del host.
 
-### Implementación
+### Autoridades y superficie
 
-- sigma/tree/manifest.py
-- sigma/tree/path.py
-- CLI provisional: sigma manifest
-- tests/tree/test_manifest_*.py
+- `sigma/tree/path.py` — canonicalización portable de paths.
+- `sigma/tree/manifest.py` — ManifestEntryV1, ManifestV1 y scanner de directorio.
+- `reference/manifest_v1.py` — oracle stdlib independiente.
+- `scripts/product_closure/st1_gate.py` — gate reproducible local/cross-platform.
+- `scripts/product_closure/st1_benchmark.py` — ledger de complejidad.
+- CLI provisional `sigma manifest`; SA3 conserva la autoridad sobre la CLI final.
+
+ST1 consume TreeRoot V1 ya congelado. No modifica chunking, domains, hashes, frontier
+ni root semantics de ST0 y no modifica Sigma v3.
+
+### Perfil base congelado
+
+Manifest profile `BASE_V1 = 0x0001`.
+
+Entry kinds:
+- FILE = 0x0001;
+- DIRECTORY = 0x0002;
+- SYMLINK = 0x0003.
+
+Metadata profile base `BASE = 0x0001`.
+
+Todo entry contiene:
+1. canonical relative path;
+2. entry kind;
+3. metadata profile;
+4. byte_length;
+5. TreeRoot V1;
+6. optional SigmaDigestV3 wire.
+
+Payload comprometido por TreeRoot:
+- FILE -> bytes exactos del fichero;
+- DIRECTORY -> bytes vacíos / canonical empty TreeRoot;
+- SYMLINK, sólo con policy explícita -> texto NFC del target UTF-8, sin seguirlo.
+
+Así los directorios vacíos participan en el manifest y un symlink no adquiere
+semántica implícita de lectura del objeto apuntado.
+
+### Canonical path V1
+
+Una ruta aceptada:
+- es `str` Unicode válido y serializable como UTF-8 estricto;
+- es relativa;
+- usa sólo `/` como separador lógico;
+- no tiene NUL;
+- no tiene componentes vacíos, `.` ni `..`;
+- no tiene drive/UNC de Windows;
+- se normaliza a Unicode NFC;
+- no aplica case folding;
+- está limitada a 4096 bytes UTF-8.
+
+El orden canónico es lexicográfico por los bytes UTF-8 NFC. Dos nombres distintos
+que colapsan al mismo path tras NFC son un duplicate error, nunca aliases silenciosos.
+
+### Symlink policy
+
+Default: `REJECT`.
+
+Modo explícito `TEXT`:
+- usa `os.readlink`;
+- normaliza sólo el texto del target a NFC;
+- no resuelve `..`;
+- no sigue el target;
+- compromete esos bytes mediante TreeRoot V1.
+
+Un loop o un target de traversal es por tanto dato comprometido, no traversal ejecutado.
+
+### Metadata base
+
+No forman parte del wire:
+- mtime/ctime;
+- uid/gid;
+- inode;
+- executable bit;
+- path absoluto.
+
+Un futuro profile que incluya executable bit necesita otro profile ID; no se
+sobrecarga silenciosamente BASE_V1.
+
+### Wire V1
+
+ManifestEntry magic: `SIGTENT1`.
+
+Campos TLV:
+1. path UTF-8 NFC;
+2. kind u16;
+3. metadata profile u16;
+4. byte_length u64;
+5. canonical TreeRoot V1 wire;
+6. optional trajectory digest wire, vacío si ausente.
+
+Manifest magic: `SIGTMNF1`.
+
+Campos:
+1. manifest profile u16;
+2. count-prefixed sequence de ManifestEntry wires en canonical path order.
+
+El record completo conserva el límite Tree V1 de 8 MiB. Entry count máximo:
+65,535. Un entry wire se limita a 1 MiB.
+
+El optional trajectory digest se trata en ST1 como bytes estructuralmente
+etiquetados por magic `SIGMA3DG`: ST1 los compromete exactamente pero no afirma
+que sean válidos ni message-bound; esa validación pertenece al track Trajectory/Artifact.
 
 ### Obligaciones
 
-ST1-O01 — Canonical relative paths  
-No absolute path, ., .., NUL ni separadores alternativos.
+ST1-O01 — Canonical relative paths.
+ST1-O02 — Traversal independence.
+ST1-O03 — Absolute root-path independence.
+ST1-O04 — Duplicate canonical path rejection.
+ST1-O05 — Base metadata excludes host-volatile fields.
+ST1-O06 — Symlink safety and explicit policy.
+ST1-O07 — Content/TreeRoot binding.
+ST1-O08 — Optional trajectory digest exact binding.
+ST1-O09 — Canonical UTF-8 byte ordering.
+ST1-O10 — Complexity contract.
 
-ST1-O02 — Traversal independence  
-El orden del sistema de ficheros no afecta el manifest.
+### Complexity contract
 
-ST1-O03 — Root-path independence  
-Mover/copiar el mismo árbol lógico no cambia el manifest.
+Con:
+- B = bytes totales de ficheros/targets leídos;
+- F = número de entries;
+- m = 4 branches Tree V1;
+- path length acotado por profile;
 
-ST1-O04 — Duplicate rejection  
-No existen dos entradas con path canónico idéntico.
+el contrato es:
 
-ST1-O05 — Metadata profile exactness  
-mtime/uid/gid/inode no participan en profile base.
+    T_manifest = O(m B + F log F)
+    IO_manifest = O(B + F)
+    M_manifest = O(F) + max_file O(chunk + m log N_file)
 
-ST1-O06 — Symlink safety  
-Symlinks se rechazan por defecto; si se habilitan, se compromete el target textual y no se sigue implícitamente.
+La memoria O(F) es explícita: BASE_V1 materializa entries antes de ordenar.
+ST5 podrá sustituir este coste accidental por sort externo/index policy sin
+cambiar el wire.
 
-ST1-O07 — Content binding  
-Cambiar TreeRoot de una entrada cambia el manifest.
+### Tests/gate ST1
 
-ST1-O08 — Optional trajectory binding  
-Si una entry incluye SigmaDigestV3, dicho digest forma parte exacta del manifest.
+Blocking local gate:
+- >= 50,000 canonical path cases;
+- >= 1,000 traversal permutations;
+- >= 1,000 product/reference differential manifests;
+- >= 50,000 entry/manifest codec mutations;
+- structural TLV missing/duplicate/reorder/unknown mutations;
+- root relocation fixture;
+- touch/chmod metadata invariance;
+- content mutation;
+- Unicode/NFC duplicate adversary;
+- symlink default rejection;
+- symlink loop/traversal TEXT-mode no-follow;
+- independent filesystem scanner agreement.
 
-ST1-O09 — Deterministic ordering  
-Entries ordenadas por bytes UTF-8 canónicos.
+Cross-platform gate:
+- ejecutar el mismo `st1_gate.py` en Linux y macOS;
+- ambos reports deben tener `local_passed=true`;
+- ambos deben producir el mismo `fixture_manifest_sha256`;
+- `closure_eligible=true` sólo aparece cuando el gate recibe reports válidos
+  de ambas plataformas.
 
-ST1-O10 — Complexity  
-O(B + F log F) en profile base.
+No se simula macOS cambiando `platform.system()`.
 
-### Tests
+### Criterio de cierre
 
-Metamórficos:
-- touch sin cambio de bytes no cambia base manifest;
-- rename sí cambia;
-- reorder traversal no cambia;
-- copy to another absolute root no cambia;
-- executable bit sólo cambia profiles que lo incluyan.
+CANDIDATE exige todas las obligaciones con evidencia local y reference differential.
 
-Adversarial:
-- symlink loops;
-- path traversal;
-- invalid UTF-8 source names según policy;
-- very large number of entries;
-- duplicate normalized paths.
-
-### Gate ST1
-
-Manifest independiente debe reconstruir el mismo wire a partir de fixture directory en Linux/macOS cuando la representación lógica sea la misma.
+COMPLETE exige además:
+1. peer report Linux/macOS byte-identical;
+2. revisión adversarial post-candidate de ST1-O01..O10;
+3. KAT/corpora ST0 intactos;
+4. ausencia de cambios en Sigma v3.
 
 ## 5. ST2 — Inclusion and Range Proofs
 

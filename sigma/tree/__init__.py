@@ -14,6 +14,14 @@ from .checkpoint import (
 )
 from .codec import TreeDecodeError
 from .core import TreeBuilder, build_tree, build_tree_chunks, combine_nodes, empty_root, leaf_node
+from .delta import (
+    RebuildRequired,
+    TreeDeltaIndex,
+    TreeEditV1,
+    TreeUpdateResultV1,
+    TreeUpdateTelemetryV1,
+    normalize_tree_edits,
+)
 from .ids import (
     ManifestEntryKind,
     ManifestMetadataProfileId,
@@ -54,6 +62,11 @@ from .path import canonical_relative_path
 
 __all__ = [
     "DEFAULT_PROFILE",
+    "RebuildRequired",
+    "TreeDeltaIndex",
+    "TreeEditV1",
+    "TreeUpdateResultV1",
+    "TreeUpdateTelemetryV1",
     "TreeResumeCheckpointV1",
     "TreeSourceHintV1",
     "ManifestEntryKind",
@@ -87,6 +100,7 @@ __all__ = [
     "empty_root",
     "leaf_node",
     "manifest_from_entries",
+    "normalize_tree_edits",
     "inclusion_geometry",
     "prove_leaf",
     "prove_range",

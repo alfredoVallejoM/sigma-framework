@@ -1703,77 +1703,513 @@ SV0 no afirma que estos intermedios sean secretos; sólo evita afirmar lo contra
 
 ## 12. TrajectoryCheckpoint V1
 
-### 12.1. Alcance
+### 12.1. Alcance y separación
 
-Reanuda la fase iterada después de que P_X y t,k hayan sido calculados.
+TrajectoryCheckpointV1 reanuda **la fase iterada de la trayectoria** una vez ya
+existen:
 
-No pretende reanudar arbitrariamente la primera pasada de preparación del input.
+    context C
+    PersistentBinding P_X
+    TrajectoryParameters (t,k).
 
-### 12.2. Estado mínimo
+Es distinto de `sigma.incremental_v3.SigmaCheckpointV3`.
+
+El checkpoint incremental histórico:
+- representa un prefijo de source;
+- es provisional;
+- reevalúa ese prefijo para obtener un digest.
+
+SV1:
+- representa el estado interno S_i/H_i de una trayectoria ya preparada;
+- no contiene bytes del source;
+- continúa sin volver a ejecutar preparación/anchor sobre X.
+
+### 12.2. Wire
+
+Magic:
+
+    SIG3TCK0
+
+Se reutiliza el strict record envelope v3.
+
+Campos:
+1. SigmaContextV3;
+2. PersistentBinding;
+3. TrajectoryParameters;
+4. round_index i;
+5. state S_i;
+6. HistoryCommitmentV3 H_i o vacío;
+7. public-window prefix sequence.
+
+### 12.3. Por qué existe window_prefix
+
+La planificación mínima original:
+
+    Q_i = (C,P_X,t,k,i,H_i,S_i)
+
+es suficiente para continuar transiciones, pero no para reconstruir el mismo
+SigmaDigestV3 si el checkpoint se toma **dentro de la ventana pública**.
+
+Si:
+
+    i > t
+
+ya se han consumido estados públicos:
+
+    S_t,...,S_(i-1).
+
+Por tanto el estado mínimo portable para todos los índices es:
 
     Q_i =
-      context,
-      PersistentBinding,
-      TrajectoryParameters,
-      round_index i,
-      H_i,
+      C,
+      P_X,
+      t,k,
+      i,
+      H_i?,
       S_i,
-      suite/profile identifiers
+      W_i
 
-### 12.3. Ley
+donde:
 
-Si Eval(X) produce Z_0,...,Z_r:
+    W_i = ()
+      si i <= t
 
-    Continue(Q_i, r-i) = Z_i,...,Z_r
+y:
 
-y el digest final coincide exactamente con la evaluación directa.
+    W_i = (S_t,...,S_(i-1))
+      si i > t.
 
-### 12.4. Seguridad semántica
+La longitud es canónica:
 
-Un checkpoint válido prueba consistencia interna con su P_X. Para demostrar que P_X corresponde a una fuente X concreta se exige verify_checkpoint_source(X,Q_i).
+    len(W_i) = max(0,i-t).
+
+### 12.4. Invariantes
+
+Para:
+
+    r = t+k-1
+
+se exige:
+
+    0 <= i <= r
+    len(S_i) = context.state_size.
+
+History suites:
+
+    H_i.round_index = i.
+
+Non-history suites:
+
+    history = None.
+
+Además:
+
+    derive_trajectory_parameters(C,P_X) = (t,k).
+
+No puede cambiar silenciosamente:
+- suite;
+- context;
+- binding;
+- t;
+- k;
+- trajectory profile.
+
+### 12.5. Construcción desde EvaluationV3
+
+API:
+
+    checkpoint_from_evaluation_v3(E,i)
+
+acepta cualquier:
+
+    i in [0,t+k-1].
+
+El wire producido se compara contra un encoder stdlib independiente que consume
+`reference.independent_v3.evaluate_suite()`.
+
+### 12.6. Continuación
+
+API:
+
+    advance_trajectory_checkpoint_v3(Q_i, rounds=n)
+
+produce exactamente:
+
+    Q_(i+n)
+
+si:
+
+    i+n <= t+k-1.
+
+No existe:
+- rewind;
+- wrap;
+- skip beyond final state.
+
+Negative rounds y avances fuera de rango se rechazan.
+
+### 12.7. Ley all-index
+
+Si una evaluación directa produce:
+
+    S_0,...,S_r
+
+y, cuando aplica:
+
+    H_0,...,H_r,
+
+entonces para todo i:
+
+    Continue(Q_i).states
+      = (S_i,...,S_r)
+
+y:
+
+    Continue(Q_i).histories
+      = (H_i,...,H_r)
+
+en history suites.
+
+### 12.8. Digest identity
+
+Al alcanzar:
+
+    r=t+k-1
+
+la ventana pública se reconstruye como:
+
+    W_r || S_r
+
+que tiene exactamente k states.
+
+Por tanto:
+
+    finalize_trajectory_checkpoint_v3(Q_i)
+      = digest_from_evaluation_v3(E)
+
+para todo i.
+
+### 12.9. Source rebind
+
+Un checkpoint interno no demuestra por sí mismo que P_X procede de un source
+actual X.
+
+API separada:
+
+    verify_trajectory_checkpoint_source_v3(X,Q_i)
+
+Procedimiento:
+1. reevaluar v3 sobre X;
+2. reconstruir Q_i;
+3. exigir igualdad canónica byte por byte.
+
+Así se conserva:
+
+    internal continuation consistency
+      !=
+    current source binding.
+
+### 12.10. Codec canonicality
+
+Top-level record:
+- campos completos;
+- tags estrictamente crecientes;
+- sin aliases;
+- sequence count/length exactos;
+- nested context/binding/parameters/history usan sus codecs existentes.
+
+Missing/duplicate/reordered/unknown fields se rechazan.
+
+### 12.11. Complejidad estructural
+
+Sea:
+
+    r=t+k-1.
+
+Crear Q_i desde una Evaluation materializada:
+
+    O(k * state_size)
+
+como máximo por el window_prefix; normalmente menor.
+
+Continuar desde i:
+
+    O((r-i) * round_cost)
+
+sin source I/O y sin repetir anchor/preparation.
+
+Finalizar desde Q_i no introduce un segundo pase: el digest se construye desde el
+checkpoint final alcanzado.
+
+Los timings empíricos se difieren a una campaña posterior; SV1 cierra primero la
+equivalencia semántica all-index.
 
 ## 13. VerificationPolicy V1
 
 ### 13.1. Objetivo
 
-Separar parseabilidad, verificabilidad y aceptabilidad operacional.
+Separar explícitamente:
 
-Una policy puede fijar:
+    parseabilidad
+    estructura/verificabilidad
+    aceptabilidad operacional.
 
-- allowed v3 suite IDs;
-- require history-feedback;
-- allow/deny legacy v2.2;
-- allow/deny Tree-only artifacts;
-- require dual evidence;
-- require signature;
-- max input bytes;
-- max tree proof size;
-- max trajectory rounds;
-- max memory/work policy;
-- allowed artifact metadata profiles;
-- symlink policy;
-- provenance requirements.
+Una evidencia sintácticamente válida nunca implica por sí sola aceptación.
 
-### 13.2. Orden de policies
+SV2 no sustituye al antiguo `ResourcePolicy` v2.2: define una policy de producto
+independiente y versionada.
 
-Se define una relación partial order de restricción:
+### 13.2. Wire
 
-    P_strict <= P_weak
+Magic:
 
-si todo objeto aceptado por P_strict es también aceptado por P_weak bajo los mismos verificadores.
+    SIGPOLY1
 
-No es obligatorio decidir automáticamente el orden para policies arbitrarias en V1; puede existir para un subconjunto normalizado.
+Policy format version:
 
-### 13.3. Resultado
+    1
 
-    verify(..., policy=P) -> VerificationDecision
+Envelope:
 
-con:
+    magic[8] || policy_version:u16 || body_length:u32 || strict TLV.
 
-- Accepted;
-- Rejected(reason);
-- Inconclusive(reason);
-- Unsupported(reason).
+Campos canónicos:
+
+1. allowed v3 suite IDs;
+2. require history-feedback;
+3. allow legacy v2.2;
+4. require message binding;
+5. require TrajectoryAudit;
+6. require Tree evidence;
+7. require DUAL evidence;
+8. require signature;
+9. require provenance;
+10. allow Tree-only artifacts;
+11. max input bytes;
+12. max trajectory rounds;
+13. max Tree-proof bytes;
+14. max working-memory estimate;
+15. allowed artifact metadata profiles;
+16. symlink mode.
+
+Suite/profile lists son sorted+unique.
+
+### 13.3. Policy identity
+
+La identidad compacta es:
+
+    policy_id = SHA256(canonical_policy_wire).
+
+Es un content ID estable, no una nueva claim de seguridad ni un aumento de
+security width.
+
+KATs congelados fijan default/strict/weak/legacy-opt-in.
+
+### 13.4. Evidencias parseables
+
+Parser V1 reconoce:
+
+- SigmaDigestV3;
+- TrajectoryAuditV3;
+- SigmaDigestV2 v2.2.
+
+Unknown/future magic:
+
+    Unsupported.
+
+Known magic pero codec inválido:
+
+    Rejected(MalformedEvidence).
+
+### 13.5. VerificationCapabilitiesV1
+
+Para no acoplar SV2 prematuramente a SigmaArtifact, requisitos que pertenecen a
+capas futuras se expresan mediante capabilities explícitas:
+
+- has_tree_evidence;
+- has_signature;
+- has_provenance;
+- tree_proof_bytes;
+- artifact_metadata_profile;
+- contains_symlink;
+- estimated_working_memory_bytes.
+
+SA0/SA1 podrán rellenar este objeto sin cambiar VerificationPolicyV1 ni su
+PolicyId.
+
+### 13.6. Cuatro decisiones
+
+Toda decisión es exactamente una de:
+
+    Accepted
+    Rejected
+    Inconclusive
+    Unsupported.
+
+Cada `VerificationDecisionV1` conserva:
+- kind;
+- reason code estable;
+- reason text;
+- policy_id;
+- evidence_id si existe;
+- evidence kind;
+- structure_valid si se pudo determinar;
+- message_binding_verified si se ejecutó.
+
+### 13.7. Semántica de decisión
+
+Accepted:
+- evidence soportada;
+- todos los checks de policy pasan;
+- el nivel de verificación exigido por policy se ha satisfecho.
+
+Rejected:
+- evidence conocida pero malformada;
+- violación de policy;
+- replay/verificación falla;
+- source incorrecto.
+
+Inconclusive:
+- evidence soportada y no rechazada;
+- falta información necesaria para decidir, por ejemplo source requerido,
+  tree-proof size requerido o memory estimate requerido.
+
+Unsupported:
+- evidence/profile desconocido;
+- tipo de source no soportado para una ruta legacy explícita.
+
+### 13.8. Cheap checks first
+
+Orden obligatorio:
+
+1. identificar/parsear tipo;
+2. capabilities/policy triviales;
+3. suite/history allowlist;
+4. committed input size;
+5. trajectory-round bound;
+6. audit requirement;
+7. sólo entonces structural replay;
+8. sólo entonces source reevaluation.
+
+Por tanto oversized/disallowed inputs no alcanzan:
+- `evaluate_v3`;
+- trajectory replay caro;
+- source I/O.
+
+Tests usan bomb verifiers/sources para fijar este contrato.
+
+### 13.9. Message binding
+
+Para v3:
+
+Si:
+
+    require_message_binding = false
+
+una evidence estructural válida puede ser Accepted sin source, con:
+
+    message_binding_verified = false.
+
+Si:
+
+    require_message_binding = true
+
+y no hay source:
+
+    Inconclusive(SourceRequired).
+
+Con source:
+- SigmaDigestV3 usa `verify_full_v3`;
+- TrajectoryAuditV3 usa `verify_trajectory_audit_full_v3`.
+
+### 13.10. Legacy v2.2
+
+Default:
+
+    allow_legacy_v22 = false.
+
+Por tanto un SigmaDigestV2 válido se rechaza por policy antes de verificación
+cara.
+
+Sólo una policy con opt-in explícito puede aceptarlo.
+
+Legacy v2.2 no puede satisfacer:
+- history-feedback requirement;
+- TrajectoryAudit requirement.
+
+La ruta legacy full exige source bytes explícitos; no se materializa
+silenciosamente un CanonicalSource arbitrario.
+
+### 13.11. DUAL/Tree/signature/provenance
+
+Aunque SigmaArtifact todavía no existe, la policy ya fija estas restricciones.
+
+Si una requirement no está satisfecha por VerificationCapabilitiesV1:
+
+    Rejected.
+
+Esto permite que SA0/SA1 reutilicen la policy sin cambiar el wire.
+
+### 13.12. Resource uncertainty
+
+Para límites cuya estimación no forma parte de la evidence:
+- max Tree-proof bytes;
+- max working memory;
+
+si el bound es activo pero la capability correspondiente no está disponible:
+
+    Inconclusive.
+
+Nunca se asume un valor favorable.
+
+### 13.13. Orden parcial normalizado
+
+Se implementa:
+
+    policy_is_stricter_or_equal_v1(P_strict,P_weak)
+
+para el subset normalizado.
+
+Condiciones principales:
+- suites_strict subset suites_weak;
+- requirements strict >= weak;
+- legacy allowance strict <= weak;
+- maxima strict <= weak;
+- metadata profiles strict subset weak;
+- REJECT symlink <= TEXT.
+
+Ley exigida:
+
+    Accepted(P_strict,x)
+      => Accepted(P_weak,x)
+
+cuando ambas decisions reciben la misma evidencia/capabilities y el mismo
+verificador necesario.
+
+### 13.14. Default policy
+
+La policy default:
+- permite suites history-feedback R12.5 activas;
+- exige history-feedback;
+- niega v2.2;
+- exige message binding;
+- no exige Audit/Tree/DUAL/signature/provenance;
+- max input = 1 GiB;
+- max trajectory rounds = 64;
+- symlink mode = REJECT.
+
+### 13.15. Claim boundary
+
+PolicyId y EvidenceId son content identifiers para determinismo/auditoría.
+
+No:
+- autentican autores;
+- prueban provenance;
+- añaden bits de seguridad;
+- sustituyen firmas.
+
+Los benchmarks de coste/policy throughput se difieren; SV2 cierra primero
+determinismo, orden de checks y semántica de decisión.
 
 ## 14. VerificationReceipt V1
 

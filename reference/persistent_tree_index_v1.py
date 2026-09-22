@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from typing import Any
 
 from reference import tree_v1
 
@@ -28,7 +29,7 @@ def _canonical_nodes(data: bytes):
     if not leaves:
         return ()
 
-    values = {}
+    values: dict[tuple[int, int], Any] = {}
 
     def build(start: int, count: int):
         key = (start, count)

@@ -41,6 +41,12 @@ RNG-EDGE-001	ST2	T1	Boundary ranges	production verifier	first/last/cross-chunk/e
 RNG-ADV-001	ST2	T4	Out of bounds	none	start/length overflow	reject early	BLOCKING
 RNG-ADV-002	ST2	T4	Mixed-tree proof	none	proof from root A data from B	reject	BLOCKING
 RNG-IO-001	ST2	T4	No rest-of-object read	I/O spy	random range	reads only supplied range + proof	BLOCKING
+RES-KAT-001	ST3	T1	Frozen checkpoint/resume wires	independent checkpoint oracle	5 deterministic prefix/suffix cases	exact checkpoint/root hashes	BLOCKING
+RES-DIFF-001	ST3	T7	Independent checkpoint/resume oracle	stdlib-only reference	>=500 split cases	zero wire/root divergence	BLOCKING
+RES-MUT-001	ST3	T5	Checkpoint codec/semantics	product+reference resume	>=20k bit mutations + TLV structural mutations	changed semantic checkpoint never reproduces original root	BLOCKING
+RES-BOUND-001	ST3	T4	Checkpoint accounting	constructor/parser	tail>=chunk, short frontier, counter drift	reject	BLOCKING
+RES-HINT-001	ST3	T4	Source hint non-evidence	resume differential	different size/mtime/inode/device hint	same resumed TreeRoot; docs mark heuristic	BLOCKING
+RES-CLI-001	ST3	T1	Provisional checkpoint/resume CLI	Python API	file prefix checkpoint + resume	exact TreeRoot, hint reported heuristic	REQUIRED
 RES-PROP-001	ST3	T2	Resume equivalence	direct Tree build	random prefix/suffix splits	same root	BLOCKING
 RES-PROP-002	ST3	T2	Repeated resume	direct Tree build	multiple checkpoint cycles	same root	BLOCKING
 RES-ADV-001	ST3	T4	Wrong profile	none	checkpoint/profile mismatch	reject	BLOCKING

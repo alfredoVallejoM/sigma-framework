@@ -272,9 +272,26 @@ class TrajectoryAuditV3:
                 ):
                     raise ValueError("COMPACT audit contains FULL-only round evidence")
         else:
+            deep = self.digest.context.round_profile in (
+                RoundProfileIdV3.DEEP,
+                RoundProfileIdV3.DEEP_VECTOR,
+            )
+            scalar_deep = self.digest.context.round_profile is RoundProfileIdV3.DEEP
             for round_ in self.rounds:
                 if not round_.state_frame:
                     raise ValueError("FULL audit must contain every state frame")
+                if history_enabled != bool(round_.round_binding):
+                    raise ValueError("FULL audit round-binding presence is non-canonical")
+                if deep:
+                    expected_branches = len(self.digest.context.joint_algorithms)
+                    if len(round_.branch_frames) != expected_branches:
+                        raise ValueError("FULL Deep audit has wrong branch-frame count")
+                    if len(round_.branch_outputs) != expected_branches:
+                        raise ValueError("FULL Deep audit has wrong branch-output count")
+                elif round_.branch_frames or round_.branch_outputs:
+                    raise ValueError("FULL Wide audit must not contain branch evidence")
+                if scalar_deep != bool(round_.fold_frame):
+                    raise ValueError("FULL fold-frame presence is non-canonical")
 
     def to_bytes(self) -> bytes:
         return encode_record(

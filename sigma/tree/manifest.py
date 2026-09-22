@@ -229,6 +229,9 @@ def _tree_root_from_file(path: Path) -> TreeRoot:
             or opened.st_ctime_ns != after.st_ctime_ns
         ):
             raise RuntimeError("manifest file changed while hashing")
+        final_path = path.lstat()
+        if not stat.S_ISREG(final_path.st_mode) or not _same_file_identity(opened, final_path):
+            raise RuntimeError("manifest path changed identity while hashing")
         return builder.finalize()
     finally:
         os.close(fd)

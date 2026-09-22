@@ -72,3 +72,24 @@ def test_canonical_frontier_heights_exhaustive_100k():
         heights = canonical_frontier_heights(n)
         assert sum(1 << h for h in heights) == n
         assert all(a > b for a, b in zip(heights, heights[1:]))
+
+
+def test_prehashed_backend_reducer_matches_direct():
+    from sigma.tree import TreeBuilder
+    from sigma.tree.core import leaf_node
+
+    data = b"x" * (2 * 65_536) + b"tail"
+    leaves = []
+    for index, start in enumerate(range(0, len(data), 65_536)):
+        raw = data[start : start + 65_536]
+        node = leaf_node(DEFAULT_PROFILE, index, start, raw)
+        leaves.append((node.digests, len(raw)))
+    assert TreeBuilder.from_prehashed_leaves(leaves) == build_tree(data)
+
+
+def test_prehashed_reducer_rejects_data_after_short_leaf():
+    from sigma.tree import TreeBuilder
+
+    digest = (b"a" * 64,) * 4
+    with pytest.raises(ValueError):
+        TreeBuilder.from_prehashed_leaves(((digest, 1), (digest, 65_536)))

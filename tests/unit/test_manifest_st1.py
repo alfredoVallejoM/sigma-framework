@@ -221,3 +221,16 @@ def test_noncanonical_wire_path_rejected():
     mutated = encoded[:10] + len(body).to_bytes(4, "big") + body
     with pytest.raises(TreeDecodeError):
         ManifestEntryV1.from_bytes(mutated)
+
+
+def test_manifest_rejects_entry_count_above_wire_limit():
+    from sigma.tree.ids import MAX_MANIFEST_ENTRIES
+
+    entry = ManifestEntryV1("x", ManifestEntryKind.FILE, 1, build_tree(b"x"))
+    with pytest.raises(ValueError, match="too many entries"):
+        ManifestV1((entry,) * (MAX_MANIFEST_ENTRIES + 1))
+
+
+def test_manifest_path_length_limit_is_explicit():
+    with pytest.raises(ValueError):
+        canonical_relative_path("a" * 4097)

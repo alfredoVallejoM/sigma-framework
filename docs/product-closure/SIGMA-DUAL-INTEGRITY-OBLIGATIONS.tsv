@@ -62,14 +62,14 @@ ST5-O01	ST	ST5	Optimized Tree preserves reference bytes	differential suite	COMPL
 ST5-O02	ST	ST5	No hidden large copies	allocation/I/O telemetry	COMPLETE	NO
 ST5-O03	ST	ST5	Streaming memory bounded	scale RSS ledger	COMPLETE	NO
 ST5-O04	ST	ST5	Index policy fallback explicit	resource-policy tests	COMPLETE	YES
-SV0-O01	SV	SV0	Audit projects exact SigmaDigestV3	R12.5 corpus replay	PLANNED	YES
-SV0-O02	SV	SV0	Audit replays successfully	v3 differential tests	PLANNED	YES
-SV0-O03	SV	SV0	Round cardinality matches t/k	suite property tests	PLANNED	YES
-SV0-O04	SV	SV0	Historical causality H_i -> H_i+1 exact	mutation + independent_v3 comparison	PLANNED	YES
-SV0-O05	SV	SV0	Audit links exact layout/frame IDs	corpus comparison	PLANNED	YES
-SV0-O06	SV	SV0	Deep vs DeepVector semantics preserved	cross-suite tests	PLANNED	YES
-SV0-O07	SV	SV0	Compact/full audits project same digest	differential	PLANNED	YES
-SV0-O08	SV	SV0	Audit makes no security-width claim	manual claim audit	PLANNED	YES
+SV0-O01	SV	SV0	Audit projects exact SigmaDigestV3	R12.5 corpus replay	ACTIVE	YES
+SV0-O02	SV	SV0	Audit replays successfully	v3 differential tests	ACTIVE	YES
+SV0-O03	SV	SV0	Round cardinality matches t/k	suite property tests	ACTIVE	YES
+SV0-O04	SV	SV0	Historical causality H_i -> H_i+1 exact	mutation + independent_v3 comparison	ACTIVE	YES
+SV0-O05	SV	SV0	Audit links exact layout/frame IDs	corpus comparison	ACTIVE	YES
+SV0-O06	SV	SV0	Deep vs DeepVector semantics preserved	cross-suite tests	ACTIVE	YES
+SV0-O07	SV	SV0	Compact/full audits project same digest	differential	ACTIVE	YES
+SV0-O08	SV	SV0	Audit makes no security-width claim	manual claim audit	ACTIVE	YES
 SV1-O01	SV	SV1	Trajectory continuation equals direct suffix	all checkpoint indices differential	PLANNED	YES
 SV1-O02	SV	SV1	Final digest identical after resume	corpus + random tests	PLANNED	YES
 SV1-O03	SV	SV1	Binding/context/parameters immutable	negative tests	PLANNED	YES

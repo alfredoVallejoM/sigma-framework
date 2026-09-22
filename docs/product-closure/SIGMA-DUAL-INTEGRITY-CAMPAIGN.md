@@ -360,72 +360,195 @@ COMPLETE exige además:
 
 ## 5. ST2 — Inclusion and Range Proofs
 
+### Objetivo
+
+Añadir evidencia selectiva sobre Sigma Tree V1 sin modificar TreeRoot, TreeNode,
+chunking, domains ni ninguna semántica ST0.
+
+La etapa se divide en:
+- ST2A — InclusionProof V1;
+- ST2B — RangeProof V1.
+
+### Implementación
+
+- `sigma/tree/proofs.py`
+  - InclusionStepV1;
+  - InclusionProofV1;
+  - RangeProofV1;
+  - TreeProofIndex efímero;
+  - prove_leaf / verify_inclusion;
+  - prove_range / verify_range;
+  - geometría canónica de inclusion/range.
+- `reference/tree_proof_v1.py`
+  - parser/verificador stdlib independiente;
+  - no importa `sigma`.
+- `scripts/product_closure/st2_gate.py`
+  - campaña de cierre 100k/100k;
+  - differential independent;
+  - mutation/adversarial;
+  - cover exhaustivo.
+- `scripts/product_closure/st2_benchmark.py`
+  - tamaño/verify ledger.
+- `scripts/product_closure/generate_st2_vectors.py`
+  - KAT hashes de wire revisados por verifier independiente.
+- tests unit/property/differential/vectors ST2.
+
+TreeProofIndex es sólo un índice efímero para amortizar proof generation. No forma
+parte de Tree identity ni introduce un persistent index antes de ST4/ST5.
+
 ### ST2A — Inclusion proofs
 
 Obligaciones:
 
 ST2-O01 — Root reconstruction  
-Proof válido reconstruye exactamente la root declarada.
+Proof válido reconstruye exactamente la TreeRoot declarada.
 
 ST2-O02 — Position binding  
-Mover leaf a otro índice invalida.
+leaf_index determina también offset canónico; mover leaf a otra posición invalida.
 
 ST2-O03 — Orientation binding  
-Swap left/right invalida salvo colisión subyacente.
+Cada step serializa LEFT/RIGHT y su geometría debe coincidir con la path canónica.
 
-ST2-O04 — Length binding  
-Alterar byte_length o leaf_count invalida.
+ST2-O04 — Length/count binding  
+Leaf length, sibling geometry y root byte_length/leaf_count se validan exactamente.
 
 ST2-O05 — Profile binding  
-Proof de un profile no verifica bajo otro.
+Proof profile y root profile deben coincidir con el único TreeProfile V1 aceptado.
 
 ST2-O06 — Independent verifier  
-reference/tree_proof_v1.py no importa sigma.
+`reference/tree_proof_v1.py` parsea y verifica los wires sin importar `sigma`.
 
 ST2-O07 — Size bound  
-O(m log N).
+Path O(log N); cada step transporta un vector fijo de m=4 branches:
+
+    inclusion wire = O(m log N)
 
 ### ST2B — Range proofs
 
-Obligaciones:
-
 ST2-O08 — Exact interval  
-La proof acredita exactamente [start,start+length).
+start y length están dentro del wire; range_bytes debe tener exactamente length bytes.
 
-ST2-O09 — Minimal canonical cover  
-La descomposición del intervalo tiene una única forma canónica.
+ST2-O09 — Canonical range cover  
+El complement witness cover es la colección única de subárboles canónicos maximales
+disjuntos del target leaf span.
 
 ST2-O10 — Partial edge honesty  
-Los bloques extremos parciales se verifican con offset/length exactos.
+Prefix/suffix son exactamente los bytes omitidos de los edge leaves y sus longitudes
+se derivan del intervalo/root antes de hashing.
 
-ST2-O11 — Range reconstruction  
-El verificador reconstruye root sin acceder al resto del objeto.
+ST2-O11 — No rest-of-object read  
+`verify_range(range_bytes, proof)` no recibe source/path/file handle; reconstruye
+root sólo con esos bytes + proof.
 
-ST2-O12 — Empty/out-of-bounds rejection  
-Rangos inválidos se rechazan antes de hashing caro.
+ST2-O12 — Cheap invalid-range rejection  
+One-shot generation valida bounds/overflow antes de construir TreeProofIndex; parser
+y verifier validan geometry antes de leaf hashing.
 
-### Test matrix
+### Wire freeze
 
-- first/last leaf;
-- full object;
-- one byte;
+Magics V1:
+
+    InclusionStep  SIGTPST1
+    InclusionProof SIGTIPF1
+    RangeProof     SIGTRPF1
+
+Los records usan el mismo strict TLV/version envelope de Sigma Tree V1.
+
+KAT corpus:
+
+    specification/test-vectors/sigma-tree-v1-st2.json
+
+Corpus SHA-256:
+
+    dea26a2bfdfe4906acf176ab8b57c1963b895c567aab7d9b614a485c5b17d674
+
+### Test matrix ST2
+
+Unit/adversarial:
+- singleton;
+- final short leaf;
+- 2^k, 2^k±1 leaf counts;
+- wrong leaf bytes;
+- leaf-index mutation;
+- side flip;
+- sibling geometry mutation;
+- root length/count mutation;
+- profile mutation/rejection;
+- one-byte range;
 - exact chunk;
 - crossing chunk;
-- 2^k boundaries;
-- N = 2^k ± 1;
-- corrupted sibling;
-- corrupted geometry;
-- mixed proof from another tree;
-- truncated path;
-- duplicate sibling.
+- multi-chunk;
+- full object;
+- partial first/last edge;
+- corrupted prefix/suffix;
+- mixed-tree witness;
+- empty/out-of-bounds/overflow;
+- invalid one-shot range must reject before index build;
+- range verification under an I/O bomb.
+
+Structural:
+- exhaustive canonical complement cover for all non-empty intervals on trees
+  with 1..64 leaves;
+- random inclusion/range property campaign;
+- witness/step count logarithmic checks.
+
+Differential:
+- product verifier vs `reference/tree_proof_v1.py`;
+- frozen vector replay;
+- zero divergence.
+
+Mutation:
+- 20,000 deterministic bit mutations over inclusion/range proof wires;
+- accepted changed wires must not verify original bytes in either verifier;
+- explicit missing/duplicate/reordered/unknown top-level TLV mutations;
+- explicit sibling/witness digest mutation.
 
 ### Gate ST2
 
-- 100k generated inclusion proofs;
-- 100k generated ranges;
-- single-field mutation campaign;
+Closure-scale gate requires:
+- 100,000 generated inclusion proofs;
+- 100,000 generated range proofs;
+- >=500 independent differential cases;
+- >=20,000 proof-wire bit mutations;
+- exhaustive complement cover over N=1..64;
 - independent verifier zero divergences;
-- proof size empirical slope compatible con O(log N).
+- KAT generator/check exact;
+- proof-size ledger compatible with O(m log N);
+- adversarial review of ST2-O01..O12.
+
+Execution result on isolated exact ST0+ST2 mirror:
+- 45,760 exhaustive cover cases PASS;
+- 100,000 inclusion proofs generated PASS;
+- 100,000 range proofs generated PASS;
+- 500 independent differential cases PASS;
+- 20,000 proof mutations: 7,885 rejected malformed,
+  12,115 accepted-but-invalid, zero still-valid mutations;
+- maximum inclusion depth observed: 7;
+- maximum range witness count observed: 11;
+- focused compile/smoke PASS.
+
+### Complexity evidence
+
+Sweep N={1,2,4,8,16,32,64,128}:
+
+- inclusion steps: 0..7;
+- inclusion wire: 482..3,128 bytes;
+- exact empirical increment: 378 bytes per log2(N) level;
+- range witnesses: 0..6 in the benchmark boundary case;
+- range edge complements stay bounded by 2*(65,536-1) bytes.
+
+Thus observed wire growth is consistent with the derived contracts.
+
+### Criterio de cierre
+
+COMPLETE requiere:
+1. O01..O12 con evidencia correspondiente;
+2. gate closure-scale PASS;
+3. independent verifier zero divergences;
+4. KAT ST2 frozen;
+5. ST0 KAT/wire unchanged;
+6. no Sigma v3 source/semantic changes;
+7. post-candidate adversarial review PASS.
 
 ## 6. ST3 — Portable Resume
 

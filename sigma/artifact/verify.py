@@ -440,11 +440,12 @@ def _policy_preflight(
                 "trajectory round count exceeds policy limit",
             )
 
-    committed_size = (
-        artifact.tree_root.byte_length
-        if artifact.tree_root is not None
-        else artifact.trajectory_digest.header.cardinality.byte_length
-    )
+    if artifact.tree_root is not None:
+        committed_size = artifact.tree_root.byte_length
+    else:
+        if artifact.trajectory_digest is None:
+            raise RuntimeError("canonical artifact has no primary evidence")
+        committed_size = artifact.trajectory_digest.header.cardinality.byte_length
     if committed_size > policy.max_input_bytes:
         return _policy_result(
             policy,

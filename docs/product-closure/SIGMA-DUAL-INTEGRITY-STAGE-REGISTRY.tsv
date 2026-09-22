@@ -6,7 +6,7 @@ ST2	ST	Inclusion and range proofs	COMPLETE	ST0	YES	ST2 blocking obligations + in
 ST3	ST	Portable tree resume	COMPLETE	ST0	YES	ST3 blocking obligations + 100k split differential
 ST4	ST	Delta and append	COMPLETE	ST0;ST3	YES	ST4 blocking obligations + performance gate
 ST5	ST	Tree performance and scale closure	COMPLETE	ST2;ST3;ST4	NO	Performance ledger frozen and reviewed
-SV0	SV	Trajectory audit	ACTIVE	BASE	YES	SV0 blocking obligations + R12.5 corpus replay
+SV0	SV	Trajectory audit	CANDIDATE	BASE	YES	SV0 blocking obligations + R12.5 corpus replay
 SV1	SV	Trajectory checkpoint	PLANNED	SV0	YES	SV1 blocking obligations + all-index differential
 SV2	SV	Verification policy	PLANNED	SV0	YES	SV2 blocking obligations + policy adversarial suite
 SV3	SV	Receipts and batch	PLANNED	SV2	NO	SV3 blocking obligations

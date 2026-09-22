@@ -18,3 +18,26 @@ REL0	REL	Historical compatibility gate	PLANNED	ST4;SV2;SA1	YES	All frozen histor
 REL1	REL	Independent consumer	PLANNED	REL0	YES	Independent consumer zero divergences
 REL2	REL	Packaging documentation examples	PLANNED	REL1;SA3	YES	Clean wheel/SBOM/examples pass
 REL3	REL	Adversarial release review	PLANNED	REL2	YES	Manual obligation-by-obligation PASS
+PX0	PX	Persistent Tree Index	PLANNED	ST5	NO	PX0 obligations + persistent/no-index differential
+PX1	PX	Artifact CAS and Local Store	PLANNED	SA0;SA1	NO	PX1 obligations + crash/idempotency gate
+PX2	PX	Artifact Lineage Graph	PLANNED	PX1;SA0	NO	PX2 obligations + DAG/cycle/query gate
+PX3	PX	Remote Storage Backends	PLANNED	PX1	NO	PX3 obligations + local/remote byte parity
+PX4	PX	Verification Gateway and Daemon	PLANNED	SA1;SV2;SV3	NO	PX4 obligations + API/local decision parity
+PX5	PX	Policy DSL and Compiler	PLANNED	SV2;SA1	NO	PX5 obligations + deterministic compile/decompile corpus
+IX0	IX	OCI and ORAS Adapter	PLANNED	SA0	NO	IX0 obligations + registry round-trip corpus
+IX1	IX	Sigstore and Rekor Adapter	PLANNED	SA2;SV3	NO	IX1 obligations + bundle/offline verification gate
+IX2	IX	in-toto and SLSA Adapter	PLANNED	SA2;SA0	NO	IX2 obligations + schema/semantic adapter corpus
+IX3	IX	TUF Adapter	PLANNED	SA2;SA3	NO	IX3 obligations + TUF-target/Sigma dual verification
+IX4	IX	KMS HSM and Keyless Signing	PLANNED	SA2	NO	IX4 obligations + backend signing-input conformance
+IX5	IX	Transparency Log Adapter	PLANNED	IX1;SV3	NO	IX5 obligations + inclusion/consistency gate
+ML0	ML	Data and ML Metadata Profiles	PLANNED	SA0	NO	ML0 obligations + metadata identity-boundary corpus
+ML1	ML	Scientific and ML File Adapters	PLANNED	ML0	NO	ML1 obligations + safe format-inspection corpus
+ML2	ML	Sharded Dataset and Model Artifacts	PLANNED	ML0;PX1;PX2	NO	ML2 obligations + shard graph/partial verification gate
+ML3	ML	ML Registry Integrations	PLANNED	ML1;ML2	NO	ML3 obligations + push/pull identity parity
+NR0	NR	Rust Canonical Core	PLANNED	ST5;SA0;SV2	NO	NR0 obligations + all frozen KAT parity
+NR1	NR	Python Native Bindings	PLANNED	NR0	NO	NR1 obligations + pure/native API differential
+NR2	NR	Go SDK	PLANNED	NR0;REL1	NO	NR2 obligations + cross-language wire/verifier corpus
+NR3	NR	JS and WASM SDK	PLANNED	NR0;REL1	NO	NR3 obligations + browser/node/WASM conformance
+AX0	AX	Subchunk Proof Profile	PLANNED	ST2;ST5	NO	AX0 obligations + disclosure/proof-size ledger
+AX1	AX	Private and ZK Selective Disclosure	PLANNED	AX0	NO	AX1 research obligations + statement/threat-model gate
+AX2	AX	Distributed Proof and Cache Protocol	PLANNED	PX0;PX3;ST2	NO	AX2 obligations + untrusted-cache poisoning gate

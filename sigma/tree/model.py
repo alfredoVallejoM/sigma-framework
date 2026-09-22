@@ -91,6 +91,19 @@ class TreeNode:
                 raise ValueError(f"{name} must be a non-negative integer")
         if self.leaf_count <= 0:
             raise ValueError("TreeNode must contain at least one leaf")
+        if self.start_leaf >= 1 << 64 or self.leaf_count >= 1 << 64:
+            raise ValueError("TreeNode leaf counters exceed u64")
+        if self.start_leaf + self.leaf_count >= 1 << 64:
+            raise ValueError("TreeNode leaf interval exceeds u64")
+        if self.byte_length >= 1 << 64:
+            raise ValueError("TreeNode byte length exceeds u64")
+        expected_height = (self.leaf_count - 1).bit_length()
+        if self.height != expected_height:
+            raise ValueError("TreeNode height is inconsistent with leaf_count")
+        min_bytes = (self.leaf_count - 1) * DEFAULT_PROFILE.chunk_size + 1
+        max_bytes = self.leaf_count * DEFAULT_PROFILE.chunk_size
+        if not min_bytes <= self.byte_length <= max_bytes:
+            raise ValueError("TreeNode byte length is inconsistent with canonical chunking")
         validate_digests(self.digests)
 
     @property
@@ -132,6 +145,11 @@ class TreeRoot:
         validate_digests(self.digests, self.profile)
         if (self.byte_length == 0) != (self.leaf_count == 0):
             raise ValueError("empty byte/root leaf accounting mismatch")
+        if self.leaf_count:
+            min_bytes = (self.leaf_count - 1) * self.profile.chunk_size + 1
+            max_bytes = self.leaf_count * self.profile.chunk_size
+            if not min_bytes <= self.byte_length <= max_bytes:
+                raise ValueError("TreeRoot byte length is inconsistent with canonical chunking")
 
     def to_bytes(self) -> bytes:
         return record(TREE_ROOT_MAGIC, ((1, self.profile.to_bytes()), (2, u64(self.byte_length)), (3, u64(self.leaf_count)), (4, encode_items(self.digests, max_items=4))))
@@ -176,6 +194,9 @@ class TreeFrontier:
             previous_height = node.height
         if tuple(n.height for n in self.nodes) != canonical_frontier_heights(end):
             raise ValueError("frontier does not match the unique binary decomposition")
+        total_bytes = sum(n.byte_length for n in self.nodes)
+        if total_bytes >= 1 << 64:
+            raise ValueError("frontier byte length exceeds u64")
 
     @property
     def leaf_count(self) -> int:

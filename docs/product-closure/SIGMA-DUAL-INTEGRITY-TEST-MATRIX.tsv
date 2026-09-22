@@ -127,10 +127,17 @@ BATCH-THREAD-001	SV3	T3	Serial/threaded equivalence	serial pointwise reference	>
 BATCH-ERR-001	SV3	T4	Hostile error canonicalization	captured exception record	NUL/non-NFC/oversized error text	bounded canonical item error	REQUIRED
 BATCH-DIFF-001	SV3	T3	Batch pointwise equality	verify_batch_item_v1	>=100 mixed batches	exact per-item equality	BLOCKING
 BATCH-FAULT-001	SV3	T4	Item isolation	pointwise neighbors	>=100 injected item failures	other receipts unaffected	BLOCKING
-ART-KAT-001	SA0	T1	Artifact identity	KAT fixture	TREE/TRAJECTORY/DUAL	stable ArtifactId	BLOCKING
-ART-FUZZ-001	SA0	T5	Artifact codec	round-trip invariant	mutated wires	no crash; invalid rejects	BLOCKING
-ART-MUT-001	SA0	T4	Profile/evidence mismatch	none	missing/extra evidence	reject	BLOCKING
-ART-PARENT-001	SA0	T2	Parent binding	identity function	parent mutations	ArtifactId changes	REQUIRED
+ART-DIFF-001	SA0	T7	Independent Artifact V1 oracle	stdlib-only reference	>=600 generated artifacts	zero descriptor/identity/ArtifactId/envelope divergence	BLOCKING
+ART-ID-001	SA0	T4	Stored ArtifactId integrity	recomputed ArtifactIdentity	>=600 stored-ID corruptions	reject	BLOCKING
+ART-DESC-001	SA0	T4	Descriptor canonicality	NFC/media-type contract	Unicode/NUL/media mutations	canonical or reject	BLOCKING
+ART-MAN-001	SA0	T2	Manifest identity binding	ManifestId domain hash	manifest mutations	ArtifactId changes	BLOCKING
+ART-AUDIT-001	SA0	T3	Auxiliary audit identity stability	same primary evidence	>=200 base/COMPACT/FULL triples	same ArtifactId; different envelope wire	BLOCKING
+ART-PROFILE-001	SA0	T2	Profile coverage	ArtifactProfileV1	200 TREE;200 TRAJECTORY;200 DUAL	all canonical profiles covered	BLOCKING
+ART-CLAIM-001	SA0	T4	No signature/security inflation	manual API/docs audit	all SA0 surfaces	no external signature in identity; no added-bit claim	BLOCKING
+ART-KAT-001	SA0	T1	Frozen canonical artifact corpus	stdlib artifact reference	6 TREE/TRAJECTORY/DUAL cases	exact ArtifactId + descriptor/identity/envelope hashes	BLOCKING
+ART-FUZZ-001	SA0	T5	Artifact/identity/descriptor codecs	strict round-trip	missing/duplicate/reorder/unknown + stored-ID corruption	reject malformed/corrupt wires	BLOCKING
+ART-MUT-001	SA0	T4	Profile/evidence exactness	constructor/parser	missing/extra primary evidence + DUAL length mismatch	reject	BLOCKING
+ART-PARENT-001	SA0	T2	Parent binding	ArtifactId function	parent set/order/duplicate mutations	canonical set; ArtifactId changes on set mutation	REQUIRED
 DUAL-DIFF-001	SA1	T3	Dual logical conjunction	separate Tree/v3 verifiers	random artifacts	exact AND semantics	BLOCKING
 DUAL-FAIL-001	SA1	T4	Tree fail attribution	separate verifiers	corrupt Tree side	Tree failure preserved	BLOCKING
 DUAL-FAIL-002	SA1	T4	Trajectory fail attribution	separate verifiers	corrupt v3 side	Trajectory failure preserved	BLOCKING

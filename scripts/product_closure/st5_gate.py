@@ -14,6 +14,7 @@ from reference.tree_v1 import root_wire as reference_root_wire
 from sigma.tree import (
     DEFAULT_PROFILE,
     TreeBuilder,
+    TreeDeltaIndex,
     TreeFallbackV1,
     TreeIndexBudgetExceeded,
     TreeIndexedOperationV1,
@@ -26,6 +27,7 @@ from sigma.tree import (
     plan_tree_index,
     prove_leaf_streaming,
     prove_range_streaming,
+    verify_range,
 )
 
 MIN_BUILD_DIFFERENTIAL_CASES = 1_000
@@ -110,8 +112,9 @@ def run_gate(
         )
 
     # O02: zero-copy proof index must not allocate another B-sized payload.
-    proof_data = bytes(
-        (i * 17 + 5) % 251 for i in range(PROOF_INDEX_AUDIT_BYTES)
+    proof_block = bytes((i * 17 + 5) % 251 for i in range(DEFAULT_PROFILE.chunk_size))
+    proof_data = proof_block * (
+        PROOF_INDEX_AUDIT_BYTES // DEFAULT_PROFILE.chunk_size
     )
     tracemalloc.start()
     proof_index = TreeProofIndex(proof_data)
@@ -132,6 +135,38 @@ def run_gate(
     if proof_index_peak > proof_estimate:
         raise AssertionError(
             "conservative proof-index budget estimate underestimates measured peak"
+        )
+
+    # Range verification must not duplicate an arbitrarily large selected range.
+    range_start = 3
+    range_length = len(proof_data) - 7
+    range_proof = proof_index.prove_range(range_start, range_length)
+    selected = proof_data[range_start : range_start + range_length]
+    tracemalloc.start()
+    if not verify_range(selected, range_proof):
+        raise AssertionError("large range verification failed")
+    _, range_verify_peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    if range_verify_peak > 4 * DEFAULT_PROFILE.chunk_size:
+        raise AssertionError(
+            "range verification allocated more than bounded edge-chunk budget"
+        )
+
+    # DeltaIndex intentionally owns one mutable payload copy; make it explicit
+    # and verify that the conservative policy estimator covers measured peak.
+    delta_data = proof_block * 128
+    tracemalloc.start()
+    delta_index = TreeDeltaIndex(delta_data)
+    _, delta_index_peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    if delta_index.root.byte_length != len(delta_data):
+        raise AssertionError("delta index audit accounting drift")
+    delta_estimate = estimate_index_bytes(
+        len(delta_data), TreeIndexedOperationV1.DELTA
+    )
+    if delta_index_peak > delta_estimate:
+        raise AssertionError(
+            "conservative delta-index budget estimate underestimates measured peak"
         )
 
     # O03: streaming builder extra memory stays bounded while B grows to 32 MiB.
@@ -206,6 +241,11 @@ def run_gate(
         "proof_index_peak_allocated_bytes": proof_index_peak,
         "proof_index_estimated_budget_bytes": proof_estimate,
         "proof_index_peak_to_source_ratio": proof_index_peak / PROOF_INDEX_AUDIT_BYTES,
+        "range_verify_selected_bytes": range_length,
+        "range_verify_peak_allocated_bytes": range_verify_peak,
+        "delta_index_audit_source_bytes": len(delta_data),
+        "delta_index_peak_allocated_bytes": delta_index_peak,
+        "delta_index_estimated_budget_bytes": delta_estimate,
         "streaming_builder_input_bytes": STREAMING_MEMORY_BYTES,
         "streaming_builder_peak_allocated_bytes": streaming_peak,
         "streaming_builder_peak_to_input_ratio": streaming_peak / STREAMING_MEMORY_BYTES,

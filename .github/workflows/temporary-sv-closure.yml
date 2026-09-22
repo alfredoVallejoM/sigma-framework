@@ -1,0 +1,52 @@
+name: temporary-sv-closure
+
+on:
+  push:
+    branches:
+      - campaign/sigma-dual-integrity-product-closure
+
+permissions:
+  contents: read
+
+jobs:
+  sv-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install test and quality dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,quality]"
+      - name: Compile focused SV surface
+        run: |
+          python -m compileall -q             sigma/trajectory             reference/trajectory_audit_v3.py             reference/trajectory_checkpoint_v3.py             scripts/product_closure/sv0_gate.py             scripts/product_closure/sv1_gate.py             scripts/product_closure/sv2_gate.py
+      - name: Ruff focused SV surface
+        run: |
+          ruff check             sigma/trajectory             reference/trajectory_audit_v3.py             reference/trajectory_checkpoint_v3.py             scripts/product_closure/sv0_gate.py             scripts/product_closure/sv1_gate.py             scripts/product_closure/sv2_gate.py             tests/unit/test_trajectory_audit_sv0.py             tests/differential/test_trajectory_audit_reference_sv0.py             tests/vectors/test_trajectory_audit_sv0_vectors.py             tests/unit/test_trajectory_checkpoint_sv1.py             tests/differential/test_trajectory_checkpoint_reference_sv1.py             tests/unit/test_verification_policy_sv2.py             tests/property/test_verification_policy_properties_sv2.py             tests/vectors/test_verification_policy_sv2_vectors.py
+      - name: Mypy focused SV product code
+        run: |
+          mypy             sigma/trajectory/audit_v3.py             sigma/trajectory/checkpoint_v3.py             sigma/trajectory/policy_v1.py             reference/trajectory_audit_v3.py             reference/trajectory_checkpoint_v3.py
+      - name: Focused SV pytest
+        run: |
+          pytest -q             tests/unit/test_trajectory_audit_sv0.py             tests/differential/test_trajectory_audit_reference_sv0.py             tests/vectors/test_trajectory_audit_sv0_vectors.py             tests/unit/test_trajectory_checkpoint_sv1.py             tests/differential/test_trajectory_checkpoint_reference_sv1.py             tests/unit/test_verification_policy_sv2.py             tests/property/test_verification_policy_properties_sv2.py             tests/vectors/test_verification_policy_sv2_vectors.py
+      - name: Run SV0 gate
+        run: |
+          mkdir -p .sigma
+          python -m scripts.product_closure.sv0_gate --report .sigma/sv0-gate.json
+      - name: Run SV1 gate
+        run: |
+          python -m scripts.product_closure.sv1_gate --report .sigma/sv1-gate.json
+      - name: Run SV2 gate
+        run: |
+          python -m scripts.product_closure.sv2_gate --report .sigma/sv2-gate.json
+      - name: Upload closure reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sv-closure-reports
+          path: .sigma/*.json
+          if-no-files-found: warn

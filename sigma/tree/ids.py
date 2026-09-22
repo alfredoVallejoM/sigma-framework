@@ -7,7 +7,7 @@ cryptographic primitives.
 
 from enum import IntEnum
 
-TREE_WIRE_VERSION = 1
+from sigma.version import TREE_WIRE_VERSION
 TREE_PROFILE_MAGIC = b"SIGTPRF1"
 TREE_ROOT_MAGIC = b"SIGTROOT"
 TREE_NODE_MAGIC = b"SIGTNODE"

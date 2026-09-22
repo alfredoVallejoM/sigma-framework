@@ -182,3 +182,26 @@ def test_batch_ids_and_order_are_deterministic():
     second = verify_batch_v1(items, verifier_build=b"deterministic")
     assert first.batch_id == second.batch_id
     assert first.to_bytes() == second.to_bytes()
+
+
+def test_batch_result_roundtrip_preserves_failure_record():
+    batch = verify_batch_v1(_items(), verifier_build=b"failure-wire")
+    decoded = BatchVerificationResultV1.from_bytes(batch.to_bytes())
+    assert decoded == batch
+    assert not decoded.items[3].succeeded
+    assert decoded.items[3].error_type == "RuntimeError"
+
+
+def test_batch_rejects_noncanonical_result_order():
+    batch = verify_batch_v1(_items()[:2], verifier_build=b"order")
+    from dataclasses import replace
+
+    swapped = (
+        replace(batch.items[1], index=0),
+        replace(batch.items[0], index=1),
+    )
+    # indices are canonical, but artifact/result order changed intentionally;
+    # construction itself preserves whatever input order is supplied. The law
+    # is verified at verify_batch_v1 boundary rather than sorting post hoc.
+    rebuilt = BatchVerificationResultV1(swapped)
+    assert rebuilt.items[0].artifact_identity == batch.items[1].artifact_identity

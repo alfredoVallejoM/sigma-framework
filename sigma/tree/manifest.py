@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import os
 import stat
-from itertools import pairwise
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+from itertools import pairwise
 from pathlib import Path
 
 from .codec import (

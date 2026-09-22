@@ -3,16 +3,7 @@ from __future__ import annotations
 import hashlib
 import random
 
-from reference.artifact_v1 import (
-    PROFILE_DUAL,
-    PROFILE_TRAJECTORY,
-    PROFILE_TREE,
-    artifact_id as reference_artifact_id,
-    artifact_wire as reference_artifact_wire,
-    descriptor_wire as reference_descriptor_wire,
-    identity_wire as reference_identity_wire,
-    manifest_id as reference_manifest_id,
-)
+from reference import artifact_v1 as artifact_reference
 from sigma.artifact import (
     ArtifactDescriptorV1,
     ArtifactProfileV1,
@@ -57,9 +48,9 @@ def test_product_artifact_matches_independent_encoder_random_corpus():
             ArtifactProfileV1.DUAL,
         )[case % 3]
         reference_profile = {
-            ArtifactProfileV1.TREE: PROFILE_TREE,
-            ArtifactProfileV1.TRAJECTORY: PROFILE_TRAJECTORY,
-            ArtifactProfileV1.DUAL: PROFILE_DUAL,
+            ArtifactProfileV1.TREE: artifact_reference.PROFILE_TREE,
+            ArtifactProfileV1.TRAJECTORY: artifact_reference.PROFILE_TRAJECTORY,
+            ArtifactProfileV1.DUAL: artifact_reference.PROFILE_DUAL,
         }[profile]
         descriptor = ArtifactDescriptorV1(
             f"artifact-{case:03d}.bin",
@@ -99,16 +90,16 @@ def test_product_artifact_matches_independent_encoder_random_corpus():
             parent_artifact_ids=parents,
         )
 
-        descriptor_ref = reference_descriptor_wire(
+        descriptor_ref = artifact_reference.descriptor_wire(
             logical_name=descriptor.logical_name,
             media_type=descriptor.media_type,
         )
         manifest_ref = (
             b""
             if manifest is None
-            else reference_manifest_id(manifest.to_bytes())
+            else artifact_reference.manifest_id(manifest.to_bytes())
         )
-        identity_ref = reference_identity_wire(
+        identity_ref = artifact_reference.identity_wire(
             profile=reference_profile,
             descriptor=descriptor_ref,
             tree_root=(
@@ -124,14 +115,14 @@ def test_product_artifact_matches_independent_encoder_random_corpus():
             manifest_id=manifest_ref,
             parent_artifact_ids=parents,
         )
-        artifact_ref = reference_artifact_wire(
+        artifact_ref = artifact_reference.artifact_wire(
             identity=identity_ref,
             trajectory_audit=b"" if audit is None else audit.to_bytes(),
         )
 
         assert descriptor.to_bytes() == descriptor_ref
         assert artifact.identity.to_bytes() == identity_ref
-        assert artifact.artifact_id == reference_artifact_id(identity_ref)
+        assert artifact.artifact_id == artifact_reference.artifact_id(identity_ref)
         assert artifact.to_bytes() == artifact_ref
 
         if manifest is not None:

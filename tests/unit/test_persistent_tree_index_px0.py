@@ -116,7 +116,7 @@ def test_structural_validation_detects_corrupt_node_even_with_recomputed_checksu
     # recompute only the sidecar corruption checksum.
     encoded[offset + node_len - 1] ^= 1
     mutated = _rechecksum(bytes(encoded))
-    with pytest.raises(ValueError, match="internal node|root node|children"):
+    with pytest.raises(ValueError, match=r"internal node|root node|children"):
         TreePersistentIndexV1.from_bytes(mutated)
 
 

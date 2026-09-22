@@ -60,4 +60,29 @@ __all__ = [
     "verify_trajectory_audit_structure_v3",
     "verify_trajectory_checkpoint_source_v3",
     "verify_with_policy_v1",
+    "BatchItemResultV1",
+    "BatchVerificationItemV1",
+    "BatchVerificationResultV1",
+    "ReceiptSignatureStatusV1",
+    "VerificationReceiptV1",
+    "receipt_from_decision_v1",
+    "sign_receipt_ed25519_v1",
+    "verify_batch_item_v1",
+    "verify_batch_v1",
+    "verify_receipt_signature_v1",
 ]
+
+from .batch_v1 import (
+    BatchItemResultV1,
+    BatchVerificationItemV1,
+    BatchVerificationResultV1,
+    verify_batch_item_v1,
+    verify_batch_v1,
+)
+from .receipt_v1 import (
+    ReceiptSignatureStatusV1,
+    VerificationReceiptV1,
+    receipt_from_decision_v1,
+    sign_receipt_ed25519_v1,
+    verify_receipt_signature_v1,
+)

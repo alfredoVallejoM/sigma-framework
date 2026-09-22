@@ -88,6 +88,7 @@ AUDIT-CODEC-001	SV0	T5	Audit codec canonicality	round-trip invariant	compact/ful
 AUDIT-SOURCE-001	SV0	T3	Message-binding replay	evaluate_v3 recomputation	>=60 correct/wrong source checks	correct accepts, wrong rejects	BLOCKING
 AUDIT-CLAIM-001	SV0	T4	No security-width inflation	manual docs/API audit	all SV0 surfaces	no extra-bit/provenance/timestamp claim	BLOCKING
 AUDIT-CARD-001	SV0	T2	Trajectory cardinality	registered t/k	all six suites	states=t+k; rounds=t+k-1	BLOCKING
+AUDIT-SCALE-001	SV0	T6	Audit size/build/replay complexity	complexity model + sv0_benchmark.py	all six suites; COMPACT/FULL	ledger compatible with O(output) build and O(R*round_cost) replay	REQUIRED
 AUDIT-DIFF-001	SV0	T7	Audit vs independent v3	independent_v3 + independent audit encoder	>=600 cases across all 6 executable suites	COMPACT/FULL byte-identical to reference	BLOCKING
 AUDIT-MUT-001	SV0	T4	H_i corruption	structural replay	history commitment bit mutation	reject	BLOCKING
 AUDIT-MUT-002	SV0	T4	S_i corruption	structural replay	pre-window state bit mutation	reject	BLOCKING

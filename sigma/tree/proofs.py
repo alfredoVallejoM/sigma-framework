@@ -726,7 +726,7 @@ def _reconstruct_from_components(
 
 
 def verify_range(range_bytes: bytes, proof: RangeProofV1) -> bool:
-    """Verify an exact byte interval using only range bytes plus proof evidence."""
+    """Verify an exact byte interval with O(log N) auxiliary tree state."""
     if not isinstance(range_bytes, bytes):
         raise TypeError("range_bytes must be bytes")
     if not isinstance(proof, RangeProofV1):
@@ -734,79 +734,102 @@ def verify_range(range_bytes: bytes, proof: RangeProofV1) -> bool:
     if len(range_bytes) != proof.length:
         return False
 
-    # All bounds/cover checks happen in RangeProofV1 before any leaf hashing.
+    # Bounds/edge/witness geometry were validated by RangeProofV1 before hashing.
     first_leaf, last_leaf_exclusive, _, _ = _range_geometry(
         proof.root, proof.start, proof.length
     )
-    components: dict[tuple[int, int], TreeNode] = {
-        (node.start_leaf, node.leaf_count): node for node in proof.witnesses
-    }
+    last_leaf = last_leaf_exclusive - 1
     view = memoryview(range_bytes)
     cursor = 0
-    last_leaf = last_leaf_exclusive - 1
+    witness_index = 0
 
-    for leaf_index in range(first_leaf, last_leaf_exclusive):
+    def target_leaf_node(leaf_index: int) -> TreeNode | None:
+        nonlocal cursor
         leaf_length = _leaf_byte_length(proof.root, leaf_index)
+
         if first_leaf == last_leaf:
             raw = proof.prefix + range_bytes + proof.suffix
             if len(raw) != leaf_length:
-                return False
-            node = _leaf_node_buffer(
+                return None
+            cursor = len(range_bytes)
+            return _leaf_node_buffer(
                 proof.profile,
                 leaf_index,
                 leaf_index * proof.profile.chunk_size,
                 raw,
             )
-            cursor = len(range_bytes)
-        elif leaf_index == first_leaf:
+
+        if leaf_index == first_leaf:
             range_part = leaf_length - len(proof.prefix)
             if range_part < 0 or cursor + range_part > len(range_bytes):
-                return False
+                return None
             raw = proof.prefix + bytes(view[cursor : cursor + range_part])
             if len(raw) != leaf_length:
-                return False
-            node = _leaf_node_buffer(
+                return None
+            cursor += range_part
+            return _leaf_node_buffer(
                 proof.profile,
                 leaf_index,
                 leaf_index * proof.profile.chunk_size,
                 raw,
             )
-            cursor += range_part
-        elif leaf_index == last_leaf:
+
+        if leaf_index == last_leaf:
             range_part = leaf_length - len(proof.suffix)
             if range_part < 0 or cursor + range_part > len(range_bytes):
-                return False
+                return None
             raw = bytes(view[cursor : cursor + range_part]) + proof.suffix
             if len(raw) != leaf_length:
-                return False
-            node = _leaf_node_buffer(
+                return None
+            cursor += range_part
+            return _leaf_node_buffer(
                 proof.profile,
                 leaf_index,
                 leaf_index * proof.profile.chunk_size,
                 raw,
             )
-            cursor += range_part
-        else:
-            if cursor + leaf_length > len(range_bytes):
-                return False
-            node = _leaf_node_buffer(
-                proof.profile,
-                leaf_index,
-                leaf_index * proof.profile.chunk_size,
-                view[cursor : cursor + leaf_length],
-            )
-            cursor += leaf_length
-        components[(leaf_index, 1)] = node
 
-    if cursor != len(range_bytes):
+        if cursor + leaf_length > len(range_bytes):
+            return None
+        node = _leaf_node_buffer(
+            proof.profile,
+            leaf_index,
+            leaf_index * proof.profile.chunk_size,
+            view[cursor : cursor + leaf_length],
+        )
+        cursor += leaf_length
+        return node
+
+    def reconstruct(start: int, count: int) -> TreeNode | None:
+        nonlocal witness_index
+        end = start + count
+        if end <= first_leaf or start >= last_leaf_exclusive:
+            if witness_index >= len(proof.witnesses):
+                return None
+            node = proof.witnesses[witness_index]
+            witness_index += 1
+            return node
+
+        if count == 1:
+            return target_leaf_node(start)
+
+        left_count = _largest_power_strictly_less(count)
+        left = reconstruct(start, left_count)
+        if left is None:
+            return None
+        right = reconstruct(start + left_count, count - left_count)
+        if right is None:
+            return None
+        return combine_nodes(proof.profile, left, right)
+
+    node = reconstruct(0, proof.root.leaf_count)
+    if (
+        node is None
+        or cursor != len(range_bytes)
+        or witness_index != len(proof.witnesses)
+    ):
         return False
 
-    node = _reconstruct_from_components(
-        proof.profile,
-        0,
-        proof.root.leaf_count,
-        components,
-    )
     reconstructed = TreeRoot(
         proof.profile,
         node.byte_length,
@@ -814,3 +837,4 @@ def verify_range(range_bytes: bytes, proof: RangeProofV1) -> bool:
         node.digests,
     )
     return hmac.compare_digest(reconstructed.to_bytes(), proof.root.to_bytes())
+

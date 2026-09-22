@@ -1,0 +1,70 @@
+{
+  "schema": "sigma-tree-v1-st3-kat",
+  "cases": [
+    {
+      "name": "empty-to-abc",
+      "prefix_length": 0,
+      "prefix_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "suffix_length": 3,
+      "suffix_sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "completed_leaf_count": 0,
+      "frontier_nodes": 0,
+      "tail_length": 0,
+      "checkpoint_wire_bytes": 190,
+      "checkpoint_wire_sha256": "bf35d4e51d5584e4344951e45704153ea0613bfa7085662f6431e4659fcf88a2",
+      "resumed_root_wire_sha256": "588886c71d3f45ef06e99f8c70542f77bb8f378377ee0283d879069394289a2d"
+    },
+    {
+      "name": "one-byte",
+      "prefix_length": 1,
+      "prefix_sha256": "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+      "suffix_length": 2,
+      "suffix_sha256": "768921a22b8e190c2cfafeb0688f0d58a5f76ee4c7fb369758a208c7ba5e9acb",
+      "completed_leaf_count": 0,
+      "frontier_nodes": 0,
+      "tail_length": 1,
+      "checkpoint_wire_bytes": 191,
+      "checkpoint_wire_sha256": "a2b796bfa71c40dc3746adffc340b63f1fb39b56c01402c5cf7c90ed23a2d51b",
+      "resumed_root_wire_sha256": "673a4b46278260954fe4933297322ea8f968ebaff76fd15e5cb18b03b8b463f0"
+    },
+    {
+      "name": "chunk-boundary",
+      "prefix_length": 65536,
+      "prefix_sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+      "suffix_length": 4,
+      "suffix_sha256": "0c62f876ef1dea830de9f32c2f4b46dd6d74d50d15896e09ef5a2fcd4ac7e1d7",
+      "completed_leaf_count": 1,
+      "frontier_nodes": 1,
+      "tail_length": 0,
+      "checkpoint_wire_bytes": 540,
+      "checkpoint_wire_sha256": "e3d9a6b25fcc71d03409c47d9c456237e8c603113b82b7c993f0075d7bbd37d1",
+      "resumed_root_wire_sha256": "053719454393439f9954b5e2b64b29f12ceae169f1f73e83e6449921488c2ed9"
+    },
+    {
+      "name": "chunk-plus-tail",
+      "prefix_length": 65555,
+      "prefix_sha256": "d3c4a55e260d185b2b3b69da69a9085bd25c2ff30f9b2b0baf881bf2ec4b4332",
+      "suffix_length": 6,
+      "suffix_sha256": "a1b7c6f1aa933f882745c9a905739790931b7fb9a01e49b44d2b4d19e1bf8e39",
+      "completed_leaf_count": 1,
+      "frontier_nodes": 1,
+      "tail_length": 19,
+      "checkpoint_wire_bytes": 559,
+      "checkpoint_wire_sha256": "a3c0db2e703418cb0e56046272471e4fb0a5bfdb63507ed948029a5f8df8ec35",
+      "resumed_root_wire_sha256": "254fa811f19afc38383d7e849e249eff38fba9ce073a25989c0787d9ea2978e7"
+    },
+    {
+      "name": "three-chunks-tail",
+      "prefix_length": 196731,
+      "prefix_sha256": "6d576dffd030aa4e9128f1afab12329df91695bea2cea040bf6a1a74664c7d42",
+      "suffix_length": 3,
+      "suffix_sha256": "b891f9e2a69626266100a5fa3161423408bdf539816e578cc6464a315b138668",
+      "completed_leaf_count": 3,
+      "frontier_nodes": 2,
+      "tail_length": 123,
+      "checkpoint_wire_bytes": 1013,
+      "checkpoint_wire_sha256": "c0b31513d87a7db7b248f322edf83031ddce6a1d81dff5d477f20c9ad3c5671a",
+      "resumed_root_wire_sha256": "f1ace075e63938f8b227b8caa3801dae3b512ca197918334e85d7777a8744823"
+    }
+  ]
+}

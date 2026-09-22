@@ -11,7 +11,7 @@ SV1	SV	Trajectory checkpoint	COMPLETE	SV0	YES	SV1 blocking obligations + all-ind
 SV2	SV	Verification policy	COMPLETE	SV0	YES	SV2 blocking obligations + policy adversarial suite
 SV3	SV	Receipts and batch	COMPLETE	SV2	NO	SV3 blocking obligations
 SA0	SA	Canonical Sigma Artifact	COMPLETE	ST1;SV0	YES	SA0 blocking obligations + canonical corpus
-SA1	SA	Dual verification	PLANNED	SA0;ST2;SV2	YES	SA1 blocking obligations + independent side verification
+SA1	SA	Dual verification	ACTIVE	SA0;ST2;SV2	YES	SA1 blocking obligations + independent side verification
 SA2	SA	Provenance and signature	PLANNED	SA0	NO	SA2 blocking obligations
 SA3	SA	Product API and CLI closure	PLANNED	SA1	YES	All mandatory workflows pass from clean wheel
 REL0	REL	Historical compatibility gate	PLANNED	ST4;SV2;SA1	YES	All frozen historical corpora byte exact

@@ -183,3 +183,44 @@ Evidencia:
 - SV0-IMPLEMENTATION-EVIDENCE.md
 
 SV1 permanece PLANNED.
+
+
+SV1 — Trajectory Checkpoint — está **CANDIDATE**.
+
+Implementado:
+- internal TrajectoryCheckpointV1 separado de SigmaCheckpointV3;
+- all-index checkpointing con window_prefix mínimo;
+- continuation/finalization sin source replay;
+- exact final SigmaDigestV3;
+- independent stdlib checkpoint encoder;
+- all-index differential tests;
+- source rebind correcto/incorrecto;
+- canonical codec/adversarial tests;
+- semantic gate preparado.
+
+Cierre pendiente:
+
+    python -m scripts.product_closure.sv1_gate --report .sigma/sv1-gate.json
+
+SV2 — Verification Policy — está **CANDIDATE**.
+
+Implementado:
+- canonical SIGPOLY1 wire/version 1;
+- stable PolicyId;
+- Accepted / Rejected / Inconclusive / Unsupported;
+- cheap-check-before-replay ordering;
+- suite/history/resource/capability constraints;
+- explicit v2.2 opt-in;
+- normalized strict<=weak relation;
+- Artifact-facing capabilities bridge;
+- frozen policy KATs;
+- deterministic/adversarial/property tests;
+- semantic gate preparado.
+
+Cierre pendiente:
+
+    python -m scripts.product_closure.sv2_gate --report .sigma/sv2-gate.json
+
+Por decisión de campaña, benchmarks/timings empíricos de SV1/SV2 se difieren a una fase posterior.
+
+SV3 permanece PLANNED.

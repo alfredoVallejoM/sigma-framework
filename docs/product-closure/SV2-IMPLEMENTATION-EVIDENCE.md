@@ -1,6 +1,6 @@
 # SV2 — Verification Policy Implementation Evidence
 
-Status: **CANDIDATE — SEMANTIC IMPLEMENTATION/REVIEW COMPLETE; RUNTIME GATE PENDING**  
+Status: **COMPLETE — POLICY RUNTIME GATE + REVIEW PASSED**  
 Reviewed implementation baseline: `2c47a2fff90e1000b20e6917e574df29cb2dc238`  
 SV0 baseline: `03f8663c12187388c3e67de6958bd58921aaa45b`  
 Date: 2026-09-22
@@ -167,7 +167,7 @@ Tests cover:
 - unknown memory estimate;
 - default legacy denial and explicit opt-in.
 
-## 11. Gate prepared
+## 11. Executed closure gate
 
 `sv2_gate.py` requires:
 - >=400 deterministic policy decisions;
@@ -179,6 +179,40 @@ Tests cover:
 - legacy default reject/opt-in accept;
 - future evidence Unsupported;
 - DUAL capabilities enforcement.
+
+Executed on GitHub Actions run `35783661720` against commit
+`5fa4ddc38a159742866acc2ed6a81aa2bdbfa4d4`.
+
+Result:
+
+    passed = true
+    closure_eligible = true
+    decision_cases = 400
+    monotonic_cases = 100
+    cheap_reject_cases = 100
+    four_way_coverage =
+      accepted
+      inconclusive
+      rejected
+      unsupported
+    legacy_default = rejected
+    legacy_opt_in = accepted
+
+Frozen streams:
+
+    decisions:
+    a1f9c8416ed58ba36e3579cb23abe49581f33c865817c4e11d6b8b4442712a6e
+
+    policy IDs:
+    0891f356952c62463c08670b5c0afe1f41bedd6f9c408f00b187952db1b73e56
+
+Frozen report:
+
+    SV2-GATE-REPORT.json
+
+Report SHA-256:
+
+    b6efef6a94ce3622aacf7427a9f272af9e56f884453c13b7cc3f4a899f35e271
 
 No timing/throughput criterion is part of this semantic gate.
 
@@ -199,15 +233,15 @@ future empirical campaign.
 
 ## 13. Obligation disposition
 
-SV2-O01 parse != accept — **CANDIDATE PASS**  
-SV2-O02 explicit four-way decision — **CANDIDATE PASS**  
-SV2-O03 cheap checks precede expensive work — **CANDIDATE PASS**  
-SV2-O04 deterministic decision — **CANDIDATE PASS**  
-SV2-O05 normalized stable PolicyId — **CANDIDATE PASS**  
-SV2-O06 monotonic normalized subset — **CANDIDATE PASS**  
-SV2-O07 legacy requires explicit opt-in — **CANDIDATE PASS**
+SV2-O01 parse != accept — **PASS**  
+SV2-O02 explicit four-way decision — **PASS**  
+SV2-O03 cheap checks precede expensive work — **PASS**  
+SV2-O04 deterministic decision — **PASS**  
+SV2-O05 normalized stable PolicyId — **PASS**  
+SV2-O06 monotonic normalized subset — **PASS**  
+SV2-O07 legacy requires explicit opt-in — **PASS**
 
-Runtime gate execution remains pending.
+Runtime gate execution passed.
 
 ## 14. Adversarial design findings
 
@@ -239,16 +273,29 @@ SV2 is additive and does not modify:
 Legacy verification calls the existing frozen v2.2 verifier only after policy
 opt-in.
 
-## 16. Promotion requirement
+## 16. Runtime closure and final disposition
 
-Current correct state:
+Isolated SV1/SV2 runner:
 
-    SV2 CANDIDATE
+    compileall PASS
+    Ruff PASS
+    Mypy PASS
+    pytest 41 passed, 1 skipped
+    SV2 gate PASS
 
-Promotion to COMPLETE requires:
-1. SV0 COMPLETE;
-2. run `python -m scripts.product_closure.sv2_gate --report .sigma/sv2-gate.json`;
-3. focused SV2 unit/property/vector tests PASS;
-4. post-execution O01..O07 review.
+The executed gate confirms:
+- all four decision classes are reachable;
+- decisions are deterministic over the generated corpus;
+- the normalized strict/weak subset satisfies the tested monotonic law;
+- cheap rejection avoids source replay;
+- legacy is rejected by default and accepted only after opt-in.
 
-Empirical policy-performance data is intentionally postponed.
+Manual post-execution review:
+
+    SV2-O01..SV2-O07 PASS
+
+Final status:
+
+    SV2 COMPLETE
+
+Performance/throughput characterization remains intentionally deferred.

@@ -472,6 +472,13 @@ def _policy_preflight(
         # Side verification records the source error with side attribution.
         pass
 
+    if int(artifact.descriptor.profile) not in policy.allowed_artifact_metadata_profiles:
+        return _policy_result(
+            policy,
+            VerificationDecisionKindV1.REJECTED,
+            ArtifactPolicyCodeV1.METADATA_PROFILE_NOT_ALLOWED,
+            "artifact descriptor profile is not allowed",
+        )
     if policy.require_signature and not capabilities.has_signature:
         return _policy_result(
             policy,

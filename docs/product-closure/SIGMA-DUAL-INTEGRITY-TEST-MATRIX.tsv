@@ -138,10 +138,17 @@ ART-KAT-001	SA0	T1	Frozen canonical artifact corpus	stdlib artifact reference	6 
 ART-FUZZ-001	SA0	T5	Artifact/identity/descriptor codecs	strict round-trip	missing/duplicate/reorder/unknown + stored-ID corruption	reject malformed/corrupt wires	BLOCKING
 ART-MUT-001	SA0	T4	Profile/evidence exactness	constructor/parser	missing/extra primary evidence + DUAL length mismatch	reject	BLOCKING
 ART-PARENT-001	SA0	T2	Parent binding	ArtifactId function	parent set/order/duplicate mutations	canonical set; ArtifactId changes on set mutation	REQUIRED
-DUAL-DIFF-001	SA1	T3	Dual logical conjunction	separate Tree/v3 verifiers	random artifacts	exact AND semantics	BLOCKING
-DUAL-FAIL-001	SA1	T4	Tree fail attribution	separate verifiers	corrupt Tree side	Tree failure preserved	BLOCKING
-DUAL-FAIL-002	SA1	T4	Trajectory fail attribution	separate verifiers	corrupt v3 side	Trajectory failure preserved	BLOCKING
-DUAL-POL-001	SA1	T3	Policy integration	policy verifier	TREE/TRAJECTORY/DUAL modes	exact requirement	BLOCKING
+DUAL-BOTH-001	SA1	T4	Both-side failure attribution	independent side reference	>=300 both-fail cases	both sides fail independently	BLOCKING
+DUAL-REF-001	SA1	T7	Independent Tree/v3 side verifier	stdlib-only references	all gate side cases	zero side divergence	BLOCKING
+DUAL-CLAIM-001	SA1	T4	No security-width addition	manual result/docs audit	all SA1 surfaces	independent claims; no bit sum	BLOCKING
+DUAL-CHEAP-001	SA1	T4	Policy preflight before hashing	bomb source	profile/policy rejection	NOT_RUN sides; no source replay	BLOCKING
+MAN-DUAL-001	SA1	T3	Selective manifest criticality	DECLARED mode	>=100 mixed manifests	Tree-only + trajectory-critical both handled explicitly	BLOCKING
+MAN-DUAL-002	SA1	T4	Manifest require-all policy	REQUIRE_ALL_FILES	>=100 mixed manifests	missing trajectory evidence rejects	BLOCKING
+MAN-TREE-001	SA1	T3	Manifest Tree-only mode	TREE_ONLY mode	mixed manifests	all regular files verified only by Tree	REQUIRED
+DUAL-DIFF-001	SA1	T3	Dual logical conjunction	independent Tree + independent v3 sides	>=300 valid DUAL + 900 attributed failures	exact side tuple + AND semantics	BLOCKING
+DUAL-FAIL-001	SA1	T4	Tree fail attribution	independent side reference	>=300 Tree-only failures	Tree fails; Trajectory preserved	BLOCKING
+DUAL-FAIL-002	SA1	T4	Trajectory fail attribution	independent side reference	>=300 Trajectory-only failures	Trajectory fails; Tree preserved	BLOCKING
+DUAL-POL-001	SA1	T3	Policy integration	VerificationPolicyV1	>=200 TREE/TRAJECTORY/DUAL cases	exact profile requirements and preflight	BLOCKING
 PROV-ADV-001	SA2	T4	Unknown claim handling	none	unknown type	explicit reject/future mode only	BLOCKING
 SIG-KAT-001	SA2	T1	Artifact signature	standard Ed25519 verifier	frozen fixture	verify true	BLOCKING
 SIG-MUT-001	SA2	T4	Signature scope	standard verifier	mutate canonical record	reject	BLOCKING

@@ -2434,28 +2434,326 @@ Benchmarks empíricos de throughput se difieren explícitamente.
 
 ### Objetivo
 
-Crear objeto único de producto que pueda consumir Tree, Trajectory o ambos.
+Crear el objeto canónico que una las dos familias de evidencia ya cerradas sin
+mezclar todavía sus verificadores.
 
-### Obligaciones
+SA0 congela:
+- Artifact format V1;
+- perfiles TREE / TRAJECTORY / DUAL;
+- descriptor;
+- identity preimage;
+- ArtifactId;
+- manifest binding;
+- parent binding;
+- optional trajectory-audit attachment.
 
-SA0-O01 — Exactly declared evidence  
-TREE exige TreeRoot; TRAJECTORY exige SigmaDigestV3; DUAL exige ambos.
+SA1 queda como única autoridad posterior para la ley de verificación DUAL.
 
-SA0-O02 — ArtifactId non-circularity  
-ArtifactId se calcula sin signature externa.
+### Implementación
 
-SA0-O03 — Canonical descriptor  
-Descriptor tiene wire único.
+Product:
 
-SA0-O04 — Parent binding  
-Cambiar parent artifact cambia ArtifactId.
+- `sigma/artifact/ids.py`
+  - ArtifactProfileV1;
+  - ArtifactDescriptorProfileV1;
+  - magics/domains/limits.
+- `sigma/artifact/codec.py`
+  - ArtifactDecodeError;
+  - strict Artifact V1 record envelope;
+  - canonical parent-ID sequence.
+- `sigma/artifact/record.py`
+  - ArtifactDescriptorV1;
+  - ArtifactIdentityV1;
+  - SigmaArtifactV1;
+  - manifest_identity_v1;
+  - create_artifact_v1.
+- `sigma/artifact/__init__.py`.
+- `ARTIFACT_WIRE_VERSION=1` en `sigma/version.py`.
 
-SA0-O05 — Manifest binding  
-Si manifest está presente, queda incluido en identity.
+Independent:
 
-### Tests
+- `reference/artifact_v1.py`
+  - stdlib-only descriptor;
+  - identity;
+  - ArtifactId;
+  - ManifestId;
+  - envelope encoder.
 
-Round-trip, mutation, missing evidence, extra evidence, wrong profile, parent reorder.
+Tooling:
+
+- `scripts/product_closure/generate_sa0_vectors.py`;
+- `scripts/product_closure/sa0_gate.py`;
+- unit/differential/vector tests.
+
+### Wires
+
+Descriptor:
+
+    SIGADSC1
+
+Identity:
+
+    SIGAIDN1
+
+Artifact envelope:
+
+    SIGARTF1
+
+Artifact format version:
+
+    1
+
+### SA0-O01 — Exactly declared primary evidence
+
+TREE:
+
+    TreeRoot required
+    SigmaDigestV3 absent
+
+TRAJECTORY:
+
+    TreeRoot absent
+    SigmaDigestV3 required
+
+DUAL:
+
+    both required.
+
+Missing/extra primary evidence rejects at construction/parser boundary.
+
+DUAL additionally requires matching committed byte length.
+
+Optional TrajectoryAudit:
+- forbidden for TREE;
+- allowed for TRAJECTORY/DUAL;
+- must project byte-exactly to the included SigmaDigestV3.
+
+### SA0-O02 — ArtifactId non-circularity
+
+Canonical preimage:
+
+    ArtifactIdentityV1
+
+contains:
+- profile;
+- descriptor;
+- primary evidence;
+- manifest ID;
+- parents.
+
+Definition:
+
+    ArtifactId =
+      SHA256(
+        b"SIGMA-ARTIFACT-ID-V1\0"
+        || identity wire
+      ).
+
+Excluded:
+- stored ArtifactId field;
+- optional audit;
+- future external signature;
+- future provenance/receipts.
+
+The artifact envelope serializes ArtifactId and parser recomputes it.
+
+Gate corrupts every stored ID case and requires rejection.
+
+### SA0-O03 — Canonical descriptor
+
+BASE_V1 descriptor:
+- NFC UTF-8 logical name;
+- no NUL;
+- canonical lowercase ASCII media `type/subtype`;
+- strict closed codec.
+
+Descriptor is part of ArtifactId.
+
+Codec tests cover:
+- round-trip;
+- malformed Unicode/media;
+- missing/duplicate/reordered/unknown TLV fields.
+
+### SA0-O04 — Parent binding
+
+Parents:
+- 32-byte IDs;
+- maximum 1024;
+- sorted raw-byte order;
+- unique.
+
+Parent sequence is part of ArtifactIdentity.
+
+Changing parent set changes ArtifactId.
+
+Raw reordered parent wire rejects.
+
+### SA0-O05 — Manifest binding
+
+Manifest identity:
+
+    ManifestId =
+      SHA256(
+        b"SIGMA-MANIFEST-ID-V1\0"
+        || ManifestV1 wire
+      ).
+
+ManifestId is optional but, when present, belongs to ArtifactIdentity.
+
+Changing manifest changes ArtifactId.
+
+### Auxiliary Audit stability
+
+Audit is deliberately outside ArtifactIdentity.
+
+For same primary evidence:
+
+    ID(base)
+      = ID(base+COMPACT)
+      = ID(base+FULL)
+
+while envelope wires differ.
+
+Executed gate covers 200 such cases.
+
+### Canonical KAT
+
+Frozen corpus:
+
+    specification/test-vectors/sigma-artifact-v1-sa0.json
+
+Corpus SHA-256:
+
+    60a0405516dd55b5ce52f14a442c12f836128357ac7b838a28f8d7b5eb748631
+
+Six cases:
+- TREE empty;
+- TREE+manifest+parents;
+- TRAJECTORY;
+- TRAJECTORY+COMPACT;
+- DUAL;
+- DUAL+FULL+manifest+parents.
+
+Every generated vector is compared first against the independent stdlib encoder.
+
+### Differential/runtime gate
+
+Executed GitHub Actions run:
+
+    35789466377
+
+Quality:
+
+    compile PASS
+    Ruff PASS
+    Mypy PASS
+    pytest 36 PASS
+
+The focused pytest set also included ST4 delta regression after auxiliary Tree
+typing cleanup.
+
+SA0 gate:
+
+    differential_cases = 600
+    identity_mutations = 1,800
+    audit_stability_cases = 200
+    stored_id_parser_rejections = 600
+
+Profiles:
+
+    TREE = 200
+    TRAJECTORY = 200
+    DUAL = 200
+
+Result:
+
+    passed = true
+    closure_eligible = true
+    artifact_id_includes_auxiliary_audit = false
+    external_signature_in_artifact_identity = false
+    security_width_claim = false
+    empirical_performance_claims = false.
+
+Frozen streams:
+
+ArtifactId:
+
+    93b8eba102bd9d980494a6db7c529fbc93a5d06590cb1f23fffa3ed77e2a8fac
+
+Artifact envelope:
+
+    fac9be3524100bcc974fd3b46d75263bf7ea1951af48553a00c0465d268db068
+
+Identity mutations:
+
+    59cda3e54e32d15683a9696da5de8b13b901c0f9fe4d4dd098b5ca1a1d8833ad
+
+Frozen gate report:
+
+    SA0-GATE-REPORT.json
+
+Report SHA-256:
+
+    a80cea91b0f17e43af8513deba054ddf404ed637870c73164c9caba8b043d6f4
+
+### Auxiliary findings during closure
+
+SA0 import/type closure exposed two old Tree engineering debts:
+
+1. Manifest file hashing used `DEFAULT_PROFILE` without importing it.
+   - fixed;
+   - cross-platform ST1 rerun passed.
+
+2. ST4 rollback journals used sentinel values that were semantically valid but
+   type-ambiguous.
+   - rewritten as typed existing-key journals;
+   - focused ST4 delta tests pass in SA0 runner.
+
+Neither change alters Tree wire/cryptographic semantics.
+
+### Dependency closure — ST1
+
+Because SA0 depends on ST1, the final missing ST1 macOS gate was executed in the
+same campaign.
+
+GitHub Actions run:
+
+    35789236301
+
+macOS local gate:
+
+    PASS
+
+Linux + Darwin peer gate:
+
+    PASS
+    cross_platform_complete = true
+    closure_eligible = true
+
+Fixture on both:
+
+    abc5d712225b89532320ee3ff9e7ac6ffe9aad5663fa61357adc2e729613ef83
+
+Thus ST1 is no longer a candidate dependency.
+
+### Criterio de cierre
+
+SA0 COMPLETE requires:
+
+1. O01 profile/evidence exactness PASS;
+2. O02 non-circular ArtifactId + stored-ID mutation PASS;
+3. O03 descriptor/codec canonicality PASS;
+4. O04 parent binding PASS;
+5. O05 manifest binding PASS;
+6. independent descriptor/identity/envelope oracle zero divergence;
+7. frozen KAT corpus unchanged under `--check`;
+8. 600 differential cases PASS;
+9. 1,800 identity mutations PASS;
+10. 200 audit-stability cases PASS;
+11. ST1 dependency COMPLETE;
+12. manual post-execution review PASS.
+
+Empirical Artifact throughput is deliberately deferred.
 
 ## 14. SA1 — Dual Verification
 

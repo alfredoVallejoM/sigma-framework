@@ -95,6 +95,52 @@ class TreeBuilder:
     def buffered_bytes(self) -> int:
         return len(self._buffer)
 
+    def checkpoint_state(self) -> tuple[TreeFrontier, bytes, int, int]:
+        """Return a portable structural snapshot without opaque hash state."""
+        if self._finalized:
+            raise RuntimeError("cannot checkpoint a finalized Sigma Tree builder")
+        frontier = self.frontier
+        tail = bytes(self._buffer)
+        if frontier.byte_length != frontier.leaf_count * self.profile.chunk_size:
+            raise RuntimeError("checkpoint frontier contains a non-full subtree")
+        if len(tail) >= self.profile.chunk_size:
+            raise RuntimeError("checkpoint tail violates chunk bound")
+        if self._leaf_count != frontier.leaf_count:
+            raise RuntimeError("checkpoint leaf accounting invariant failed")
+        if self._byte_length != frontier.byte_length + len(tail):
+            raise RuntimeError("checkpoint byte accounting invariant failed")
+        return frontier, tail, self._byte_length, self._leaf_count
+
+    @classmethod
+    def from_checkpoint_state(
+        cls,
+        frontier: TreeFrontier,
+        tail: bytes,
+        *,
+        profile: TreeProfileV1 = DEFAULT_PROFILE,
+    ) -> "TreeBuilder":
+        """Restore only canonical structural state; no hashlib internals are serialized."""
+        if profile != DEFAULT_PROFILE:
+            raise ValueError("unsupported Sigma Tree profile")
+        if not isinstance(frontier, TreeFrontier):
+            raise TypeError("frontier must be TreeFrontier")
+        if not isinstance(tail, bytes):
+            raise TypeError("checkpoint tail must be bytes")
+        if frontier.byte_length != frontier.leaf_count * profile.chunk_size:
+            raise ValueError("checkpoint frontier must contain only complete leaves")
+        if len(tail) >= profile.chunk_size:
+            raise ValueError("checkpoint tail must be shorter than chunk size")
+        total = frontier.byte_length + len(tail)
+        if total >= 1 << 64:
+            raise ValueError("checkpoint byte length exceeds u64")
+
+        builder = cls(profile)
+        builder._nodes = list(frontier.nodes)
+        builder._leaf_count = frontier.leaf_count
+        builder._buffer.extend(tail)
+        builder._byte_length = total
+        return builder
+
     def update(self, data: bytes) -> None:
         if self._finalized:
             raise RuntimeError("Sigma Tree builder is finalized")

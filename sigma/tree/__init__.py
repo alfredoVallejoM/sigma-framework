@@ -1,5 +1,17 @@
 """Sigma Tree V1: canonical structural integrity primitives."""
 
+from .checkpoint import (
+    TreeResumeCheckpointV1,
+    TreeSourceHintV1,
+    checkpoint_builder,
+    checkpoint_bytes,
+    read_checkpoint,
+    restore_builder,
+    resume_tree,
+    source_hint_from_path,
+    source_hint_matches_path,
+    write_checkpoint_atomic,
+)
 from .codec import TreeDecodeError
 from .core import TreeBuilder, build_tree, build_tree_chunks, combine_nodes, empty_root, leaf_node
 from .ids import (
@@ -42,6 +54,8 @@ from .path import canonical_relative_path
 
 __all__ = [
     "DEFAULT_PROFILE",
+    "TreeResumeCheckpointV1",
+    "TreeSourceHintV1",
     "ManifestEntryKind",
     "ManifestEntryV1",
     "ManifestMetadataProfileId",
@@ -63,6 +77,8 @@ __all__ = [
     "TreeProfileV1",
     "TreeRoot",
     "build_directory_manifest",
+    "checkpoint_builder",
+    "checkpoint_bytes",
     "build_tree",
     "build_tree_chunks",
     "canonical_frontier_heights",
@@ -75,6 +91,12 @@ __all__ = [
     "prove_leaf",
     "prove_range",
     "range_witness_geometry",
+    "read_checkpoint",
+    "restore_builder",
+    "resume_tree",
+    "source_hint_from_path",
+    "source_hint_matches_path",
     "verify_inclusion",
     "verify_range",
+    "write_checkpoint_atomic",
 ]

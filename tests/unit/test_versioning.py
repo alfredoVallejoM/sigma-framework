@@ -18,6 +18,7 @@ from sigma.version import (
     SIGNED_COMMITMENT_WIRE_VERSION,
     SUPPORTED_SUITE_FAMILIES,
     TRANSITIONAL_SUITE_FAMILIES,
+    TREE_WIRE_VERSION,
 )
 
 
@@ -38,6 +39,7 @@ def test_version_axes_are_independent_and_declared() -> None:
         POW_WIRE_VERSION,
         SIGNED_COMMITMENT_WIRE_VERSION,
     ) == (2, 2, 2, 2, 2, 3, 2)
+    assert TREE_WIRE_VERSION == 1
     assert ACTIVE_SUITE_FAMILIES == ("v3-r12.5",)
     assert TRANSITIONAL_SUITE_FAMILIES == ("v2-2", "v3-r12")
     assert SUPPORTED_SUITE_FAMILIES == ("v3-r12.5", "v2-2", "v3-r12")

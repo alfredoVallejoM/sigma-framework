@@ -3,7 +3,7 @@ BASE	BASE	Compatibility and claim boundary	ACTIVE		YES	All DI-INV blocking oblig
 ST0	ST	Sigma Tree core extraction	COMPLETE	BASE	YES	ST0 blocking obligations + adversarial review
 ST1	ST	Canonical manifest	CANDIDATE	ST0	YES	ST1 blocking obligations + cross-platform fixtures
 ST2	ST	Inclusion and range proofs	COMPLETE	ST0	YES	ST2 blocking obligations + independent verifier
-ST3	ST	Portable tree resume	ACTIVE	ST0	YES	ST3 blocking obligations + 100k split differential
+ST3	ST	Portable tree resume	COMPLETE	ST0	YES	ST3 blocking obligations + 100k split differential
 ST4	ST	Delta and append	PLANNED	ST0;ST3	YES	ST4 blocking obligations + performance gate
 ST5	ST	Tree performance and scale closure	PLANNED	ST2;ST3;ST4	NO	Performance ledger frozen and reviewed
 SV0	SV	Trajectory audit	PLANNED	BASE	YES	SV0 blocking obligations + R12.5 corpus replay

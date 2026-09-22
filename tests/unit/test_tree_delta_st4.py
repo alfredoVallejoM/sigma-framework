@@ -242,3 +242,43 @@ def test_full_file_same_length_replacement_equals_rebuild():
     assert set(result.telemetry.recomputed_nodes) == set(
         result.telemetry.invalidated_nodes
     )
+
+
+class _FailingUpdateDict(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fail_next_update = True
+
+    def update(self, *args, **kwargs):
+        if self.fail_next_update:
+            self.fail_next_update = False
+            raise RuntimeError("injected commit update failure")
+        return super().update(*args, **kwargs)
+
+
+def test_delta_commit_failure_rolls_back_partially_published_state():
+    data = _data(8)
+    index = TreeDeltaIndex(data)
+    before_root = index.root
+    before_bytes = index.materialize()
+    index._nodes = _FailingUpdateDict(index._nodes)
+
+    with pytest.raises(RuntimeError, match="commit update"):
+        index.apply_delta([TreeEditV1(2 * 65_536 + 3, 1, b"R")])
+
+    assert index.root == before_root
+    assert index.materialize() == before_bytes
+
+
+def test_append_commit_failure_rolls_back_partially_published_state():
+    data = _data(8, 19)
+    index = TreeDeltaIndex(data)
+    before_root = index.root
+    before_bytes = index.materialize()
+    index._nodes = _FailingUpdateDict(index._nodes)
+
+    with pytest.raises(RuntimeError, match="commit update"):
+        index.append(b"append-data")
+
+    assert index.root == before_root
+    assert index.materialize() == before_bytes

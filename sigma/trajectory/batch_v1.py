@@ -46,6 +46,19 @@ class _BatchItemField(IntEnum):
     ERROR_MESSAGE = 5
 
 
+def _safe_error_text(value: object) -> str:
+    text = unicodedata.normalize("NFC", str(value)).replace("\x00", "\\0")
+    encoded = text.encode("utf-8", "replace")
+    if len(encoded) <= 4096:
+        return text
+    shortened = encoded[:4096]
+    while True:
+        try:
+            return shortened.decode("utf-8")
+        except UnicodeDecodeError:
+            shortened = shortened[:-1]
+
+
 def _canonical_error_text(name: str, value: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"{name} must be str")
@@ -321,8 +334,8 @@ def verify_batch_item_v1(
             index=index,
             artifact_identity=item.artifact_identity,
             receipt=None,
-            error_type=type(exc).__name__,
-            error_message=str(exc),
+            error_type=_safe_error_text(type(exc).__name__),
+            error_message=_safe_error_text(exc),
         )
 
 

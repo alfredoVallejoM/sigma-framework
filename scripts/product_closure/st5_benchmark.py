@@ -18,7 +18,6 @@ from sigma.tree import (
     TreeDeltaIndex,
     TreeEditV1,
     TreeProofIndex,
-    TreeResumeCheckpointV1,
     build_directory_manifest,
     build_tree,
     checkpoint_bytes,

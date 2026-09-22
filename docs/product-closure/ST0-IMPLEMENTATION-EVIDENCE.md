@@ -1,6 +1,6 @@
 # ST0 — Implementation Evidence
 
-Status: **ADVERSARIAL REVIEW PASSED — ST0 COMPLETE CANDIDATE**  
+Status: **ST0 COMPLETE — ADVERSARIAL REVIEW PASSED**  
 Reviewed implementation baseline: `0bf2be404b4b16b80592295cdc3c50be6f970227`  
 Campaign reconciliation baseline: `7d265e76a8cb921e0cc3142f9d668ef683262a30`  
 Date: 2026-09-22
@@ -389,7 +389,7 @@ TreeCore mirror and passed. The independent KAT generator still yields:
 
 Adversarial review disposition: **PASS**.
 
-## 11. Candidate conclusion
+## 11. Closure conclusion
 
 All ST0-specific blocking obligations have implementation evidence and the
 required post-candidate adversarial review has passed.

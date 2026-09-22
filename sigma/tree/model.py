@@ -30,6 +30,10 @@ class TreeProfileV1:
             raise ValueError("unsupported Sigma Tree profile")
         if self.chunk_size != DEFAULT_TREE_CHUNK_SIZE:
             raise ValueError("Sigma Tree V1 fixes the canonical chunk size")
+        if not isinstance(self.algorithms, tuple) or not all(
+            isinstance(algorithm, TreeAlgorithmId) for algorithm in self.algorithms
+        ):
+            raise TypeError("Sigma Tree algorithms must be a tuple of TreeAlgorithmId values")
         if self.algorithms != DEFAULT_TREE_ALGORITHMS:
             raise ValueError("Sigma Tree V1 fixes the canonical algorithm order")
 
@@ -73,6 +77,8 @@ DEFAULT_PROFILE = TreeProfileV1()
 
 
 def validate_digests(digests: tuple[bytes, ...], profile: TreeProfileV1 = DEFAULT_PROFILE) -> None:
+    if not isinstance(digests, tuple):
+        raise TypeError("digest vector must be an immutable tuple")
     if len(digests) != len(profile.algorithms):
         raise ValueError("digest vector does not match profile algorithm count")
     if any(not isinstance(d, bytes) or len(d) != TREE_DIGEST_SIZE for d in digests):
@@ -181,6 +187,8 @@ class TreeFrontier:
     nodes: tuple[TreeNode, ...] = ()
 
     def __post_init__(self) -> None:
+        if not isinstance(self.nodes, tuple) or not all(isinstance(node, TreeNode) for node in self.nodes):
+            raise TypeError("frontier nodes must be an immutable tuple of TreeNode values")
         if len(self.nodes) > MAX_TREE_FRONTIER_NODES:
             raise ValueError("frontier contains too many nodes")
         end = 0

@@ -1411,50 +1411,339 @@ ST5 se marca COMPLETE sólo si:
 
 ### Objetivo
 
-Exponer la dinámica actual Z_i=(H_i,S_i) como evidencia inspeccionable sin modificar Sigma v3.
+Exponer la trayectoria Sigma v3 ya calculada como evidencia canónica inspeccionable,
+sin alterar evaluación, digest, suites, domains ni corpora históricos.
 
-### Obligaciones
+SV0 es estrictamente observacional:
 
-SV0-O01 — Digest projection
+    evaluate_v3
+      -> EvaluationV3
+      -> TrajectoryAuditV3
 
-    project_digest(audit(X)) = sigma_v3(X)
+Nunca:
 
-SV0-O02 — Replay
+    Audit
+      -> modifica evaluate_v3
 
-    verify_audit(X,audit(X)) = Verified
+### Implementación
 
-SV0-O03 — Round cardinality  
-Audit tiene exactamente los estados/rondas requeridos por t,k y suite.
+Product:
 
-SV0-O04 — Historical causality  
-H_{i+1} debe coincidir con HistoryStep(H_i,S_i).
+- `sigma/trajectory/audit_v3.py`
+  - TrajectoryAuditModeV3;
+  - TrajectoryRoundAuditV3;
+  - TrajectoryAuditV3;
+  - audit_from_evaluation_v3;
+  - evaluate_audit_v3;
+  - project_digest_v3;
+  - verify_trajectory_audit_structure_v3;
+  - verify_trajectory_audit_full_v3.
+- `sigma/trajectory/__init__.py`;
+- exports aditivos en `sigma/v3.py`.
 
-SV0-O05 — Layout linkage  
-Cada round audit referencia el plan/frame exacto consumido.
+Independent:
 
-SV0-O06 — Deep fidelity  
-Deep/DeepVector audit conserva la distinción entre fold escalar y vector completo.
+- `reference/trajectory_audit_v3.py`
+  - stdlib-only canonical encoder;
+  - consume `reference.independent_v3.evaluate_suite()`;
+  - no importa `sigma`.
 
-SV0-O07 — Compact/full consistency  
-COMPACT y FULL proyectan al mismo digest.
+Tests:
 
-SV0-O08 — No security inflation  
-Audit no se presenta como bits de seguridad adicionales.
+- `tests/unit/test_trajectory_audit_sv0.py`;
+- `tests/differential/test_trajectory_audit_reference_sv0.py`;
+- `tests/vectors/test_trajectory_audit_sv0_vectors.py`.
 
-### Tests
+Gate:
 
-- product implementation vs independent_v3;
-- mutate H_i;
-- mutate S_i;
-- mutate round index;
-- mutate plan hash;
+- `scripts/product_closure/sv0_gate.py`.
+
+### Wire freeze
+
+Top-level magic:
+
+    SIG3AUD0
+
+Round-record magic:
+
+    SIG3AUR0
+
+Se reutiliza el codec record v3 existente.
+
+No se añaden:
+- SuiteIdV3;
+- DomainIdV3;
+- algorithm ID;
+- primitive criptográfica.
+
+### Modos
+
+COMPACT:
+- exact SigmaDigestV3;
+- exact PersistentBinding;
+- init layout;
+- todos los states;
+- todos los histories si HISTORY_FEEDBACK;
+- todos los round layouts;
+- FULL-only frame/branch fields vacíos.
+
+FULL:
+- todo COMPACT;
+- exact RoundBindingV3 en history suites;
+- exact round/vector frame wire;
+- exact Deep branch frame wires;
+- exact branch outputs;
+- exact scalar fold frame cuando profile=DEEP.
+
+FULL conserva más material de replay, no más bits de seguridad.
+
+### SV0-O01 — Digest projection
+
+Para todo EvaluationV3 E:
+
+    project_digest_v3(audit_from_evaluation_v3(E))
+      = digest_from_evaluation_v3(E)
+
+byte por byte.
+
+El Audit contiene el SigmaDigestV3 exacto, no una reinterpretación.
+
+### SV0-O02 — Replay
+
+Dos niveles separados:
+
+Structural replay:
+
+    verify_trajectory_audit_structure_v3(audit)
+
+reconstruye la dinámica únicamente desde audit/context/binding.
+
+Full source replay:
+
+    verify_trajectory_audit_full_v3(source,audit)
+
+reejecuta Sigma v3 desde source y exige igualdad del Audit canónico completo.
+
+Structural PASS no se presenta como message-binding.
+
+### SV0-O03 — Round cardinality
+
+Registered suites actuales satisfacen:
+
+    len(states) = t + k
+    len(rounds) = t + k - 1
+
+Round indices:
+
+    0..t+k-2
+
+sin gaps/reorder.
+
+La public TrajectoryWindow debe coincidir exactamente con:
+
+    states[t:t+k].
+
+### SV0-O04 — Historical causality
+
+Para HISTORY_FEEDBACK:
+
+    H_0 = history_seed_v3(context,binding)
+
+y:
+
+    H_(i+1)
+      = history_step_v3(
+          context,
+          binding,
+          H_i,
+          i,
+          S_i
+        )
+
+El gate muta histories y exige rechazo.
+
+### SV0-O05 — Layout/frame linkage
+
+Cada audit conserva el layout wire exacto.
+
+Replay vuelve a derivar:
+- LayoutPlan o HistoryLayoutPlan;
+- RoundBindingV3 cuando aplica;
+- RoundFrame/VectorRoundFrame o history variants;
+- DeepBranchFrame/history variants;
+- DeepFoldFrame/history variant.
+
+FULL exige igualdad byte por byte de esos wires.
+
+No se inventa un "frame hash" alternativo.
+
+### SV0-O06 — Deep fidelity
+
+Deep scalar:
+
+    S_(i+1) = Hash(FoldFrame(branch_outputs))
+
+y FULL contiene fold frame.
+
+DeepVector:
+
+    S_(i+1) = concat(branch_outputs)
+
+y FULL exige ausencia de fold frame.
+
+El gate comprueba explícitamente ambas leyes para suites R12 y R12.5.
+
+### SV0-O07 — COMPACT/FULL consistency
+
+Para la misma EvaluationV3:
+
+    COMPACT.digest == FULL.digest
+    COMPACT.states == FULL.states
+    COMPACT.histories == FULL.histories
+    COMPACT.layouts == FULL.layouts
+
+FULL sólo añade material redundante/reconstruible.
+
+### SV0-O08 — No security inflation
+
+Documentación/API no atribuyen al Audit:
+- suma de bits;
+- nueva collision/preimage resistance;
+- timestamp;
+- provenance;
+- historical-execution truth.
+
+Audit es evidence/inspection surface sobre Sigma v3 existente.
+
+### Frozen R12.5 replay
+
+El gate usa directamente:
+
+    specification/test-vectors/conformance-v3-r12-5.json.gz.b64
+
+No crea un segundo corpus criptográfico.
+
+Para las tres history suites exige:
+- digest_hex exacto;
+- histories exactos;
+- COMPACT product == independent audit encoding;
+- FULL product == independent audit encoding;
+- structural replay PASS;
+- full source replay PASS.
+
+### Cross-suite differential gate
+
+Threshold bloqueante:
+
+    >= 600 cases
+
+repartidos entre las seis suites ejecutables:
+
+    0x0301
+    0x0303
+    0x0304
+    0x0321
+    0x0323
+    0x0324
+
+Cada caso compara:
+- product evaluation vs independent_v3;
+- COMPACT product vs independent audit encoder;
+- FULL product vs independent audit encoder;
+- digest projection;
+- codec round-trip;
+- structural replay.
+
+### Source-binding campaign
+
+Threshold:
+
+    >= 60 full-source replays
+
+incluyendo wrong-source rejection.
+
+### Mutation/adversarial campaign
+
+Threshold:
+
+    >= 2,000 directed mutations
+
+Superficies:
+- S_i bit mutation;
+- H_i bit mutation en history suites;
+- layout wire mutation;
+- state-frame mutation;
+- branch-output mutation en Deep/DeepVector.
+
+Además:
 - delete round;
-- reorder rounds;
-- cross-suite audit.
+- wrong round cardinality;
+- non-contiguous round index;
+- COMPACT carrying FULL evidence;
+- wrong branch count;
+- wrong fold-frame presence.
 
-### Gate
+Todo debe rechazar en construcción o replay.
 
-Todo corpus R12.5 v3 debe poder renderizarse como Audit y revalidarse.
+### Complexity contract
+
+Sea:
+
+    R = t+k-1
+    s = state_size
+    m = joint branch count.
+
+Audit construction from an existing evaluation:
+
+COMPACT:
+
+    O(output_size)
+
+sin source I/O ni nuevo hashing de trayectoria.
+
+FULL:
+
+    O(full_audit_size)
+
+para materializar frames ya derivables; branch outputs existentes se reutilizan.
+
+Structural replay:
+
+    O(R * round_cost)
+
+sin source I/O.
+
+Full source replay:
+
+    O(cost(evaluate_v3(source)) + audit_size).
+
+### Gate SV0
+
+`sv0_gate.py` sólo puede reportar `closure_eligible=true` si:
+
+1. frozen R12.5 corpus replay PASS;
+2. >=600 independent cross-suite cases PASS;
+3. >=2,000 directed mutations reject;
+4. >=60 source-binding replays PASS;
+5. COMPACT/FULL projection equality PASS;
+6. history causality PASS;
+7. Deep/DeepVector distinction PASS;
+8. audit codec round-trip PASS;
+9. `security_width_claim=false`.
+
+### Criterio de cierre
+
+CANDIDATE:
+- implementación completa;
+- referencia independiente completa;
+- tests/gate presentes;
+- revisión estática/adversarial sin blocker conceptual.
+
+COMPLETE:
+- gate SV0 ejecutado desde checkout real o mirror exacto;
+- report de gate congelado;
+- revisión post-ejecución O01..O08 PASS;
+- diff confirma que Sigma v3 core/corpora no cambiaron.
 
 ## 10. SV1 — Trajectory Checkpoint
 

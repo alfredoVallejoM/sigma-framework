@@ -74,6 +74,16 @@ from sigma.rounds.wide_once_v3 import (
     evaluate_wide_once_v3,
 )
 from sigma.spec.context_v3 import SigmaContextV3
+from sigma.trajectory import (
+    TrajectoryAuditModeV3,
+    TrajectoryAuditV3,
+    TrajectoryRoundAuditV3,
+    audit_from_evaluation_v3,
+    evaluate_audit_v3,
+    project_digest_v3,
+    verify_trajectory_audit_full_v3,
+    verify_trajectory_audit_structure_v3,
+)
 
 __all__ = [
     "SERIAL_DEEP_BRANCH_BACKEND_V3",
@@ -102,8 +112,12 @@ __all__ = [
     "SigmaSignedCommitmentV3",
     "StructureVerificationV3",
     "ThreadDeepBranchBackendV3",
+    "TrajectoryAuditModeV3",
+    "TrajectoryAuditV3",
+    "TrajectoryRoundAuditV3",
     "WideOnceEvaluationV3",
     "accepts_v3",
+    "audit_from_evaluation_v3",
     "compose_argon2id_output_v3",
     "derive_argon2id_sigma_v3",
     "derive_argon2id_v3",
@@ -122,6 +136,7 @@ __all__ = [
     "evaluate_history_wide_once_bytes_v3",
     "evaluate_history_wide_once_v3",
     "evaluate_nonce_v3",
+    "evaluate_audit_v3",
     "evaluate_reader_v3",
     "evaluate_v3",
     "evaluate_wide_once_bytes_v3",
@@ -129,6 +144,7 @@ __all__ = [
     "next_deep_state_v3",
     "next_deep_vector_state_v3",
     "pow_input_v3",
+    "project_digest_v3",
     "sign_digest_ed25519_v3",
     "solve_pow_v3",
     "verify_explicit_full_v3",
@@ -139,4 +155,6 @@ __all__ = [
     "verify_prepared_v3",
     "verify_signed_digest_v3",
     "verify_structure_v3",
+    "verify_trajectory_audit_full_v3",
+    "verify_trajectory_audit_structure_v3",
 ]

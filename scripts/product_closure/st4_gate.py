@@ -192,7 +192,15 @@ def run_gate(
         size = rng.randrange(1, 8 * 65_536 + 257)
         source = rng.randbytes(size)
 
-        edits = [_random_edit(rng, size, 256) for _ in range(rng.randrange(1, 5))]
+        edits = []
+        available_leaves = list(range((size + 65_535) // 65_536))
+        rng.shuffle(available_leaves)
+        for leaf in available_leaves[: rng.randrange(1, min(5, len(available_leaves) + 1))]:
+            leaf_start = leaf * 65_536
+            leaf_end = min(leaf_start + 65_536, size)
+            start = rng.randrange(leaf_start, leaf_end)
+            width = rng.randrange(1, min(256, leaf_end - start) + 1)
+            edits.append(TreeEditV1(start, width, rng.randbytes(width)))
         product = TreeDeltaIndex(source)
         delta_result = product.apply_delta(edits)
         tuples = [(edit.start, edit.delete_length, edit.data) for edit in edits]

@@ -60,3 +60,18 @@ def test_parser_rejects_oversized_record_before_tlv_walk():
 
     with pytest.raises(TreeDecodeError, match="total-size limit"):
         TreeRoot.from_bytes(b"X" * (MAX_TREE_RECORD_BYTES + 1))
+
+
+def test_profile_rejects_integer_algorithm_aliases():
+    from sigma.tree.model import TreeProfileV1
+
+    with pytest.raises(TypeError, match="TreeAlgorithmId"):
+        TreeProfileV1(algorithms=(1, 2, 3, 4))
+
+
+def test_digest_and_frontier_containers_are_immutable_tuples():
+    root = build_tree(b"abc")
+    with pytest.raises(TypeError, match="immutable tuple"):
+        TreeRoot(root.profile, root.byte_length, root.leaf_count, list(root.digests))
+    with pytest.raises(TypeError, match="immutable tuple"):
+        TreeFrontier([])

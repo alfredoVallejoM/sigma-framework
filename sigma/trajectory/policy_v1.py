@@ -359,25 +359,25 @@ def parse_verification_evidence_v1(data: bytes) -> ParsedVerificationEvidenceV1:
     if not isinstance(data, bytes):
         raise TypeError("verification evidence must be bytes")
     if data.startswith(_AUDIT_MAGIC):
-        value = TrajectoryAuditV3.from_bytes(data)
+        audit_value = TrajectoryAuditV3.from_bytes(data)
         return ParsedVerificationEvidenceV1(
             VerificationEvidenceKindV1.TRAJECTORY_AUDIT,
-            value,
-            value.to_bytes(),
+            audit_value,
+            audit_value.to_bytes(),
         )
     if data.startswith(_V3_DIGEST_MAGIC):
-        value = SigmaDigestV3.from_bytes(data)
+        digest_value = SigmaDigestV3.from_bytes(data)
         return ParsedVerificationEvidenceV1(
             VerificationEvidenceKindV1.V3_DIGEST,
-            value,
-            value.to_bytes(),
+            digest_value,
+            digest_value.to_bytes(),
         )
     if data.startswith(DIGEST_MAGIC):
-        value = SigmaDigestV2.from_bytes(data)
+        legacy_value = SigmaDigestV2.from_bytes(data)
         return ParsedVerificationEvidenceV1(
             VerificationEvidenceKindV1.LEGACY_V22,
-            value,
-            value.to_bytes(),
+            legacy_value,
+            legacy_value.to_bytes(),
         )
     raise LookupError("unsupported verification evidence magic")
 

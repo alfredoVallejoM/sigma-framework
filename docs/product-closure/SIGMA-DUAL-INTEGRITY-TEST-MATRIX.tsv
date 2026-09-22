@@ -53,6 +53,15 @@ RES-ADV-001	ST3	T4	Wrong profile	none	checkpoint/profile mismatch	reject	BLOCKIN
 RES-ADV-002	ST3	T4	Corrupt frontier	none	single-field mutations	reject	BLOCKING
 RES-FAULT-001	ST3	T4	Atomic checkpoint persistence	previous checkpoint	failure injection	old checkpoint remains valid	BLOCKING
 RES-SCALE-001	ST3	T6	Restore complexity	model	N sweep	O(log N) compatible	REQUIRED
+DELTA-KAT-001	ST4	T1	Frozen delta/append semantic vectors	independent full-rebuild reference	6 deterministic cases	exact root hashes + normalized geometry	BLOCKING
+DELTA-NORM-001	ST4	T2	Order-independent edit normalization	canonical normalizer	permuted adjacent/overlapping consistent edits	same normalized edits	BLOCKING
+DELTA-NORM-002	ST4	T4	Conflicting overlap rejection	canonical normalizer	overlap with different replacement bytes	reject	BLOCKING
+DELTA-DIFF-003	ST4	T7	Independent full-rebuild oracle	stdlib-only reference	>=500 fresh random delta+append cases	zero root divergence	BLOCKING
+DELTA-WORK-001	ST4	T6	Exact local recomputation	work telemetry	one-leaf edit on 128+ leaves	1 leaf + logarithmic ancestors only	BLOCKING
+DELTA-TXN-002	ST4	T4	Commit rollback after partial publication	failure-injecting cache	throw inside node-cache update	old bytes/cache/root restored	BLOCKING
+APPEND-REUSE-001	ST4	T6	Prior frontier/subtree reuse	work telemetry	append after full boundary and partial tail	old canonical prefix nodes reused	BLOCKING
+APPEND-TXN-002	ST4	T4	Append commit rollback	failure-injecting cache	throw inside append publication	old bytes/cache/root restored	BLOCKING
+DELTA-PERF-001	ST4	T6	Incremental fraction sweep	full rebuild baseline	1 leaf;0.1%;1%;10%;100%	local regimes sublinear; 100% result retained	BLOCKING
 DELTA-DIFF-001	ST4	T3	Same-length delta	full rebuild	random local edits	same root	BLOCKING
 DELTA-DIFF-002	ST4	T3	Append	full rebuild	random suffixes	same root	BLOCKING
 DELTA-PROP-001	ST4	T2	Unaffected subtree reuse	instrumented reference	random local edits	unaffected roots unchanged	BLOCKING

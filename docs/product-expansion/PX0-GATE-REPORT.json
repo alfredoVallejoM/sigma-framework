@@ -1,0 +1,23 @@
+{
+  "append_differential_cases": 300,
+  "append_stream_sha256": "2516166643f37ed27363aa0db913da5ff69220122391e7c7a48de2dc6a1922ce",
+  "artifact_identity_cases": 500,
+  "atomic_publication_failure_preserves_old_index": true,
+  "closure_eligible": true,
+  "corruption_mutations": 5000,
+  "corruption_rejections": 5000,
+  "delta_differential_cases": 300,
+  "delta_stream_sha256": "e9649db9d4cf47f6ea5072bf1d7958e66487d4e2997a13d70ccfd979caeb9eec",
+  "index_differential_cases": 500,
+  "mmap_parity": true,
+  "passed": true,
+  "persistent_index_part_of_tree_or_artifact_identity": false,
+  "proof_differential_cases": 500,
+  "proof_stream_sha256": "8d2b71dbf4fa57b866f508581c8677ef4eb4cdd85f587c2e4d8ac045f44f2484",
+  "schema": "sigma-px0-persistent-tree-index-gate-v1",
+  "source_hint_security_evidence": false,
+  "stale_source_cases": 200,
+  "stale_source_rejections": 200,
+  "structural_corruption_rejections": 200,
+  "wire_stream_sha256": "f4ce101f5e633c1f129afa7c442523dd79cfb815533ddedb0b4c661d1da8edf8"
+}

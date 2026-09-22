@@ -12,6 +12,7 @@ from reference.tree_delta_v1 import (
     ancestor_closure,
     append_root_wire,
     apply_same_length,
+    delta_root_wire,
     normalize_edits,
 )
 from sigma.tree import TreeDeltaIndex, TreeEditV1
@@ -37,7 +38,7 @@ def _delta_case(name: str, source_name: str, edits: list[TreeEditV1]) -> dict[st
     expected = apply_same_length(source, tuples)
     product = TreeDeltaIndex(source)
     result = product.apply_delta(edits)
-    if result.root.to_bytes() != append_root_wire(expected, b""):
+    if result.root.to_bytes() != delta_root_wire(source, tuples):
         raise AssertionError(f"ST4 delta product/reference divergence: {name}")
     affected = affected_leaves(tuples, len(source))
     closure = ancestor_closure(result.root.leaf_count, affected)

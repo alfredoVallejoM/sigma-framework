@@ -9,6 +9,7 @@ from .ids import TREE_DOMAIN_MAGIC, TREE_WIRE_VERSION, TreeDomainId
 
 _TLV_HEADER = struct.Struct(">HI")
 _MAX_FIELD = 1 << 20
+MAX_TREE_RECORD_BYTES = 8 << 20
 
 
 class TreeDecodeError(ValueError):
@@ -97,6 +98,8 @@ def record(magic: bytes, fields: Iterable[tuple[int, bytes]]) -> bytes:
 def parse_record(data: bytes, *, magic: bytes, allowed: frozenset[int]) -> dict[int, bytes]:
     if not isinstance(data, bytes):
         raise TypeError("record must be bytes")
+    if len(data) > MAX_TREE_RECORD_BYTES:
+        raise TreeDecodeError("record exceeds Sigma Tree V1 total-size limit")
     header = 14
     if len(data) < header or data[:8] != magic:
         raise TreeDecodeError("invalid or truncated record magic")

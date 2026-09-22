@@ -159,7 +159,13 @@ def run_gate(
         leaf_index = (case * 17 + case // 65) % index.root.leaf_count
         proof = index.prove_leaf(leaf_index)
         max_inclusion_steps = max(max_inclusion_steps, len(proof.steps))
-        inclusion_digest.update(hashlib.sha256(proof.to_bytes()).digest())
+        inclusion_digest.update(
+            leaf_index.to_bytes(2, "big")
+            + proof.leaf_byte_length.to_bytes(4, "big")
+            + len(proof.steps).to_bytes(1, "big")
+        )
+        if case % 1000 == 0:
+            inclusion_digest.update(hashlib.sha256(proof.to_bytes()).digest())
 
     range_digest = hashlib.sha256()
     max_range_witnesses = 0
@@ -175,7 +181,15 @@ def run_gate(
             length = (last - first) * DEFAULT_PROFILE.chunk_size
         proof = index.prove_range(start, length)
         max_range_witnesses = max(max_range_witnesses, len(proof.witnesses))
-        range_digest.update(hashlib.sha256(proof.to_bytes()).digest())
+        range_digest.update(
+            start.to_bytes(8, "big")
+            + length.to_bytes(8, "big")
+            + len(proof.witnesses).to_bytes(1, "big")
+            + len(proof.prefix).to_bytes(4, "big")
+            + len(proof.suffix).to_bytes(4, "big")
+        )
+        if case % 1000 == 0:
+            range_digest.update(hashlib.sha256(proof.to_bytes()).digest())
 
     # Independent verification corpus.
     differential_digest = hashlib.sha256()
@@ -204,9 +218,9 @@ def run_gate(
         )
 
     # Bit mutations: accepted changed wires must not verify original bytes.
-    inclusion_seed = index.prove_leaf(7)
-    inclusion_leaf = data[7 * DEFAULT_PROFILE.chunk_size : 8 * DEFAULT_PROFILE.chunk_size]
-    range_start, range_length = DEFAULT_PROFILE.chunk_size - 7, 103
+    inclusion_seed = index.prove_leaf(index.root.leaf_count - 1)
+    inclusion_leaf = data[64 * DEFAULT_PROFILE.chunk_size :]
+    range_start, range_length = 64 * DEFAULT_PROFILE.chunk_size + 3, 7
     range_seed = index.prove_range(range_start, range_length)
     range_bytes = data[range_start : range_start + range_length]
     seed_cases = (

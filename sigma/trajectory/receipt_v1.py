@@ -199,13 +199,12 @@ class VerificationReceiptV1:
         _encode_hash_sequence(self.evidence_hashes)
         if self.evidence_id is not None and self.evidence_id not in self.evidence_hashes:
             raise ValueError("evidence_hashes must include evidence_id when present")
-        if self.claimed_unix_time is not None:
-            if (
-                isinstance(self.claimed_unix_time, bool)
-                or not isinstance(self.claimed_unix_time, int)
-                or not 0 <= self.claimed_unix_time < (1 << 64)
-            ):
-                raise ValueError("claimed_unix_time must be u64 or None")
+        if self.claimed_unix_time is not None and (
+            isinstance(self.claimed_unix_time, bool)
+            or not isinstance(self.claimed_unix_time, int)
+            or not 0 <= self.claimed_unix_time < (1 << 64)
+        ):
+            raise ValueError("claimed_unix_time must be u64 or None")
         if not isinstance(self.signature_status, ReceiptSignatureStatusV1):
             raise TypeError("signature_status must be ReceiptSignatureStatusV1")
         if self.signature_status is ReceiptSignatureStatusV1.UNSIGNED:

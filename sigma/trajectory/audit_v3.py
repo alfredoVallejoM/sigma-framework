@@ -51,8 +51,8 @@ from sigma.spec.codec_v3 import (
     decode_record,
     encode_record,
 )
-from sigma.spec.encoding import DecodeError, decode_uint, encode_uint
 from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.encoding import DecodeError, decode_uint, encode_uint
 from sigma.spec.ids_v3 import (
     DomainIdV3,
     LayoutKindV3,

@@ -7,6 +7,7 @@ reference.independent_v3.evaluate_suite().
 from __future__ import annotations
 
 import struct
+from typing import Any
 
 VERSION = 3
 AUDIT_MAGIC = b"SIG3AUD0"
@@ -89,7 +90,7 @@ def _round_wire(
 
 
 def audit_from_reference_evaluation(
-    evaluation: dict[str, object],
+    evaluation: dict[str, Any],
     *,
     mode: int,
 ) -> bytes:

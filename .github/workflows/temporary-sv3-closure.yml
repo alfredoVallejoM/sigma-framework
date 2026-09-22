@@ -1,0 +1,48 @@
+name: temporary-sv3-closure
+
+on:
+  push:
+    branches:
+      - campaign/sigma-dual-integrity-product-closure
+    paths:
+      - ".github/workflows/temporary-sv3-closure.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sv3-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,quality]"
+      - name: Compile
+        run: |
+          python -m compileall -q             sigma/trajectory/receipt_v1.py             sigma/trajectory/batch_v1.py             reference/verification_receipt_v1.py             scripts/product_closure/sv3_gate.py
+      - name: Ruff
+        run: |
+          ruff check             sigma/trajectory/receipt_v1.py             sigma/trajectory/batch_v1.py             sigma/trajectory/__init__.py             sigma/v3.py             reference/verification_receipt_v1.py             scripts/product_closure/sv3_gate.py             tests/unit/test_verification_receipt_sv3.py             tests/unit/test_batch_verification_sv3.py
+      - name: Mypy
+        run: |
+          mypy             sigma/trajectory/receipt_v1.py             sigma/trajectory/batch_v1.py             reference/verification_receipt_v1.py
+      - name: Pytest
+        run: |
+          pytest -q             tests/unit/test_verification_receipt_sv3.py             tests/unit/test_batch_verification_sv3.py
+      - name: SV3 gate
+        run: |
+          mkdir -p reports
+          python -m scripts.product_closure.sv3_gate --report reports/sv3-gate.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sv3-closure-report
+          path: reports/sv3-gate.json
+          if-no-files-found: warn

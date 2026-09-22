@@ -229,3 +229,16 @@ def test_append_failure_before_publish_preserves_state(monkeypatch):
 
     assert index.root == before_root
     assert index.materialize() == before_bytes
+
+
+def test_full_file_same_length_replacement_equals_rebuild():
+    data = _data(5, 23)
+    replacement = bytes((i * 7 + 19) % 251 for i in range(len(data)))
+    index = TreeDeltaIndex(data)
+    result = index.apply_delta([TreeEditV1(0, len(data), replacement)])
+    assert index.materialize() == replacement
+    assert result.root == build_tree(replacement)
+    assert result.telemetry.recomputed_leaf_count == index.leaf_count
+    assert set(result.telemetry.recomputed_nodes) == set(
+        result.telemetry.invalidated_nodes
+    )

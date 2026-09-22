@@ -5,10 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import resource
 import statistics
+import sys
 import time
 import tracemalloc
+
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows engineering run
+    resource = None
 from pathlib import Path
 
 from sigma.tree import TreeDeltaIndex, TreeEditV1, build_tree
@@ -27,8 +32,13 @@ def _fraction_cases(leaves: int) -> tuple[tuple[str, int], ...]:
     )
 
 
-def _rss_kib() -> int:
-    return int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+def _rss_kib() -> int | None:
+    if resource is None:
+        return None
+    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    if sys.platform == "darwin":
+        return value // 1024
+    return value
 
 
 def run_benchmark(*, leaves: int, repeats: int) -> dict[str, object]:

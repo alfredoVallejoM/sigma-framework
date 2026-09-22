@@ -19,6 +19,7 @@ from sigma.spec.encoding import (
     encode_uint,
 )
 from sigma.spec.ids import DIGEST_MAGIC
+from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3, TrajectoryProfileIdV3
 from sigma.trajectory.audit_v3 import (
     TrajectoryAuditV3,
@@ -505,7 +506,7 @@ def _source_size(source: CanonicalSource | bytes | None) -> int | None:
 
 def _v3_context_and_size(
     parsed: ParsedVerificationEvidenceV1,
-) -> tuple[object, int, int]:
+) -> tuple[SigmaContextV3, int, int]:
     if parsed.kind is VerificationEvidenceKindV1.TRAJECTORY_AUDIT:
         assert isinstance(parsed.value, TrajectoryAuditV3)
         digest = parsed.value.digest

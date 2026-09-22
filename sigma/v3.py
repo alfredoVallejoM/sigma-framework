@@ -76,13 +76,20 @@ from sigma.rounds.wide_once_v3 import (
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.trajectory import (
     TrajectoryAuditModeV3,
+    TrajectoryCheckpointV1,
+    TrajectoryContinuationV1,
     TrajectoryAuditV3,
     TrajectoryRoundAuditV3,
+    advance_trajectory_checkpoint_v3,
     audit_from_evaluation_v3,
+    checkpoint_from_evaluation_v3,
+    continue_trajectory_checkpoint_v3,
+    finalize_trajectory_checkpoint_v3,
     evaluate_audit_v3,
     project_digest_v3,
     verify_trajectory_audit_full_v3,
     verify_trajectory_audit_structure_v3,
+    verify_trajectory_checkpoint_source_v3,
 )
 
 __all__ = [
@@ -113,11 +120,17 @@ __all__ = [
     "StructureVerificationV3",
     "ThreadDeepBranchBackendV3",
     "TrajectoryAuditModeV3",
+    "TrajectoryCheckpointV1",
+    "TrajectoryContinuationV1",
     "TrajectoryAuditV3",
     "TrajectoryRoundAuditV3",
     "WideOnceEvaluationV3",
     "accepts_v3",
+    "advance_trajectory_checkpoint_v3",
     "audit_from_evaluation_v3",
+    "checkpoint_from_evaluation_v3",
+    "continue_trajectory_checkpoint_v3",
+    "finalize_trajectory_checkpoint_v3",
     "compose_argon2id_output_v3",
     "derive_argon2id_sigma_v3",
     "derive_argon2id_v3",
@@ -157,4 +170,5 @@ __all__ = [
     "verify_structure_v3",
     "verify_trajectory_audit_full_v3",
     "verify_trajectory_audit_structure_v3",
+    "verify_trajectory_checkpoint_source_v3",
 ]

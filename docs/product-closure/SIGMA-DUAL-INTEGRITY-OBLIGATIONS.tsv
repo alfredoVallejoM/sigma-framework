@@ -95,11 +95,11 @@ SA0-O02	SA	SA0	ArtifactId calculation non-circular	KAT + mutation	COMPLETE	YES
 SA0-O03	SA	SA0	Descriptor canonical	codec fuzz	COMPLETE	YES
 SA0-O04	SA	SA0	Parent artifacts are bound	mutation tests	COMPLETE	NO
 SA0-O05	SA	SA0	Manifest identity is bound	mutation tests	COMPLETE	YES
-SA1-O01	SA	SA1	Dual verify equals Tree AND Trajectory	composition tests	ACTIVE	YES
-SA1-O02	SA	SA1	Dual failure attribution preserved	negative tests	ACTIVE	YES
-SA1-O03	SA	SA1	Tree and Trajectory claims stay independent	manual result-schema audit	ACTIVE	YES
-SA1-O04	SA	SA1	Policy can require TREE/TRAJECTORY/DUAL	policy integration tests	ACTIVE	YES
-SA1-O05	SA	SA1	Manifest selective trajectory criticality is explicit	mixed-entry tests	ACTIVE	NO
+SA1-O01	SA	SA1	Dual verify equals Tree AND Trajectory	composition tests	COMPLETE	YES
+SA1-O02	SA	SA1	Dual failure attribution preserved	negative tests	COMPLETE	YES
+SA1-O03	SA	SA1	Tree and Trajectory claims stay independent	manual result-schema audit	COMPLETE	YES
+SA1-O04	SA	SA1	Policy can require TREE/TRAJECTORY/DUAL	policy integration tests	COMPLETE	YES
+SA1-O05	SA	SA1	Manifest selective trajectory criticality is explicit	mixed-entry tests	COMPLETE	NO
 SA2-O01	SA	SA2	Provenance claim registry closed	codec tests	PLANNED	YES
 SA2-O02	SA	SA2	Opaque provenance validates bytes only	API/docs audit	PLANNED	NO
 SA2-O03	SA	SA2	Only standard supported signature primitive used	design audit	PLANNED	YES

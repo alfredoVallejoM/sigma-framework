@@ -279,12 +279,24 @@ class TreeDeltaIndex:
             )
             return TreeUpdateResultV1(self.root, telemetry, normalized)
 
-        affected: set[int] = set()
+        leaf_segments: dict[int, list[tuple[int, bytes]]] = {}
         for edit in normalized:
-            first = edit.start // self.profile.chunk_size
-            last = (edit.end - 1) // self.profile.chunk_size
-            affected.update(range(first, last + 1))
-        affected_leaves = tuple(sorted(affected))
+            position = edit.start
+            while position < edit.end:
+                leaf_index = position // self.profile.chunk_size
+                leaf_start = leaf_index * self.profile.chunk_size
+                leaf_end = leaf_start + len(self._leaves[leaf_index])
+                end = min(edit.end, leaf_end)
+                source_start = position - edit.start
+                leaf_segments.setdefault(leaf_index, []).append(
+                    (
+                        position - leaf_start,
+                        edit.data[source_start : source_start + (end - position)],
+                    )
+                )
+                position = end
+
+        affected_leaves = tuple(sorted(leaf_segments))
         closure = self._ancestor_closure(affected_leaves)
 
         updated_leaf_bytes: dict[int, bytes] = {}
@@ -292,16 +304,8 @@ class TreeDeltaIndex:
         for leaf_index in affected_leaves:
             raw = bytearray(self._leaves[leaf_index])
             leaf_start = leaf_index * self.profile.chunk_size
-            leaf_end = leaf_start + len(raw)
-            for edit in normalized:
-                start = max(edit.start, leaf_start)
-                end = min(edit.end, leaf_end)
-                if start >= end:
-                    continue
-                src_start = start - edit.start
-                raw[start - leaf_start : end - leaf_start] = edit.data[
-                    src_start : src_start + (end - start)
-                ]
+            for local_start, replacement in leaf_segments[leaf_index]:
+                raw[local_start : local_start + len(replacement)] = replacement
             value = bytes(raw)
             updated_leaf_bytes[leaf_index] = value
             updated_leaf_nodes[leaf_index] = leaf_node(

@@ -141,6 +141,19 @@ def run_gate(
     range_start = 3
     range_length = len(proof_data) - 7
     range_proof = proof_index.prove_range(range_start, range_length)
+    tracemalloc.start()
+    streaming_range_proof = prove_range_streaming(
+        proof_data, range_start, range_length
+    )
+    _, streaming_range_peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    if streaming_range_proof.to_bytes() != range_proof.to_bytes():
+        raise AssertionError("large streaming range proof drifted from FULL index")
+    if streaming_range_peak > 4 * DEFAULT_PROFILE.chunk_size:
+        raise AssertionError(
+            "streaming range proof exceeded bounded auxiliary-memory budget"
+        )
+
     selected = proof_data[range_start : range_start + range_length]
     tracemalloc.start()
     if not verify_range(selected, range_proof):
@@ -242,6 +255,7 @@ def run_gate(
         "proof_index_estimated_budget_bytes": proof_estimate,
         "proof_index_peak_to_source_ratio": proof_index_peak / PROOF_INDEX_AUDIT_BYTES,
         "range_verify_selected_bytes": range_length,
+        "streaming_range_generation_peak_allocated_bytes": streaming_range_peak,
         "range_verify_peak_allocated_bytes": range_verify_peak,
         "delta_index_audit_source_bytes": len(delta_data),
         "delta_index_peak_allocated_bytes": delta_index_peak,

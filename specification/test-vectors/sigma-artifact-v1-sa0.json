@@ -1,0 +1,89 @@
+{
+  "cases": [
+    {
+      "artifact_id": "b14cb16db8398a5fe4a7a0f20ae785510a14d72956d1e31adcf45018152bd149",
+      "artifact_wire_sha256": "6c0f33ac9ba397e56b9349125d5941f48551df99db728d217c5ada19c9ddaf08",
+      "audit_mode": null,
+      "descriptor_sha256": "8e0adfd4db8e302626f6ff12db359d4b6db3af140f375247788994c60442703c",
+      "identity_sha256": "e113dcd22c4f3d731ade20407b32113386d0c85eaa1c4be1f28bd3b4b0b7df8f",
+      "manifest_id": null,
+      "message_length": 0,
+      "name": "tree-empty",
+      "parent_artifact_ids": [],
+      "profile": "TREE",
+      "suite_id": "0x0321"
+    },
+    {
+      "artifact_id": "d5297152ff1af91d687cb19b07a35c0b4064a68ef73aa0a01ffc2f8eae396238",
+      "artifact_wire_sha256": "c54fa110185107cec9e6cb375cb02e0d1fce13d30cfa894e88f326db400603b4",
+      "audit_mode": null,
+      "descriptor_sha256": "25bf5ea25d94f71744344396661e83f249fb52a223e7888b47afd277642bc275",
+      "identity_sha256": "24899c026ba388c1ac78892a7bfa5560952a4736b7710d03aa3cb0f13bad6752",
+      "manifest_id": "52d6f163485b283ae3e6acd609a84775c35b82b7ff698dc5eadf09253321cfcb",
+      "message_length": 13,
+      "name": "tree-parents-manifest",
+      "parent_artifact_ids": [
+        "1111111111111111111111111111111111111111111111111111111111111111",
+        "2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      "profile": "TREE",
+      "suite_id": "0x0321"
+    },
+    {
+      "artifact_id": "1c05715f6555a7c514b7995011d21e36ba995cc5cfb562d0785e91f379c8a732",
+      "artifact_wire_sha256": "d9a27499e92133cc20baac2b2637232f860ef6a1fd31a90edddc2f3967675888",
+      "audit_mode": null,
+      "descriptor_sha256": "f78bef93b0bb28428971ef65a8ec17ce91adc8da5890676b2a3c0d5ecac48f18",
+      "identity_sha256": "40a8bcf13cf683a272291c2cf9110306f077ae9410abeded8076187082a0bc0c",
+      "manifest_id": null,
+      "message_length": 15,
+      "name": "trajectory",
+      "parent_artifact_ids": [],
+      "profile": "TRAJECTORY",
+      "suite_id": "0x0323"
+    },
+    {
+      "artifact_id": "29368fd2f4b54384fb0333000da5c36e9cc16dcf264c53cf8920f9b87bbdd4b7",
+      "artifact_wire_sha256": "5f55344273dea3df5e794d61ceaf2f4e97d0755f1f87ffb93c80220c56995747",
+      "audit_mode": "COMPACT",
+      "descriptor_sha256": "e93e59c13cdf2d73ed6b5c990a9c499cd5662d24c3213803697919e4667b570b",
+      "identity_sha256": "e82b68d6453f857fb877c33b2ad4103f3848c9c6fef47eef48d6728af631334b",
+      "manifest_id": null,
+      "message_length": 16,
+      "name": "trajectory-compact-audit",
+      "parent_artifact_ids": [],
+      "profile": "TRAJECTORY",
+      "suite_id": "0x0324"
+    },
+    {
+      "artifact_id": "8589309aec0720697b4d6b383122a7624c4b45fff1e019ff3aee22e1740b3503",
+      "artifact_wire_sha256": "44360b94c164a89813cb2af8a48d4fba11022b761faf9c08d7674234c9ca0535",
+      "audit_mode": null,
+      "descriptor_sha256": "14f052a74142e6db2cf26a7f2bd0e763c36e2de695f1c34aecb1690b69c01640",
+      "identity_sha256": "05120a5b3b6e79eb44619a6dc47a85daddb95242a478528972178b56ec41fdb8",
+      "manifest_id": null,
+      "message_length": 12,
+      "name": "dual",
+      "parent_artifact_ids": [],
+      "profile": "DUAL",
+      "suite_id": "0x0323"
+    },
+    {
+      "artifact_id": "6a4f85ea85ee1e1ceb66e8291160ccb5de02c1e14eab222326ec5ef3bb9bed31",
+      "artifact_wire_sha256": "44e05355af901be926acd80851c8608de921135e1927d6e570bc9259f6dd037e",
+      "audit_mode": "FULL",
+      "descriptor_sha256": "80ee7e19d7e0a787ffb162e93e7dddd82085c586c8989dd0cd96473087773d8f",
+      "identity_sha256": "b9e489be241993e48da971a2b56183ac5ab1788e2d1ba6494fea9e42977e4fe5",
+      "manifest_id": "52d6f163485b283ae3e6acd609a84775c35b82b7ff698dc5eadf09253321cfcb",
+      "message_length": 21,
+      "name": "dual-full-audit-manifest-parents",
+      "parent_artifact_ids": [
+        "1111111111111111111111111111111111111111111111111111111111111111",
+        "2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      "profile": "DUAL",
+      "suite_id": "0x0324"
+    }
+  ],
+  "schema": "sigma-artifact-v1-sa0-kat"
+}

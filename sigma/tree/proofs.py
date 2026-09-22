@@ -248,6 +248,23 @@ def range_witness_geometry(
     return tuple(result)
 
 
+def _validate_raw_range(total_bytes: int, start: int, length: int) -> None:
+    if isinstance(total_bytes, bool) or not isinstance(total_bytes, int) or total_bytes < 0:
+        raise TypeError("total_bytes must be a non-negative int")
+    for name, value in (("start", start), ("length", length)):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f"range {name} must be int")
+        if value < 0 or value >= 1 << 64:
+            raise ValueError(f"range {name} is outside u64")
+    if length == 0:
+        raise ValueError("range length must be positive")
+    end = start + length
+    if end >= 1 << 64:
+        raise ValueError("range end exceeds u64")
+    if start >= total_bytes or end > total_bytes:
+        raise ValueError("range is outside source byte bounds")
+
+
 def _range_geometry(root: TreeRoot, start: int, length: int) -> tuple[int, int, int, int]:
     if not isinstance(root, TreeRoot):
         raise TypeError("root must be TreeRoot")
@@ -475,6 +492,9 @@ def prove_leaf(data: bytes, leaf_index: int) -> InclusionProofV1:
 
 
 def prove_range(data: bytes, start: int, length: int) -> RangeProofV1:
+    if not isinstance(data, bytes):
+        raise TypeError("range proof source must be bytes")
+    _validate_raw_range(len(data), start, length)
     return TreeProofIndex(data).prove_range(start, length)
 
 

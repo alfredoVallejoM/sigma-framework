@@ -2540,47 +2540,358 @@ empíricos se dejan para una campaña posterior.
 
 ## 16. Familia C — Sigma Artifact V1
 
-### 16.1. Modos
+### 16.1. Objetivo
+
+SigmaArtifact V1 es el objeto canónico de producto que declara qué evidencia
+primaria representa un artefacto y cuál es su identidad estable.
+
+SA0 define:
+- formato;
+- descriptor;
+- perfiles TREE / TRAJECTORY / DUAL;
+- ArtifactId;
+- manifest identity;
+- parent binding;
+- optional TrajectoryAudit attachment.
+
+SA0 **no** define todavía la semántica de verificación conjunta. Eso pertenece a
+SA1.
+
+### 16.2. Eje de versión
+
+Artifact mantiene su propio eje:
+
+    ARTIFACT_WIRE_VERSION = 1
+
+independiente de:
+- package version;
+- Sigma suite IDs;
+- Tree wire version;
+- policy version.
+
+### 16.3. Magics
+
+Descriptor:
+
+    SIGADSC1
+
+Identity preimage:
+
+    SIGAIDN1
+
+Artifact envelope:
+
+    SIGARTF1
+
+Todos usan el artifact record envelope:
+
+    magic[8] || artifact_version:u16 || body_length:u32 || strict TLV.
+
+### 16.4. Artifact profiles
+
+`ArtifactProfileV1`:
 
 TREE:
-contiene evidencia Sigma Tree.
+
+    TreeRoot = required
+    SigmaDigestV3 = absent
 
 TRAJECTORY:
-contiene SigmaDigestV3 y opcional TrajectoryAudit.
+
+    TreeRoot = absent
+    SigmaDigestV3 = required
 
 DUAL:
-contiene TreeRoot + SigmaDigestV3.
 
-### 16.2. Record
+    TreeRoot = required
+    SigmaDigestV3 = required
 
-SigmaArtifactV1 contiene:
+La evidencia primaria debe coincidir **exactamente** con el profile.
 
-- artifact format version;
-- artifact profile;
-- canonical descriptor;
-- optional TreeRoot;
-- optional SigmaDigestV3;
-- optional manifest identity;
-- optional provenance claims;
-- optional parent artifact IDs;
-- optional signature.
+No se permite:
+- TREE sin TreeRoot;
+- TREE con digest;
+- TRAJECTORY con TreeRoot;
+- DUAL con sólo uno de los dos.
 
-### 16.3. Dual verification
+Además, DUAL rechaza antes de SA1 si:
 
-Para profile DUAL:
+    tree_root.byte_length
+      !=
+    trajectory_digest.header.cardinality.byte_length.
 
-    VerifyDual(X,A) =
-      VerifyTree(X,A.tree)
-      AND
-      VerifyTrajectory(X,A.trajectory)
+Esto es una consistencia estructural barata, no la verificación dual completa.
 
-No se deriva ninguna claim criptográfica adicional salvo esta conjunción lógica.
+### 16.5. ArtifactDescriptorV1
 
-### 16.4. Artifact identity
+Descriptor profile inicial:
 
-ArtifactId se calcula sobre el record canónico sin su firma externa para evitar circularidad.
+    BASE_V1 = 1
 
-La firma autentica ArtifactId + record canónico versionado.
+Campos:
+
+    logical_name
+    media_type
+
+`logical_name`:
+- UTF-8;
+- NFC;
+- sin NUL;
+- máximo 4096 bytes;
+- puede estar vacío.
+
+`media_type`:
+- opcional;
+- ASCII;
+- lowercase;
+- forma canónica `type/subtype`;
+- sin parámetros en V1;
+- máximo 255 bytes.
+
+El descriptor forma parte de ArtifactIdentityV1 y por tanto modifica ArtifactId.
+
+### 16.6. ArtifactIdentityV1
+
+Identity contiene exactamente:
+
+1. ArtifactProfileV1;
+2. ArtifactDescriptorV1;
+3. optional TreeRoot;
+4. optional SigmaDigestV3;
+5. optional ManifestId;
+6. canonical parent ArtifactId sequence.
+
+Wire:
+
+    SIGAIDN1
+
+Este record es la única preimagen de ArtifactId.
+
+### 16.7. ArtifactId
+
+Domain:
+
+    b"SIGMA-ARTIFACT-ID-V1\0"
+
+Definición:
+
+    ArtifactId =
+      SHA256(
+        domain
+        || ArtifactIdentityV1.to_bytes()
+      ).
+
+ArtifactId tiene 32 bytes.
+
+No contiene:
+- el propio ArtifactId;
+- TrajectoryAudit auxiliar;
+- signatures futuras;
+- provenance claims futuras;
+- receipts.
+
+Por tanto la definición es no circular.
+
+El envelope serializa ArtifactId explícitamente y el parser exige:
+
+    stored ArtifactId
+      =
+    recomputed ArtifactId.
+
+Una mutación del ID almacenado se rechaza.
+
+ArtifactId es un content identifier de producto; no se presenta como un aumento
+de security width.
+
+### 16.8. SigmaArtifactV1 envelope
+
+`SigmaArtifactV1` contiene:
+
+1. stored ArtifactId;
+2. ArtifactIdentityV1;
+3. optional TrajectoryAuditV3.
+
+Wire:
+
+    SIGARTF1.
+
+El Audit es evidencia auxiliar inspeccionable.
+
+Si está presente:
+- el profile debe tener trajectory evidence;
+- `audit.digest` debe ser byte-idéntico a `identity.trajectory_digest`.
+
+TREE no puede transportar un TrajectoryAudit.
+
+### 16.9. Audit attachment stability
+
+COMPACT/FULL son dos representaciones de evidencia auxiliar sobre el mismo digest.
+
+SA0 fija deliberadamente:
+
+    ArtifactId(base)
+      =
+    ArtifactId(base + COMPACT audit)
+      =
+    ArtifactId(base + FULL audit).
+
+Pero:
+
+    artifact envelope wire
+
+sí cambia al adjuntar audit.
+
+Esto permite enriquecer evidencia de inspección sin renombrar el artefacto lógico.
+
+### 16.10. Manifest identity
+
+Domain:
+
+    b"SIGMA-MANIFEST-ID-V1\0"
+
+Definición:
+
+    ManifestId =
+      SHA256(
+        domain
+        || ManifestV1.to_bytes()
+      ).
+
+ManifestId tiene 32 bytes.
+
+Si está presente, forma parte de ArtifactIdentityV1.
+
+Por tanto:
+
+    manifest change
+      =>
+    ManifestId change
+      =>
+    ArtifactId change
+
+salvo la colisión criptográfica subyacente.
+
+`create_artifact_v1` acepta:
+- `manifest`;
+- o `manifest_id`;
+
+pero no ambos simultáneamente.
+
+### 16.11. Parent artifacts
+
+`parent_artifact_ids` es una secuencia canónica de IDs de 32 bytes.
+
+Reglas:
+- máximo 1024;
+- sorted lexicographically by raw bytes;
+- unique;
+- no duplicates;
+- no input-order semantics.
+
+La API helper puede recibir una Sequence y normaliza a sorted+unique.
+
+El constructor/parser canónico exige ya la forma ordenada.
+
+Parents forman parte de ArtifactIdentityV1:
+
+    parent set mutation
+      =>
+    ArtifactId mutation.
+
+SA0 sólo liga IDs de parent. No prueba la existencia ni semántica de esos parents.
+
+### 16.12. External signature/provenance boundary
+
+SA0 no contiene firma externa ni provenance.
+
+Esto evita circularidad y mantiene ArtifactId estable cuando SA2 añada capas de
+autenticación/provenance.
+
+El gate SA0 congela explícitamente:
+
+    external_signature_in_artifact_identity = false.
+
+SA2 podrá autenticar ArtifactId/record sin redefinir ArtifactId.
+
+### 16.13. Canonical corpus
+
+Corpus congelado:
+
+    specification/test-vectors/sigma-artifact-v1-sa0.json
+
+SHA-256:
+
+    60a0405516dd55b5ce52f14a442c12f836128357ac7b838a28f8d7b5eb748631
+
+Contiene seis casos:
+- TREE empty;
+- TREE + parents + manifest;
+- TRAJECTORY;
+- TRAJECTORY + COMPACT audit;
+- DUAL;
+- DUAL + FULL audit + parents + manifest.
+
+Los vectores sólo se emiten después de comparar descriptor/identity/envelope
+contra el encoder stdlib independiente.
+
+### 16.14. Independent oracle
+
+`reference/artifact_v1.py` no importa `sigma`.
+
+Implementa independientemente:
+- descriptor wire;
+- identity wire;
+- ArtifactId;
+- artifact envelope wire;
+- ManifestId.
+
+SA0 diferencial exige igualdad byte por byte.
+
+### 16.15. Complejidad estructural
+
+Sea:
+- D = descriptor wire size;
+- P = número de parents;
+- E = tamaño de primary evidence;
+- A = tamaño del optional audit.
+
+Construcción de identity:
+
+    O(D + 32P + E).
+
+ArtifactId:
+
+    O(identity wire size)
+
+por SHA-256 de la identidad canónica.
+
+Envelope:
+
+    O(identity wire + A).
+
+No se vuelve a hashear el source para construir un Artifact desde TreeRoot /
+SigmaDigest ya materializados.
+
+SA0 no congela todavía claims empíricas de throughput.
+
+### 16.16. Claim boundary
+
+TREE:
+- declara structural evidence identity.
+
+TRAJECTORY:
+- declara Sigma trajectory evidence identity.
+
+DUAL:
+- declara la presencia canónica de ambas.
+
+SA0 no afirma todavía:
+
+    VerifyDual = VerifyTree AND VerifyTrajectory.
+
+Esa ley pertenece a SA1.
+
+Tampoco suma nominalmente bits de seguridad.
 
 ## 17. Provenance V1
 

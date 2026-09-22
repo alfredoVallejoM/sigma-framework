@@ -2757,27 +2757,191 @@ Empirical Artifact throughput is deliberately deferred.
 
 ## 14. SA1 — Dual Verification
 
-### Ley principal
+### Objetivo
 
-SA1-O01
+Materializar por primera vez la composición de producto:
 
     VerifyDual(X,A)
-      = VerifyTree(X,A.tree)
-        AND VerifyTrajectory(X,A.trajectory)
+      =
+    VerifyTree(X,A.tree)
+      AND
+    VerifyTrajectory(X,A.trajectory)
 
-### Otras obligaciones
+sin colapsar side results ni crear una claim de seguridad agregada.
 
-SA1-O02 — Failure attribution  
-Resultado explica qué lado falló.
+### Implementación
 
-SA1-O03 — Independent claims  
-No se colapsan los dos informes a una sola fuerza criptográfica.
+Product:
+- `sigma/artifact/verify.py`
+  - ArtifactSideStatusV1;
+  - ArtifactSideCodeV1;
+  - ArtifactSideResultV1;
+  - ArtifactPolicyCodeV1;
+  - ArtifactPolicyResultV1;
+  - ArtifactVerificationResultV1;
+  - verify_artifact_v1;
+  - ManifestTrajectoryModeV1;
+  - ManifestFileVerificationResultV1;
+  - ManifestVerificationResultV1;
+  - verify_manifest_files_v1.
+- exports aditivos en `sigma/artifact`.
 
-SA1-O04 — Policy integration  
-VerificationPolicy puede requerir TREE/TRAJECTORY/DUAL.
+Independent:
+- `reference/dual_verification_v1.py`
+  - Tree reference;
+  - v3 reference;
+  - separate conjunction.
 
-SA1-O05 — Selective manifest verification  
-Manifest puede contener Tree-only entries y trajectory-critical entries según policy explícita.
+Tests:
+- `tests/unit/test_artifact_verification_sa1.py`;
+- `tests/differential/test_dual_verification_reference_sa1.py`.
+
+Gate:
+- `scripts/product_closure/sa1_gate.py`.
+
+### SA1-O01 — Exact AND semantics
+
+Para DUAL:
+
+    result.dual_conjunction
+      =
+    result.tree.verified
+      AND
+    result.trajectory.verified.
+
+Gate ejecutado:
+- 300 DUAL válidos;
+- 300 trajectory-only failures;
+- 300 tree-only failures;
+- 300 both failures.
+
+Total independent side cases:
+
+    1,200.
+
+Product y reference side tuple deben ser idénticos.
+
+### SA1-O02 — Failure attribution
+
+Result schema conserva Tree y Trajectory por separado.
+
+Ejecutado:
+
+    tree_only_failure = 300
+    trajectory_only_failure = 300
+    both_failure = 300.
+
+Ningún side failure se traduce al side contrario.
+
+### SA1-O03 — Independent claims
+
+Cada side conserva:
+- status/code/reason;
+- expected wire;
+- actual recomputed wire cuando existe.
+
+No se produce score combinado ni fuerza criptográfica agregada.
+
+Gate:
+
+    tree_trajectory_claims_independent = true
+    dual_security_width_addition_claim = false.
+
+### SA1-O04 — Policy integration
+
+VerificationPolicyV1 no cambia wire/PolicyId.
+
+SA1 integra:
+- TREE requirement;
+- TRAJECTORY presence mediante Tree-only allowance;
+- DUAL requirement;
+- Audit;
+- suite/history;
+- input/round bounds;
+- signature/provenance capabilities;
+- metadata/symlink/resource bounds.
+
+Gate ejecutado:
+
+    policy_cases = 200.
+
+Cada caso comprueba aceptación correcta de TREE, TRAJECTORY y DUAL y rechazo de
+profiles que no satisfacen DUAL.
+
+Cheap preflight se ejecuta antes de Tree/Sigma hashing cuando la policy ya decide.
+
+### SA1-O05 — Selective manifest trajectory criticality
+
+Modos:
+
+    TREE_ONLY
+    DECLARED
+    REQUIRE_ALL_FILES.
+
+Gate ejecutado:
+
+    manifest_cases = 100
+    DECLARED accepted = 100
+    REQUIRE_ALL_FILES missing-trajectory rejection = 100.
+
+Cada fixture contiene:
+- un file Tree-only;
+- un file trajectory-critical.
+
+### Runtime closure
+
+GitHub Actions run:
+
+    35792567055
+
+Executed baseline:
+
+    afa58186a93d4680bb47490548aa244f36e70c03
+
+Quality:
+
+    compile PASS
+    Ruff PASS
+    Mypy PASS
+    pytest 36 passed
+    SA1 gate PASS.
+
+Frozen report:
+
+    SA1-GATE-REPORT.json
+
+Report SHA-256:
+
+    b3ed54f82e29461e47453f41ef2a038bb29d3688d5f0396d79cddbb6f374f44f
+
+Frozen streams:
+
+Tree result:
+
+    e5154d09e09d6bd9f773f62412fe4d3e7113c964e4d096898340acc50a6123c1
+
+Trajectory result:
+
+    af0ea2e9b2b87f6feffc7bedb8d6793138adebf3b77309f8681c6889446154f7
+
+Composition:
+
+    82fa259392e63533a63ef513f775dc7167c62c01c9c8dd7196f5d43487bc8774
+
+### Criterio de cierre
+
+SA1 COMPLETE requiere:
+1. O01 exact conjunction PASS;
+2. O02 three-way failure attribution PASS;
+3. O03 independent result schema/claim audit PASS;
+4. O04 policy integration PASS;
+5. O05 selective manifest policy PASS;
+6. independent Tree/v3 side oracle zero divergences;
+7. no security-width addition claim;
+8. post-execution manual review PASS.
+
+Empirical throughput remains deferred.
+
 
 ## 15. SA2 — Provenance and Signature
 

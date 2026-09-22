@@ -19,16 +19,16 @@ ST0-O07	ST	ST0	Unique empty root	KAT + negative tests	COMPLETE	YES
 ST0-O08	ST	ST0	Legacy v2.2 isolation	legacy corpus + type/API tests	COMPLETE	YES
 ST0-O09	ST	ST0	Resource-bounded parser	adversarial size tests + fuzz	COMPLETE	YES
 ST0-O10	ST	ST0	Tree build/frontier complexity	complexity derivation + scale benchmark	COMPLETE	YES
-ST1-O01	ST	ST1	Canonical relative paths	path property tests	ACTIVE	YES
-ST1-O02	ST	ST1	Traversal independence	metamorphic traversal permutations	ACTIVE	YES
-ST1-O03	ST	ST1	Absolute root-path independence	cross-directory fixtures	ACTIVE	YES
-ST1-O04	ST	ST1	Duplicate path rejection	negative tests	ACTIVE	YES
-ST1-O05	ST	ST1	Base metadata excludes host-volatile fields	touch/chown-style fixture tests where portable	ACTIVE	NO
-ST1-O06	ST	ST1	Symlink policy is explicit	loop/traversal adversarial tests	ACTIVE	YES
-ST1-O07	ST	ST1	Content change changes manifest	differential fixtures	ACTIVE	YES
-ST1-O08	ST	ST1	Optional trajectory digest is exactly bound	manifest mutation tests	ACTIVE	NO
-ST1-O09	ST	ST1	Canonical ordering by UTF-8 bytes	property tests	ACTIVE	YES
-ST1-O10	ST	ST1	Manifest complexity contract	scale benchmark	ACTIVE	NO
+ST1-O01	ST	ST1	Canonical relative paths	path property tests	CANDIDATE	YES
+ST1-O02	ST	ST1	Traversal independence	metamorphic traversal permutations	CANDIDATE	YES
+ST1-O03	ST	ST1	Absolute root-path independence	cross-directory fixtures	CANDIDATE	YES
+ST1-O04	ST	ST1	Duplicate path rejection	negative tests	CANDIDATE	YES
+ST1-O05	ST	ST1	Base metadata excludes host-volatile fields	touch/chown-style fixture tests where portable	CANDIDATE	NO
+ST1-O06	ST	ST1	Symlink policy is explicit	loop/traversal adversarial tests	CANDIDATE	YES
+ST1-O07	ST	ST1	Content change changes manifest	differential fixtures	CANDIDATE	YES
+ST1-O08	ST	ST1	Optional trajectory digest is exactly bound	manifest mutation tests	CANDIDATE	NO
+ST1-O09	ST	ST1	Canonical ordering by UTF-8 bytes	property tests	CANDIDATE	YES
+ST1-O10	ST	ST1	Manifest complexity contract	scale benchmark	CANDIDATE	NO
 ST2-O01	ST	ST2	Inclusion proof reconstructs root	property + independent verifier	PLANNED	YES
 ST2-O02	ST	ST2	Leaf position is bound	single-field mutation	PLANNED	YES
 ST2-O03	ST	ST2	Left/right orientation is bound	sibling swap tests	PLANNED	YES

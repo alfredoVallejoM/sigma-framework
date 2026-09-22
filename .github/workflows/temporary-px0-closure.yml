@@ -1,0 +1,51 @@
+name: temporary-px0-closure
+
+on:
+  push:
+    branches:
+      - campaign/sigma-dual-integrity-product-closure
+    paths:
+      - ".github/workflows/temporary-px0-closure.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  px0-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,quality]"
+      - name: Compile
+        run: |
+          python -m compileall -q             sigma/tree/persistent.py             sigma/tree/delta.py             reference/persistent_tree_index_v1.py             scripts/product_closure/px0_gate.py             scripts/product_closure/px0_benchmark.py
+      - name: Ruff
+        run: |
+          ruff check             sigma/tree/persistent.py             sigma/tree/delta.py             sigma/tree/__init__.py             sigma/version.py             reference/persistent_tree_index_v1.py             scripts/product_closure/px0_gate.py             scripts/product_closure/px0_benchmark.py             tests/unit/test_persistent_tree_index_px0.py             tests/differential/test_persistent_tree_index_reference_px0.py
+      - name: Mypy
+        run: |
+          mypy             sigma/tree/persistent.py             sigma/tree/delta.py             reference/persistent_tree_index_v1.py
+      - name: Focused pytest
+        run: |
+          pytest -q             tests/unit/test_persistent_tree_index_px0.py             tests/differential/test_persistent_tree_index_reference_px0.py             tests/unit/test_tree_proofs_st2.py             tests/differential/test_tree_proof_reference_st2.py             tests/unit/test_tree_delta_st4.py             tests/differential/test_tree_delta_reference_st4.py             tests/unit/test_tree_scale_st5.py             tests/differential/test_tree_scale_reference_st5.py             tests/unit/test_artifact_sa0.py             tests/vectors/test_artifact_sa0_vectors.py
+      - name: PX0 gate
+        run: |
+          mkdir -p reports
+          python -m scripts.product_closure.px0_gate --report reports/px0-gate.json
+      - name: PX0 benchmark
+        run: |
+          python -m scripts.product_closure.px0_benchmark --report reports/px0-ledger.json
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: px0-closure-reports
+          path: reports/*.json
+          if-no-files-found: warn

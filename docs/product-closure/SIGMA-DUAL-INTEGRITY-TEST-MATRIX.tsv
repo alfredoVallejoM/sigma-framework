@@ -83,13 +83,18 @@ ST5-LEDGER-001	ST5	T6	Frozen scale ledger	ST5-PERFORMANCE-LEDGER.json	build/proo
 ST5-PERF-001	ST5	T6	Tree build baseline	reference implementation	B geometric sweep	ledger frozen	BLOCKING
 ST5-PERF-002	ST5	T6	Proof verification	complexity model	N sweep	ledger frozen	REQUIRED
 ST5-PERF-003	ST5	T6	Memory/RSS	resource model	B sweep	ledger frozen	REQUIRED
-AUDIT-DIFF-001	SV0	T3	Audit vs v3 core	independent_v3	R12.5 corpus	exact projection/replay	BLOCKING
-AUDIT-MUT-001	SV0	T4	H_i corruption	v3 replay	single bit	reject	BLOCKING
-AUDIT-MUT-002	SV0	T4	S_i corruption	v3 replay	single bit	reject	BLOCKING
-AUDIT-MUT-003	SV0	T4	Round reorder	v3 replay	permutation	reject	BLOCKING
-AUDIT-DEEP-001	SV0	T3	Deep fidelity	independent_v3	Deep suite	branch/fold identities exact	BLOCKING
-AUDIT-VEC-001	SV0	T3	DeepVector fidelity	independent_v3	DeepVector suite	full vector chain exact	BLOCKING
-AUDIT-COMPACT-001	SV0	T3	Compact vs full audit	v3 digest	random inputs	same projected digest	BLOCKING
+AUDIT-R125-001	SV0	T1	Frozen R12.5 replay	conformance-v3-r12-5 corpus	all frozen history-suite cases	exact digest/history + compact/full reference audit	BLOCKING
+AUDIT-CODEC-001	SV0	T5	Audit codec canonicality	round-trip invariant	compact/full records + malformed shape	exact round-trip or reject	BLOCKING
+AUDIT-SOURCE-001	SV0	T3	Message-binding replay	evaluate_v3 recomputation	>=60 correct/wrong source checks	correct accepts, wrong rejects	BLOCKING
+AUDIT-CLAIM-001	SV0	T4	No security-width inflation	manual docs/API audit	all SV0 surfaces	no extra-bit/provenance/timestamp claim	BLOCKING
+AUDIT-CARD-001	SV0	T2	Trajectory cardinality	registered t/k	all six suites	states=t+k; rounds=t+k-1	BLOCKING
+AUDIT-DIFF-001	SV0	T7	Audit vs independent v3	independent_v3 + independent audit encoder	>=600 cases across all 6 executable suites	COMPACT/FULL byte-identical to reference	BLOCKING
+AUDIT-MUT-001	SV0	T4	H_i corruption	structural replay	history commitment bit mutation	reject	BLOCKING
+AUDIT-MUT-002	SV0	T4	S_i corruption	structural replay	pre-window state bit mutation	reject	BLOCKING
+AUDIT-MUT-003	SV0	T4	Round/layout/frame corruption	structural replay	layout/frame/reorder/cardinality mutations	reject	BLOCKING
+AUDIT-DEEP-001	SV0	T3	Deep fidelity	independent_v3	R12/R12.5 Deep suites	branch outputs + scalar fold exact	BLOCKING
+AUDIT-VEC-001	SV0	T3	DeepVector fidelity	independent_v3	R12/R12.5 DeepVector suites	full vector concatenation exact, no fold	BLOCKING
+AUDIT-COMPACT-001	SV0	T3	Compact vs full audit	SigmaDigestV3 projection	random cross-suite evaluations	same digest/states/histories/layouts	BLOCKING
 TCHK-DIFF-001	SV1	T3	Trajectory resume	direct v3 evaluation	all valid i on corpus	same suffix/digest	BLOCKING
 TCHK-ADV-001	SV1	T4	Wrong P_X	none	cross-input checkpoint	reject	BLOCKING
 TCHK-ADV-002	SV1	T4	Wrong round index	none	rewind/skip	reject	BLOCKING

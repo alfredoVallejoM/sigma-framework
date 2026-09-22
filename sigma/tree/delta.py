@@ -345,14 +345,33 @@ class TreeDeltaIndex:
             node.digests,
         )
 
-        # Publish only after all hashing/composition has succeeded.
-        for index, value in updated_leaf_bytes.items():
-            self._leaves[index] = value
-            self._leaf_nodes[index] = updated_leaf_nodes[index]
-        for key in closure:
-            self._nodes.pop(key, None)
-        self._nodes.update(temp_nodes)
-        self.root = new_root
+        # Publish only after all hashing/composition has succeeded. Keep a
+        # small rollback journal over exactly the touched state.
+        old_leaf_bytes = {index: self._leaves[index] for index in affected_leaves}
+        old_leaf_nodes = {index: self._leaf_nodes[index] for index in affected_leaves}
+        touched_node_keys = set(closure) | set(temp_nodes)
+        missing = object()
+        old_nodes = {key: self._nodes.get(key, missing) for key in touched_node_keys}
+        old_root = self.root
+        try:
+            for index, value in updated_leaf_bytes.items():
+                self._leaves[index] = value
+                self._leaf_nodes[index] = updated_leaf_nodes[index]
+            for key in closure:
+                self._nodes.pop(key, None)
+            self._nodes.update(temp_nodes)
+            self.root = new_root
+        except Exception:
+            for index, value in old_leaf_bytes.items():
+                self._leaves[index] = value
+                self._leaf_nodes[index] = old_leaf_nodes[index]
+            for key, value in old_nodes.items():
+                if value is missing:
+                    self._nodes.pop(key, None)
+                else:
+                    self._nodes[key] = value
+            self.root = old_root
+            raise
 
         recomputed = tuple(sorted(temp_nodes))
         reused_nodes = tuple(sorted(reused))
@@ -475,21 +494,52 @@ class TreeDeltaIndex:
             affected_existing = (full_count,)
             invalidated = self._ancestor_closure(affected_existing)
 
-        # Publish after the complete new root has been computed.
-        if tail_length:
-            self._leaves[full_count] = new_chunks[0]
-            append_from = 1
-        else:
-            append_from = 0
-        self._leaves.extend(new_chunks[append_from:])
+        # Publish after the complete new root has been computed, with a
+        # rollback journal limited to the changed tail/new leaves and bridge nodes.
+        old_list_length = len(self._leaves)
+        old_tail_value = self._leaves[full_count] if tail_length else None
+        affected_leaf_node_keys = set(new_leaf_nodes)
+        missing = object()
+        old_leaf_node_values = {
+            key: self._leaf_nodes.get(key, missing) for key in affected_leaf_node_keys
+        }
+        touched_node_keys = set(invalidated) | set(temp_nodes)
+        old_node_values = {
+            key: self._nodes.get(key, missing) for key in touched_node_keys
+        }
+        old_root = self.root
+        try:
+            if tail_length:
+                self._leaves[full_count] = new_chunks[0]
+                append_from = 1
+            else:
+                append_from = 0
+            self._leaves.extend(new_chunks[append_from:])
 
-        for index, node_value in new_leaf_nodes.items():
-            self._leaf_nodes[index] = node_value
-        for key in invalidated:
-            self._nodes.pop(key, None)
-        self._nodes.update(temp_nodes)
-        self._byte_length = new_length
-        self.root = new_root
+            for index, node_value in new_leaf_nodes.items():
+                self._leaf_nodes[index] = node_value
+            for key in invalidated:
+                self._nodes.pop(key, None)
+            self._nodes.update(temp_nodes)
+            self._byte_length = new_length
+            self.root = new_root
+        except Exception:
+            del self._leaves[old_list_length:]
+            if tail_length and old_tail_value is not None:
+                self._leaves[full_count] = old_tail_value
+            for key, value in old_leaf_node_values.items():
+                if value is missing:
+                    self._leaf_nodes.pop(key, None)
+                else:
+                    self._leaf_nodes[key] = value
+            for key, value in old_node_values.items():
+                if value is missing:
+                    self._nodes.pop(key, None)
+                else:
+                    self._nodes[key] = value
+            self._byte_length = old_length
+            self.root = old_root
+            raise
 
         recomputed = tuple(sorted(temp_nodes))
         reused_nodes = tuple(sorted(reused))

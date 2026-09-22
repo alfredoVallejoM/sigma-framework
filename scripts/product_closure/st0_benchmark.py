@@ -11,7 +11,7 @@ from pathlib import Path
 
 from sigma.tree import TreeBuilder
 
-DEFAULT_SIZES = (0, 65_536, 262_144, 1_048_576, 4_194_304, 8_388_608)
+DEFAULT_SIZES = tuple(n * 65_536 for n in (0, 1, 3, 4, 15, 16, 63, 64, 127, 128))
 
 
 def _slope(rows: list[dict[str, int]]) -> float | None:

@@ -10,6 +10,7 @@ import json
 import random
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 from reference.independent_v3 import evaluate_suite
 from reference.trajectory_audit_v3 import (
@@ -50,12 +51,12 @@ MIN_MUTATION_CASES = 2_000
 MIN_FULL_SOURCE_REPLAYS = 60
 
 
-def _r125_document() -> dict[str, object]:
+def _r125_document() -> dict[str, Any]:
     decoded = gzip.decompress(base64.b64decode(R125_CORPUS.read_text(encoding="ascii")))
     return json.loads(decoded.decode("utf-8"))
 
 
-def _reference_from_frozen_case(case: dict[str, object]) -> dict[str, object]:
+def _reference_from_frozen_case(case: dict[str, Any]) -> dict[str, Any]:
     return {
         "states": tuple(bytes.fromhex(value) for value in case["states_hex"]),
         "round_layouts": tuple(
@@ -177,7 +178,7 @@ def run_gate(
     differential_cases: int,
     minimum_mutations: int,
     full_source_replays: int,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     if differential_cases < MIN_DIFFERENTIAL_CASES:
         raise ValueError(
             f"SV0 requires at least {MIN_DIFFERENTIAL_CASES} differential cases"

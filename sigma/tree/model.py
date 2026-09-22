@@ -52,6 +52,8 @@ class TreeProfileV1:
         if len(encoded) < 2:
             raise TreeDecodeError("truncated algorithm vector")
         count = decode_uint(encoded[:2], 2)
+        if count != len(DEFAULT_TREE_ALGORITHMS):
+            raise TreeDecodeError("Sigma Tree V1 requires exactly four algorithms")
         if len(encoded) != 2 + 2 * count:
             raise TreeDecodeError("algorithm vector length mismatch")
         try:
@@ -183,13 +185,17 @@ class TreeFrontier:
             raise ValueError("frontier contains too many nodes")
         end = 0
         previous_height: int | None = None
-        for node in self.nodes:
+        for index, node in enumerate(self.nodes):
             if not node.is_perfect:
                 raise ValueError("frontier nodes must be perfect subtrees")
             if node.start_leaf != end:
                 raise ValueError("frontier nodes must be contiguous from leaf zero")
             if previous_height is not None and node.height >= previous_height:
                 raise ValueError("frontier heights must be strictly decreasing")
+            if index < len(self.nodes) - 1:
+                full_bytes = node.leaf_count * DEFAULT_PROFILE.chunk_size
+                if node.byte_length != full_bytes:
+                    raise ValueError("only the rightmost frontier subtree may contain a short leaf")
             end = node.end_leaf
             previous_height = node.height
         if tuple(n.height for n in self.nodes) != canonical_frontier_heights(end):

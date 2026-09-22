@@ -90,11 +90,11 @@ SV3-O04	SV	SV3	Unsigned receipt marked unsigned	codec/API tests	COMPLETE	NO
 SV3-O05	SV	SV3	Batch verify equals pointwise verify	differential	COMPLETE	YES
 SV3-O06	SV	SV3	Batch item failures isolated	failure injection	COMPLETE	YES
 SV3-O07	SV	SV3	Batch result ordering deterministic	property tests	COMPLETE	NO
-SA0-O01	SA	SA0	Artifact profile requires exactly declared evidence	codec/type tests	PLANNED	YES
-SA0-O02	SA	SA0	ArtifactId calculation non-circular	KAT + mutation	PLANNED	YES
-SA0-O03	SA	SA0	Descriptor canonical	codec fuzz	PLANNED	YES
-SA0-O04	SA	SA0	Parent artifacts are bound	mutation tests	PLANNED	NO
-SA0-O05	SA	SA0	Manifest identity is bound	mutation tests	PLANNED	YES
+SA0-O01	SA	SA0	Artifact profile requires exactly declared evidence	codec/type tests	ACTIVE	YES
+SA0-O02	SA	SA0	ArtifactId calculation non-circular	KAT + mutation	ACTIVE	YES
+SA0-O03	SA	SA0	Descriptor canonical	codec fuzz	ACTIVE	YES
+SA0-O04	SA	SA0	Parent artifacts are bound	mutation tests	ACTIVE	NO
+SA0-O05	SA	SA0	Manifest identity is bound	mutation tests	ACTIVE	YES
 SA1-O01	SA	SA1	Dual verify equals Tree AND Trajectory	composition tests	PLANNED	YES
 SA1-O02	SA	SA1	Dual failure attribution preserved	negative tests	PLANNED	YES
 SA1-O03	SA	SA1	Tree and Trajectory claims stay independent	manual result-schema audit	PLANNED	YES

@@ -29,7 +29,7 @@ from .ids import (
     ManifestMetadataProfileId,
     ManifestProfileId,
 )
-from .model import TreeRoot
+from .model import DEFAULT_PROFILE, TreeRoot
 from .path import canonical_path_bytes, canonical_relative_path, canonical_symlink_target_bytes
 
 _MAX_ENTRY_WIRE_BYTES = 1 << 20

@@ -2143,24 +2143,292 @@ COMPLETE:
 
 ## 12. SV3 — Receipts and Batch
 
-### Receipt obligations
+### Objetivo
 
-SV3-O01 — Receipt binds artifact identity, policy identity, verifier identity and result.
-SV3-O02 — Receipt signature, if present, covers full canonical record.
-SV3-O03 — Receipt does not imply semantic truth of opaque provenance.
-SV3-O04 — Unsigned receipt is marked unsigned.
+Cerrar la superficie no bloqueante de:
+- receipts verificables;
+- firma opcional Ed25519;
+- batch pointwise;
+- aislamiento de fallos;
+- ordering determinista.
 
-### Batch obligations
+SV3 no introduce Artifact semantics; `artifact_identity` permanece opaco hasta
+SA0.
 
-SV3-O05 — Pointwise equivalence
+### Implementación
 
-    batch[i] = verify(item_i)
+Product:
+- `sigma/trajectory/receipt_v1.py`
+  - ReceiptSignatureStatusV1;
+  - VerificationReceiptV1;
+  - receipt_from_decision_v1;
+  - sign_receipt_ed25519_v1;
+  - verify_receipt_signature_v1.
+- `sigma/trajectory/batch_v1.py`
+  - BatchVerificationItemV1;
+  - BatchItemResultV1;
+  - BatchVerificationResultV1;
+  - verify_batch_item_v1;
+  - verify_batch_v1.
+- exports aditivos en `sigma/trajectory` y `sigma/v3.py`.
 
-SV3-O06 — Isolation  
-Failure/crash de un item no altera evidencias de otros.
+Independent:
+- `reference/verification_receipt_v1.py`
+  - stdlib-only receipt encoder;
+  - stdlib-only signing-input encoder;
+  - stdlib-only batch-item/batch encoder;
+  - no imports `sigma`.
 
-SV3-O07 — Deterministic result ordering  
-Output sigue input ordering o canonical key ordering declarado.
+Tests:
+- `tests/unit/test_verification_receipt_sv3.py`;
+- `tests/unit/test_batch_verification_sv3.py`.
+
+Gate:
+- `scripts/product_closure/sv3_gate.py`.
+
+### Wires
+
+Receipt:
+
+    SIGRCPT1
+
+Batch item result:
+
+    SIGBCRI1
+
+Batch result:
+
+    SIGBCHT1
+
+Se reutiliza strict record codec v3.
+
+No se añaden:
+- suite IDs;
+- DomainIdV3;
+- hash algorithms;
+- signature algorithms distintos de Ed25519.
+
+### SV3-O01 — Receipt binding
+
+VerificationReceiptV1 liga canónicamente:
+- artifact_identity;
+- policy_id;
+- verifier package/version/build;
+- evidence kind/id/hashes;
+- decision kind/code/reason;
+- structure/message-binding result flags;
+- claimed timestamp;
+- signature metadata.
+
+`decision_projection()` reconstruye exactamente VerificationDecisionV1.
+
+`receipt_from_decision_v1` rechaza policy/decision mismatch.
+
+### SV3-O02 — Signature covers canonical record
+
+Signed receipt usa sólo:
+
+    Ed25519.
+
+Signing input:
+
+    fixed receipt domain
+      || canonical SIGRCPT1 record
+         with SIGNED metadata
+         and empty signature field.
+
+Así la firma cubre:
+- artifact;
+- policy;
+- verifier;
+- evidence;
+- result;
+- timestamp claim;
+- signature status/algorithm;
+- public key ID.
+
+El gate muta múltiples campos y exige rechazo.
+
+### SV3-O03 — No opaque provenance truth
+
+Receipt signature autentica el record.
+
+No prueba por sí misma:
+- provenance semántica;
+- historical existence;
+- trusted timestamp;
+- identity externa del artifact opaque ID.
+
+Executed gate fija:
+
+    opaque_provenance_truth_claim = false.
+
+### SV3-O04 — Unsigned explicit
+
+Unsigned receipt exige:
+
+    status = UNSIGNED
+    algorithm = None
+    public_key_id = empty
+    signature = empty.
+
+`verify_receipt_signature_v1(unsigned,...)` devuelve false.
+
+No existe firma implícita.
+
+### SV3-O05 — Pointwise batch equivalence
+
+Autoridad:
+
+    verify_batch_item_v1.
+
+Ley:
+
+    verify_batch_v1(items).items[i]
+      =
+    verify_batch_item_v1(items[i],index=i).
+
+Gate:
+- 100 mixed batches;
+- accepted/rejected/inconclusive/error;
+- exact pointwise equality.
+
+### SV3-O06 — Failure isolation
+
+Una excepción de un source/verifier de un item se materializa como error sólo en
+ese BatchItemResultV1.
+
+Los demás receipts permanecen idénticos a sus pointwise results.
+
+Error text se canonicaliza y limita para impedir secondary-failure durante
+error recording.
+
+Gate:
+- 100 failure-injection cases;
+- zero neighbor contamination.
+
+### SV3-O07 — Deterministic ordering
+
+Ordering declarado:
+
+    input order.
+
+Siempre:
+
+    result.items[i].index = i.
+
+Threaded scheduling usa ordered map.
+
+Gate exige:
+
+    serial batch wire
+      =
+    threaded batch wire.
+
+### Independent wire comparison
+
+Product receipt y batch wires se comparan contra
+`reference/verification_receipt_v1.py`.
+
+Esto comprueba independientemente:
+- TLV ordering;
+- field widths;
+- empty/optional encodings;
+- signing input;
+- batch sequence framing.
+
+### Codec/adversarial coverage
+
+Receipt:
+- round-trip;
+- missing fields;
+- duplicated fields;
+- reordered fields;
+- unknown fields;
+- policy mismatch;
+- evidence hash omission;
+- re-sign attempt;
+- signed-field mutations.
+
+Batch:
+- result round-trip;
+- error record persistence;
+- pointwise equality;
+- threaded equality;
+- input ordering;
+- isolated source exception.
+
+### Gate SV3
+
+Executed threshold:
+
+    receipt_cases >= 200
+    signature_mutations >= 1,000
+    batch_cases >= 100
+    failure_isolation_cases >= 100.
+
+Debe además fijar:
+
+    pointwise_equivalence = true
+    threaded_equivalence = true
+    unsigned_receipt_explicit = true
+    opaque_provenance_truth_claim = false
+    empirical_performance_claims = false.
+
+### Ejecutado
+
+GitHub Actions run:
+
+    35786646804
+
+Quality:
+- compile PASS;
+- Ruff PASS;
+- Mypy PASS;
+- pytest 14 PASS.
+
+Gate:
+
+    passed = true
+    closure_eligible = true
+    receipt_cases = 200
+    signature_mutations = 1,000
+    batch_cases = 100
+    failure_isolation_cases = 100.
+
+Frozen streams:
+
+    receipt:
+    c8f889fc9a20c5c141ca9628cb5abec4b63478744f68e335100a3eddd978c261
+
+    signed receipt:
+    8d0f725e940b28a7ea9014cfa1f68bff03bbf12779149049d21513b31767d7e4
+
+    batch:
+    d06d75b39e2b5fed2b264a89b3092b66a6870ea93c1d43219f019fef8deca75b
+
+Frozen report:
+
+    SV3-GATE-REPORT.json
+
+Report SHA-256:
+
+    bd958921a9313d79a1d69d4bfde4dabbee7dbb732b9dff3d00c12400a698cc74
+
+### Criterio de cierre
+
+SV3 COMPLETE requiere:
+1. receipt canonical binding PASS;
+2. Ed25519 mutation campaign PASS;
+3. unsigned explicit PASS;
+4. provenance claim audit PASS;
+5. pointwise batch equivalence PASS;
+6. failure isolation PASS;
+7. deterministic ordering/threaded equivalence PASS;
+8. manual post-execution O01..O07 review PASS.
+
+Benchmarks empíricos de throughput se difieren explícitamente.
+
 
 ## 13. SA0 — Canonical Artifact
 

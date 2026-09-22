@@ -189,15 +189,49 @@ def manifest_from_entries(entries: Sequence[ManifestEntryV1]) -> ManifestV1:
     return ManifestV1(ordered)
 
 
+def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    if left.st_ino and right.st_ino:
+        return left.st_ino == right.st_ino and left.st_dev == right.st_dev
+    return True
+
+
 def _tree_root_from_file(path: Path) -> TreeRoot:
-    builder = TreeBuilder()
-    with path.open("rb") as handle:
+    """Hash one stable regular-file handle without intentionally following links."""
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError("manifest file entry is no longer a regular file")
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    fd = os.open(path, flags)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode):
+            raise ValueError("manifest file descriptor is not a regular file")
+        if not _same_file_identity(before, opened):
+            raise RuntimeError("manifest file changed identity before hashing")
+
+        builder = TreeBuilder()
         while True:
-            chunk = handle.read(1024 * 1024)
+            chunk = os.read(fd, 1024 * 1024)
             if not chunk:
                 break
             builder.update(chunk)
-    return builder.finalize()
+
+        after = os.fstat(fd)
+        if (
+            opened.st_size != after.st_size
+            or opened.st_mtime_ns != after.st_mtime_ns
+            or opened.st_ctime_ns != after.st_ctime_ns
+        ):
+            raise RuntimeError("manifest file changed while hashing")
+        return builder.finalize()
+    finally:
+        os.close(fd)
 
 
 def _normalize_trajectory_map(

@@ -38,6 +38,28 @@ from .manifest import (
     build_directory_manifest,
     manifest_from_entries,
 )
+from .model import (
+    DEFAULT_PROFILE,
+    TreeFrontier,
+    TreeNode,
+    TreeProfileV1,
+    TreeRoot,
+    canonical_frontier_heights,
+)
+from .path import canonical_relative_path
+from .persistent import (
+    BoundPersistentTreeIndexV1,
+    PersistentIndexSourceUnverified,
+    PersistentSourceValidationV1,
+    PersistentTreeIndexDecodeError,
+    PersistentTreeMutationResultV1,
+    TreePersistentIndexV1,
+    build_persistent_index,
+    build_persistent_index_chunks,
+    build_persistent_index_file,
+    read_persistent_index,
+    write_persistent_index_atomic,
+)
 from .proofs import (
     InclusionProofV1,
     InclusionStepV1,
@@ -50,15 +72,6 @@ from .proofs import (
     verify_inclusion,
     verify_range,
 )
-from .model import (
-    DEFAULT_PROFILE,
-    TreeFrontier,
-    TreeNode,
-    TreeProfileV1,
-    TreeRoot,
-    canonical_frontier_heights,
-)
-from .path import canonical_relative_path
 from .scale import (
     ScaledProofResultV1,
     TreeFallbackV1,
@@ -151,17 +164,3 @@ __all__ = [
     "write_checkpoint_atomic",
     "write_persistent_index_atomic",
 ]
-
-from .persistent import (
-    BoundPersistentTreeIndexV1,
-    PersistentIndexSourceUnverified,
-    PersistentSourceValidationV1,
-    PersistentTreeIndexDecodeError,
-    PersistentTreeMutationResultV1,
-    TreePersistentIndexV1,
-    build_persistent_index,
-    build_persistent_index_chunks,
-    build_persistent_index_file,
-    read_persistent_index,
-    write_persistent_index_atomic,
-)

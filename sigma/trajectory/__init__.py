@@ -20,4 +20,21 @@ __all__ = [
     "project_digest_v3",
     "verify_trajectory_audit_full_v3",
     "verify_trajectory_audit_structure_v3",
+    "TrajectoryCheckpointV1",
+    "TrajectoryContinuationV1",
+    "advance_trajectory_checkpoint_v3",
+    "checkpoint_from_evaluation_v3",
+    "continue_trajectory_checkpoint_v3",
+    "finalize_trajectory_checkpoint_v3",
+    "verify_trajectory_checkpoint_source_v3",
 ]
+
+from .checkpoint_v3 import (
+    TrajectoryCheckpointV1,
+    TrajectoryContinuationV1,
+    advance_trajectory_checkpoint_v3,
+    checkpoint_from_evaluation_v3,
+    continue_trajectory_checkpoint_v3,
+    finalize_trajectory_checkpoint_v3,
+    verify_trajectory_checkpoint_source_v3,
+)

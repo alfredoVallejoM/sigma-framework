@@ -1,0 +1,17 @@
+{
+  "batch_cases": 100,
+  "batch_stream_sha256": "d06d75b39e2b5fed2b264a89b3092b66a6870ea93c1d43219f019fef8deca75b",
+  "closure_eligible": true,
+  "empirical_performance_claims": false,
+  "failure_isolation_cases": 100,
+  "opaque_provenance_truth_claim": false,
+  "passed": true,
+  "pointwise_equivalence": true,
+  "receipt_cases": 200,
+  "receipt_stream_sha256": "c8f889fc9a20c5c141ca9628cb5abec4b63478744f68e335100a3eddd978c261",
+  "schema": "sigma-sv3-receipt-batch-gate-v1",
+  "signature_mutations": 1000,
+  "signed_receipt_stream_sha256": "8d0f725e940b28a7ea9014cfa1f68bff03bbf12779149049d21513b31767d7e4",
+  "threaded_equivalence": true,
+  "unsigned_receipt_explicit": true
+}

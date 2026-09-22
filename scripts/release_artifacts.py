@@ -128,6 +128,10 @@ def generate(directory: Path, *, require_clean_tag: bool = False) -> tuple[Path,
                     "value": str(axes["SIGNED_COMMITMENT_WIRE_VERSION"]),
                 },
                 {
+                    "name": "sigma:tree-wire-version",
+                    "value": str(axes["TREE_WIRE_VERSION"]),
+                },
+                {
                     "name": "sigma:active-suite-families",
                     "value": ",".join(active_suite_families),
                 },

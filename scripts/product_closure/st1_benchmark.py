@@ -16,8 +16,8 @@ DEFAULT_FILE_COUNTS = (1, 4, 16, 64, 256, 1024)
 DEFAULT_BYTE_SIZES = (0, 1, 4096, 65_536, 262_144, 1_048_576)
 
 
-def _slope(points: list[tuple[int, int]]) -> float | None:
-    usable = [(x, y) for x, y in points if x > 0 and y > 0]
+def _slope(points: list[tuple[int, int]], *, min_x: int = 1) -> float | None:
+    usable = [(x, y) for x, y in points if x >= min_x and y > 0]
     if len(usable) < 2:
         return None
     xs = [math.log(x) for x, _ in usable]
@@ -86,8 +86,9 @@ def run_benchmark(*, repeats: int) -> dict[str, object]:
         "empirical_file_count_exponent": _slope(
             [(row["files"], row["median_ns"]) for row in file_rows]
         ),
-        "empirical_byte_exponent": _slope(
-            [(row["input_bytes"], row["median_ns"]) for row in byte_rows]
+        "empirical_large_byte_exponent": _slope(
+            [(row["input_bytes"], row["median_ns"]) for row in byte_rows],
+            min_x=65_536,
         ),
         "derived_contract": {
             "time": "O(m*B + F log F) with bounded canonical path length",

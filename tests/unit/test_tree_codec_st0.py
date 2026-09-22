@@ -1,8 +1,30 @@
 import pytest
 
 from sigma.tree.codec import TreeDecodeError
-from sigma.tree.model import DEFAULT_PROFILE, TreeFrontier, TreeNode, TreeRoot
 from sigma.tree.core import build_tree, leaf_node
+from sigma.tree.model import DEFAULT_PROFILE, TreeFrontier, TreeNode, TreeRoot
+
+
+def _top_level_fields(encoded: bytes) -> list[tuple[int, bytes]]:
+    body_length = int.from_bytes(encoded[10:14], "big")
+    assert body_length == len(encoded) - 14
+    fields = []
+    offset = 14
+    while offset < len(encoded):
+        tag = int.from_bytes(encoded[offset : offset + 2], "big")
+        length = int.from_bytes(encoded[offset + 2 : offset + 6], "big")
+        offset += 6
+        fields.append((tag, encoded[offset : offset + length]))
+        offset += length
+    return fields
+
+
+def _raw_record(template: bytes, fields: list[tuple[int, bytes]]) -> bytes:
+    body = b"".join(
+        tag.to_bytes(2, "big") + len(value).to_bytes(4, "big") + value
+        for tag, value in fields
+    )
+    return template[:10] + len(body).to_bytes(4, "big") + body
 
 
 def test_root_rejects_bad_magic_and_version():
@@ -11,6 +33,21 @@ def test_root_rejects_bad_magic_and_version():
         TreeRoot.from_bytes(b"X" + root[1:])
     with pytest.raises(TreeDecodeError):
         TreeRoot.from_bytes(root[:8] + b"\x00\x02" + root[10:])
+
+
+def test_root_rejects_missing_duplicate_reordered_and_unknown_fields():
+    encoded = build_tree(b"schema-mutation").to_bytes()
+    fields = _top_level_fields(encoded)
+
+    mutations = [
+        _raw_record(encoded, fields[1:]),
+        _raw_record(encoded, fields[:1] + [fields[0]] + fields[1:]),
+        _raw_record(encoded, [fields[1], fields[0], *fields[2:]]),
+        _raw_record(encoded, [*fields, (0xFFFF, b"")]),
+    ]
+    for mutated in mutations:
+        with pytest.raises(TreeDecodeError):
+            TreeRoot.from_bytes(mutated)
 
 
 def test_node_digest_width_enforced():

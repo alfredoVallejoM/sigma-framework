@@ -8,7 +8,17 @@ import json
 import sys
 from pathlib import Path
 
-from sigma.tree import SymlinkPolicy, build_directory_manifest
+from sigma.tree import (
+    SymlinkPolicy,
+    TreeBuilder,
+    build_directory_manifest,
+    checkpoint_builder,
+    read_checkpoint,
+    restore_builder,
+    source_hint_from_path,
+    source_hint_matches_path,
+    write_checkpoint_atomic,
+)
 
 
 def _manifest_command(args: argparse.Namespace) -> int:
@@ -51,6 +61,88 @@ def _manifest_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _checkpoint_tree_command(args: argparse.Namespace) -> int:
+    size = args.file.stat().st_size
+    offset = size if args.offset is None else args.offset
+    if offset < 0 or offset > size:
+        raise ValueError("checkpoint offset must be within the current file")
+
+    builder = TreeBuilder()
+    remaining = offset
+    with args.file.open("rb") as handle:
+        while remaining:
+            chunk = handle.read(min(1024 * 1024, remaining))
+            if not chunk:
+                raise OSError("file ended before requested checkpoint offset")
+            builder.update(chunk)
+            remaining -= len(chunk)
+
+    hint = source_hint_from_path(args.file)
+    checkpoint = checkpoint_builder(builder, source_hint=hint)
+    write_checkpoint_atomic(args.output, checkpoint)
+    encoded = checkpoint.to_bytes()
+    print(
+        json.dumps(
+            {
+                "checkpoint": str(args.output),
+                "checkpoint_sha256": hashlib.sha256(encoded).hexdigest(),
+                "completed_bytes": checkpoint.completed_bytes,
+                "completed_leaf_count": checkpoint.completed_leaf_count,
+                "frontier_nodes": len(checkpoint.frontier.nodes),
+                "tail_bytes": len(checkpoint.tail),
+                "source_hint": "heuristic-only",
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _resume_tree_command(args: argparse.Namespace) -> int:
+    checkpoint = read_checkpoint(args.checkpoint)
+    size = args.file.stat().st_size
+    if checkpoint.completed_bytes > size:
+        raise ValueError("checkpoint offset exceeds current file size")
+
+    hint_match = (
+        source_hint_matches_path(checkpoint.source_hint, args.file)
+        if checkpoint.source_hint is not None
+        else None
+    )
+    if args.require_hint_match and hint_match is not True:
+        raise ValueError("source hint mismatch; hint is heuristic and does not prove source identity")
+
+    builder = restore_builder(checkpoint)
+    with args.file.open("rb") as handle:
+        handle.seek(checkpoint.completed_bytes)
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            builder.update(chunk)
+    root = builder.finalize()
+    encoded = root.to_bytes()
+
+    if args.output is not None:
+        args.output.write_bytes(encoded)
+
+    print(
+        json.dumps(
+            {
+                "completed_from_checkpoint": checkpoint.completed_bytes,
+                "file": str(args.file),
+                "root_sha256": hashlib.sha256(encoded).hexdigest(),
+                "root_wire_hex": None if args.output is not None else encoded.hex(),
+                "output": str(args.output) if args.output is not None else None,
+                "source_hint_match": hint_match,
+                "source_hint_security_evidence": False,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sigma",
@@ -64,6 +156,25 @@ def build_parser() -> argparse.ArgumentParser:
     manifest.add_argument("--output", type=Path)
     manifest.add_argument("--format", choices=("hex", "json", "binary"), default="hex")
     manifest.set_defaults(handler=_manifest_command)
+
+    checkpoint = commands.add_parser(
+        "checkpoint-tree",
+        help="write a portable Sigma Tree V1 checkpoint for a file prefix",
+    )
+    checkpoint.add_argument("file", type=Path)
+    checkpoint.add_argument("--offset", type=int)
+    checkpoint.add_argument("--output", type=Path, required=True)
+    checkpoint.set_defaults(handler=_checkpoint_tree_command)
+
+    resume = commands.add_parser(
+        "resume-tree",
+        help="resume Sigma Tree V1 from a portable checkpoint",
+    )
+    resume.add_argument("checkpoint", type=Path)
+    resume.add_argument("file", type=Path)
+    resume.add_argument("--output", type=Path)
+    resume.add_argument("--require-hint-match", action="store_true")
+    resume.set_defaults(handler=_resume_tree_command)
     return parser
 
 

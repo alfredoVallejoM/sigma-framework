@@ -1,7 +1,7 @@
 stage	track	title	status	depends_on	blocking_for_release	closure_rule
 BASE	BASE	Compatibility and claim boundary	ACTIVE		YES	All DI-INV blocking obligations COMPLETE
 ST0	ST	Sigma Tree core extraction	COMPLETE	BASE	YES	ST0 blocking obligations + adversarial review
-ST1	ST	Canonical manifest	ACTIVE	ST0	YES	ST1 blocking obligations + cross-platform fixtures
+ST1	ST	Canonical manifest	CANDIDATE	ST0	YES	ST1 blocking obligations + cross-platform fixtures
 ST2	ST	Inclusion and range proofs	PLANNED	ST0	YES	ST2 blocking obligations + independent verifier
 ST3	ST	Portable tree resume	PLANNED	ST0	YES	ST3 blocking obligations + 100k split differential
 ST4	ST	Delta and append	PLANNED	ST0;ST3	YES	ST4 blocking obligations + performance gate

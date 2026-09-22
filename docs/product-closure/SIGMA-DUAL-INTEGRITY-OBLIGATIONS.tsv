@@ -70,19 +70,19 @@ SV0-O05	SV	SV0	Audit links exact layout/frame IDs	corpus comparison	CANDIDATE	YE
 SV0-O06	SV	SV0	Deep vs DeepVector semantics preserved	cross-suite tests	CANDIDATE	YES
 SV0-O07	SV	SV0	Compact/full audits project same digest	differential	CANDIDATE	YES
 SV0-O08	SV	SV0	Audit makes no security-width claim	manual claim audit	CANDIDATE	YES
-SV1-O01	SV	SV1	Trajectory continuation equals direct suffix	all checkpoint indices differential	PLANNED	YES
-SV1-O02	SV	SV1	Final digest identical after resume	corpus + random tests	PLANNED	YES
-SV1-O03	SV	SV1	Binding/context/parameters immutable	negative tests	PLANNED	YES
-SV1-O04	SV	SV1	Round index cannot silently rewind/skip	negative tests	PLANNED	YES
-SV1-O05	SV	SV1	Internal checkpoint distinct from source verification	API separation review	PLANNED	YES
-SV1-O06	SV	SV1	Checkpoint codec canonical	codec fuzz + mutation	PLANNED	YES
-SV2-O01	SV	SV2	Parse validity does not imply policy acceptance	policy tests	PLANNED	YES
-SV2-O02	SV	SV2	Four-way decision explicit	API exhaustiveness tests	PLANNED	YES
-SV2-O03	SV	SV2	Policy cheap checks precede expensive work	instrumentation	PLANNED	YES
-SV2-O04	SV	SV2	Policy decision deterministic	repeatability tests	PLANNED	YES
-SV2-O05	SV	SV2	Normalized policy identity stable	KAT + codec tests	PLANNED	YES
-SV2-O06	SV	SV2	Defined strict-policy subset is monotone	property tests	PLANNED	NO
-SV2-O07	SV	SV2	Legacy v2.2 requires explicit opt-in	negative default tests	PLANNED	YES
+SV1-O01	SV	SV1	Trajectory continuation equals direct suffix	all checkpoint indices differential	ACTIVE	YES
+SV1-O02	SV	SV1	Final digest identical after resume	corpus + random tests	ACTIVE	YES
+SV1-O03	SV	SV1	Binding/context/parameters immutable	negative tests	ACTIVE	YES
+SV1-O04	SV	SV1	Round index cannot silently rewind/skip	negative tests	ACTIVE	YES
+SV1-O05	SV	SV1	Internal checkpoint distinct from source verification	API separation review	ACTIVE	YES
+SV1-O06	SV	SV1	Checkpoint codec canonical	codec fuzz + mutation	ACTIVE	YES
+SV2-O01	SV	SV2	Parse validity does not imply policy acceptance	policy tests	ACTIVE	YES
+SV2-O02	SV	SV2	Four-way decision explicit	API exhaustiveness tests	ACTIVE	YES
+SV2-O03	SV	SV2	Policy cheap checks precede expensive work	instrumentation	ACTIVE	YES
+SV2-O04	SV	SV2	Policy decision deterministic	repeatability tests	ACTIVE	YES
+SV2-O05	SV	SV2	Normalized policy identity stable	KAT + codec tests	ACTIVE	YES
+SV2-O06	SV	SV2	Defined strict-policy subset is monotone	property tests	ACTIVE	NO
+SV2-O07	SV	SV2	Legacy v2.2 requires explicit opt-in	negative default tests	ACTIVE	YES
 SV3-O01	SV	SV3	Receipt binds artifact/policy/verifier/result	mutation tests	PLANNED	YES
 SV3-O02	SV	SV3	Optional receipt signature covers canonical record	signature tests	PLANNED	YES
 SV3-O03	SV	SV3	Receipt does not imply opaque provenance truth	manual claim audit	PLANNED	NO

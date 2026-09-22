@@ -9,8 +9,15 @@
       "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
       "edit_count": 1,
       "normalized_count": 1,
-      "normalized_intervals": [[65543, 1]],
-      "affected_leaves": [1],
+      "normalized_intervals": [
+        [
+          65543,
+          1
+        ]
+      ],
+      "affected_leaves": [
+        1
+      ],
       "ancestor_nodes": 3,
       "result_sha256": "fe18717b5bdda152ccd87cfe61227e22301e65c6069b69bcf12721baaca1db55",
       "root_wire_sha256": "420db6254cc974723a82fb74a5a5b22acc4ad9ba95edb27189691e252a72ef43"
@@ -23,8 +30,16 @@
       "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
       "edit_count": 1,
       "normalized_count": 1,
-      "normalized_intervals": [[65534, 4]],
-      "affected_leaves": [0, 1],
+      "normalized_intervals": [
+        [
+          65534,
+          4
+        ]
+      ],
+      "affected_leaves": [
+        0,
+        1
+      ],
       "ancestor_nodes": 4,
       "result_sha256": "760e3c215b0fdf4a7e87f1dbfdd8f6c848f1979ece82525ecb6b8645e1381823",
       "root_wire_sha256": "fe637e4d8fec7890bd86aae6643ee53751a33e2edcd1399b460dc3f55ca6a8ea"
@@ -37,8 +52,15 @@
       "source_sha256": "f7c968be8dee93b945872f5631fd807e6e2f242dcf29980586e8bca90d2b3c82",
       "edit_count": 4,
       "normalized_count": 1,
-      "normalized_intervals": [[0, 10]],
-      "affected_leaves": [0],
+      "normalized_intervals": [
+        [
+          0,
+          10
+        ]
+      ],
+      "affected_leaves": [
+        0
+      ],
       "ancestor_nodes": 3,
       "result_sha256": "a9c96a3438cce2d55ba01c08f9aeb13521e61bf106033ecc7f0b5c66c926ff7c",
       "root_wire_sha256": "0173e70482cefeafbb406933c6af89b03c93ef25ed7f1b01a680b9d692e9f9b7"
@@ -51,8 +73,19 @@
       "source_sha256": "b08bf1a95e3cc4a77b5e448d05e0ddcc69a8b10a9ef382d3a4413e821c80c8e0",
       "edit_count": 1,
       "normalized_count": 1,
-      "normalized_intervals": [[0, 327680]],
-      "affected_leaves": [0, 1, 2, 3, 4],
+      "normalized_intervals": [
+        [
+          0,
+          327680
+        ]
+      ],
+      "affected_leaves": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
       "ancestor_nodes": 9,
       "replacement_sha256": "f2fe7d5281b80c4340dcd52e9c07d67c79c8613caabf42739befa593c56aac2d",
       "result_sha256": "f2fe7d5281b80c4340dcd52e9c07d67c79c8613caabf42739befa593c56aac2d",

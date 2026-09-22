@@ -595,7 +595,7 @@ def prove_leaf_streaming(data: bytes, leaf_index: int) -> InclusionProofV1:
 
 
 def prove_range_streaming(data: bytes, start: int, length: int) -> RangeProofV1:
-    """Generate a range proof without retaining a full TreeProofIndex."""
+    """Generate a range proof with O(log N) auxiliary tree state and no full index."""
     if not isinstance(data, bytes):
         raise TypeError("range proof source must be bytes")
     _validate_raw_range(len(data), start, length)
@@ -606,47 +606,47 @@ def prove_range_streaming(data: bytes, start: int, length: int) -> RangeProofV1:
         length,
     )
     view = memoryview(data)
-    witnesses = tuple(
-        _subtree_node_from_view(
-            view,
+    witnesses: list[TreeNode] = []
+
+    def reconstruct(node_start: int, node_count: int) -> TreeNode:
+        node_end = node_start + node_count
+        if node_end <= first_leaf or node_start >= last_leaf_exclusive:
+            node = _subtree_node_from_view(
+                view,
+                DEFAULT_PROFILE,
+                node_start,
+                node_count,
+                geometry_root.leaf_count,
+                geometry_root.byte_length,
+            )
+            witnesses.append(node)
+            return node
+
+        if node_count == 1:
+            leaf_start = node_start * DEFAULT_PROFILE.chunk_size
+            leaf_end = min(leaf_start + DEFAULT_PROFILE.chunk_size, len(data))
+            return _leaf_node_buffer(
+                DEFAULT_PROFILE,
+                node_start,
+                leaf_start,
+                view[leaf_start:leaf_end],
+            )
+
+        left_count = _largest_power_strictly_less(node_count)
+        return combine_nodes(
             DEFAULT_PROFILE,
-            witness_start,
-            witness_count,
-            geometry_root.leaf_count,
-            geometry_root.byte_length,
-        )
-        for witness_start, witness_count, _ in range_witness_geometry(
-            geometry_root,
-            first_leaf,
-            last_leaf_exclusive,
-        )
-    )
-    components: dict[tuple[int, int], TreeNode] = {
-        (node.start_leaf, node.leaf_count): node for node in witnesses
-    }
-    for leaf_index in range(first_leaf, last_leaf_exclusive):
-        leaf_start = leaf_index * DEFAULT_PROFILE.chunk_size
-        leaf_end = min(leaf_start + DEFAULT_PROFILE.chunk_size, len(data))
-        components[(leaf_index, 1)] = _leaf_node_buffer(
-            DEFAULT_PROFILE,
-            leaf_index,
-            leaf_start,
-            view[leaf_start:leaf_end],
+            reconstruct(node_start, left_count),
+            reconstruct(node_start + left_count, node_count - left_count),
         )
 
-    node = _reconstruct_from_components(
-        DEFAULT_PROFILE,
-        0,
-        geometry_root.leaf_count,
-        components,
-    )
+    node = reconstruct(0, geometry_root.leaf_count)
     root = TreeRoot(
         DEFAULT_PROFILE,
         len(data),
         geometry_root.leaf_count,
         node.digests,
     )
-    end = start + length
+    end_offset = start + length
     first_leaf_start = first_leaf * DEFAULT_PROFILE.chunk_size
     last_leaf = last_leaf_exclusive - 1
     last_leaf_end = min(
@@ -654,7 +654,7 @@ def prove_range_streaming(data: bytes, start: int, length: int) -> RangeProofV1:
         len(data),
     )
     prefix = data[first_leaf_start:start] if prefix_length else b""
-    suffix = data[end:last_leaf_end] if suffix_length else b""
+    suffix = data[end_offset:last_leaf_end] if suffix_length else b""
     return RangeProofV1(
         DEFAULT_PROFILE,
         root,
@@ -662,9 +662,8 @@ def prove_range_streaming(data: bytes, start: int, length: int) -> RangeProofV1:
         length,
         prefix,
         suffix,
-        witnesses,
+        tuple(witnesses),
     )
-
 
 def prove_leaf(data: bytes, leaf_index: int) -> InclusionProofV1:
     return TreeProofIndex(data).prove_leaf(leaf_index)

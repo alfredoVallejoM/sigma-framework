@@ -156,3 +156,30 @@ Evidence:
 - ST5-IMPLEMENTATION-EVIDENCE.md
 
 No persistent index wire was introduced in ST5; only its logical layout/resource contract was closed.
+
+
+SV0 — Trajectory Audit — está **CANDIDATE** tras revisión adversaria de implementación.
+
+Implementado:
+- TrajectoryAuditV3 COMPACT/FULL;
+- projection exacta a SigmaDigestV3;
+- replay estructural sin source;
+- full source verification por reevaluación v3;
+- history causality H_i -> H_(i+1);
+- exact layout/frame/branch/fold wires en FULL;
+- Deep vs DeepVector fidelity;
+- independent stdlib audit encoder;
+- frozen R12.5 corpus replay;
+- gate 600 differential / >=2,000 mutations / >=60 source replays;
+- complexity/size ledger runner.
+
+No se ha modificado binding/layout/rounds/digest/suite/domain v3 ni ningún corpus congelado.
+
+SV0 permanece CANDIDATE porque el gate de cierre todavía debe ejecutarse desde un checkout real:
+
+    python -m scripts.product_closure.sv0_gate --report .sigma/sv0-gate.json
+
+Evidencia:
+- SV0-IMPLEMENTATION-EVIDENCE.md
+
+SV1 permanece PLANNED.

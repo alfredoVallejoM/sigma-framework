@@ -115,9 +115,18 @@ POL-PROP-002	SV2	T2	Defined monotonicity	reference restriction relation	>=100 st
 POL-ADV-001	SV2	T4	Legacy default/opt-in	v2.2 verifier	valid v2.2 evidence	default reject; explicit opt-in accept	BLOCKING
 POL-ADV-002	SV2	T4	Resource precheck	bomb source/verifier	oversized declarations	reject before expensive work	BLOCKING
 POL-ADV-003	SV2	T4	Unsupported future profile	closed parser	unknown magic/profile	Unsupported	BLOCKING
-RCPT-MUT-001	SV3	T4	Receipt binding	receipt verifier	mutate artifact/policy/result	reject signature or identity	BLOCKING
-BATCH-DIFF-001	SV3	T3	Batch pointwise equality	single verify	random mixed inputs	exact per-item equality	BLOCKING
-BATCH-FAULT-001	SV3	T4	Item isolation	single verify	one failing item	others unaffected	BLOCKING
+RCPT-CODEC-001	SV3	T5	Receipt canonical codec	strict TLV	missing/duplicate/reorder/unknown	reject	BLOCKING
+RCPT-REF-001	SV3	T7	Independent receipt wire	stdlib-only reference	unsigned + signed corpus	byte-identical wire/signing input	BLOCKING
+RCPT-UNSIGNED-001	SV3	T2	Explicit unsigned status	receipt API	unsigned corpus	UNSIGNED + no signature material	BLOCKING
+RCPT-DEC-001	SV3	T3	Decision reconstruction	VerificationDecisionV1	generated receipts	exact decision_projection	BLOCKING
+RCPT-CLAIM-001	SV3	T4	No provenance/timestamp truth inflation	manual docs/API audit	all receipt surfaces	no semantic provenance/timestamp claim	REQUIRED
+RCPT-MUT-001	SV3	T4	Receipt binding	Ed25519 receipt verifier	>=1,000 canonical signed-field mutations	reject mutated signature	BLOCKING
+BATCH-REF-001	SV3	T7	Independent batch wire	stdlib-only reference	mixed batch results	byte-identical wire	BLOCKING
+BATCH-ORDER-001	SV3	T2	Input-order preservation	index invariant	>=100 mixed batches	item[i].index=i	BLOCKING
+BATCH-THREAD-001	SV3	T3	Serial/threaded equivalence	serial pointwise reference	>=100 mixed batches	byte-identical batch result	BLOCKING
+BATCH-ERR-001	SV3	T4	Hostile error canonicalization	captured exception record	NUL/non-NFC/oversized error text	bounded canonical item error	REQUIRED
+BATCH-DIFF-001	SV3	T3	Batch pointwise equality	verify_batch_item_v1	>=100 mixed batches	exact per-item equality	BLOCKING
+BATCH-FAULT-001	SV3	T4	Item isolation	pointwise neighbors	>=100 injected item failures	other receipts unaffected	BLOCKING
 ART-KAT-001	SA0	T1	Artifact identity	KAT fixture	TREE/TRAJECTORY/DUAL	stable ArtifactId	BLOCKING
 ART-FUZZ-001	SA0	T5	Artifact codec	round-trip invariant	mutated wires	no crash; invalid rejects	BLOCKING
 ART-MUT-001	SA0	T4	Profile/evidence mismatch	none	missing/extra evidence	reject	BLOCKING

@@ -233,17 +233,17 @@ class TreeDeltaIndex:
         leaf_nodes: dict[int, TreeNode] = {}
         for index, raw in enumerate(leaves):
             key = (index, 1)
-            node = copied_nodes.get(key)
-            if node is None:
+            leaf_node_value = copied_nodes.get(key)
+            if leaf_node_value is None:
                 raise ValueError("precomputed state is missing a leaf node")
             if (
-                node.start_leaf != index
-                or node.leaf_count != 1
-                or node.height != 0
-                or node.byte_length != len(raw)
+                leaf_node_value.start_leaf != index
+                or leaf_node_value.leaf_count != 1
+                or leaf_node_value.height != 0
+                or leaf_node_value.byte_length != len(raw)
             ):
                 raise ValueError("precomputed leaf node geometry differs from source")
-            leaf_nodes[index] = node
+            leaf_nodes[index] = leaf_node_value
 
         if leaves:
             root_node = copied_nodes.get((0, len(leaves)))

@@ -22,6 +22,7 @@ from sigma.binding import (
     history_step_v3,
 )
 from sigma.crypto.primitives import hash_bytes
+from sigma.layout import derive_history_layout_v3, derive_layout_v3
 from sigma.outputs.digest_v3 import SigmaDigestV3
 from sigma.rounds.deep_v3 import (
     DeepEvaluationV3,
@@ -58,7 +59,6 @@ from sigma.spec.ids_v3 import (
     RoundProfileIdV3,
     TrajectoryProfileIdV3,
 )
-from sigma.layout import derive_history_layout_v3, derive_layout_v3
 
 _CHECKPOINT_MAGIC = b"SIG3TCK0"
 

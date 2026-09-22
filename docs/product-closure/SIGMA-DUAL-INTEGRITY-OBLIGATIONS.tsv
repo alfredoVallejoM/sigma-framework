@@ -58,10 +58,10 @@ ST4-O06	ST	ST4	Delta update transactional	failure injection	COMPLETE	YES
 ST4-O07	ST	ST4	Boundary-shifting edits return RebuildRequired	negative tests	COMPLETE	YES
 ST4-O08	ST	ST4	Append equals full rebuild	random differential	COMPLETE	YES
 ST4-O09	ST	ST4	Append reuses frontier	work counter + benchmark	COMPLETE	NO
-ST5-O01	ST	ST5	Optimized Tree preserves reference bytes	differential suite	ACTIVE	YES
-ST5-O02	ST	ST5	No hidden large copies	allocation/I/O telemetry	ACTIVE	NO
-ST5-O03	ST	ST5	Streaming memory bounded	scale RSS ledger	ACTIVE	NO
-ST5-O04	ST	ST5	Index policy fallback explicit	resource-policy tests	ACTIVE	YES
+ST5-O01	ST	ST5	Optimized Tree preserves reference bytes	differential suite	COMPLETE	YES
+ST5-O02	ST	ST5	No hidden large copies	allocation/I/O telemetry	COMPLETE	NO
+ST5-O03	ST	ST5	Streaming memory bounded	scale RSS ledger	COMPLETE	NO
+ST5-O04	ST	ST5	Index policy fallback explicit	resource-policy tests	COMPLETE	YES
 SV0-O01	SV	SV0	Audit projects exact SigmaDigestV3	R12.5 corpus replay	PLANNED	YES
 SV0-O02	SV	SV0	Audit replays successfully	v3 differential tests	PLANNED	YES
 SV0-O03	SV	SV0	Round cardinality matches t/k	suite property tests	PLANNED	YES

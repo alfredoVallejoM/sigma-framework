@@ -1,7 +1,8 @@
 # ST0 — Implementation Evidence
 
-Status: **CANDIDATE FOR ADVERSARIAL REVIEW**  
-Reviewed source baseline before final adversarial review: `7d7acceb3e8470050ec5cc41f9e0fdb18802c1d7`  
+Status: **ADVERSARIAL REVIEW PASSED — ST0 COMPLETE CANDIDATE**  
+Reviewed implementation baseline: `0bf2be404b4b16b80592295cdc3c50be6f970227`  
+Campaign reconciliation baseline: `7d265e76a8cb921e0cc3142f9d668ef683262a30`  
 Date: 2026-09-22
 
 ## 1. Scope actually implemented
@@ -148,24 +149,37 @@ Command:
 
     python -m scripts.product_closure.st0_gate       --structural-cases 100001       --differential-cases 2000       --fuzz-cases 10000
 
-Result:
+Post-review gate V2 result:
 
 - passed: true
+- closure_eligible: true
 - structural cases: 100,001
 - independent differential cases: 2,000
-- deterministic codec mutations: 10,000
-- rejected malformed mutations: 3,143
-- accepted-but-different canonical mutations: 6,857
+- deterministic codec mutations: 100,000
+- explicit structural TLV mutations: 36
+- rejected malformed bit mutations: 47,023
+- accepted-but-different canonical bit mutations: 52,977
+- profile mutations: 25,000 rejected / 0 accepted
+- node mutations: 5,701 rejected / 19,299 accepted-different
+- frontier mutations: 8,372 rejected / 16,628 accepted-different
+- root mutations: 7,950 rejected / 17,050 accepted-different
 - differential root stream SHA-256:
   `27c4880352dc58d4b381e82ab069984afb63178a3eaee2023fb6519396a270b8`
+- differential frontier stream SHA-256:
+  `586cf34098c75de6189c89c55402ae6ca407cf3e1de5cd39e2db0927b7ae35cb`
 - mutation stream SHA-256:
-  `de8573088fc8cf8b7cea926562066fd3bc9920a99ee5a623ba915d21de6bfe8b`
+  `08d4b904f27070f536a33627bd43580097f7404abcebf42aab3023c7c1e00994`
 - frontier wire SHA-256:
-  `a069fc7478e862928b77a70bbbfcf45e68c88d6032c32977adf05ae80097d671`
+  `2b758b5bec56a03180e8c7e276be16fb955b6a44cfa7d4da4ee6881b34e79f9f`
+
+The V2 gate refuses to claim closure below the campaign thresholds
+(100,001 structural / 2,000 differential / 100,000 fuzz cases). It mutates
+TreeProfile, TreeNode, TreeFrontier and TreeRoot independently and additionally
+tests missing, duplicate, reordered and unknown top-level TLV fields.
 
 The mutation gate does not require all bit mutations to be rejected. Mutating a
-digest payload can yield a different well-formed root. The required invariant is
-that no changed accepted wire decodes to the original structural object.
+digest payload can yield a different well-formed claim. The required invariant
+is that no changed accepted wire decodes to the original structural object.
 
 ## 7. Complexity evidence
 
@@ -318,10 +332,67 @@ This limitation is not hidden. ST0 evidence instead consists of:
 A future REL gate still requires clean-wheel/full-package execution before public
 release.
 
+
+## 10A. Post-candidate adversarial review
+
+The post-candidate review found evidence/closure gaps, not a TreeCore semantic
+counterexample.
+
+Findings and remediation:
+
+1. **Fuzz scale mismatch.** The test matrix required at least 100k codec
+   mutations while the candidate evidence had 10k. The authoritative gate now
+   enforces a hard minimum of 100,000.
+2. **Missing explicit schema mutation campaign.** Random bit flips were not a
+   substitute for TREE-MUT-001. The gate now removes, duplicates, reorders and
+   adds unknown TLV fields across profile/node/frontier/root records.
+3. **Incomplete differential surface.** The independent oracle previously
+   checked TreeRoot only. It now independently constructs and serializes the
+   canonical frontier and the product implementation is byte-differentiated
+   against it in every differential case.
+4. **Boundary/adversarial coverage was implicit in random campaigns.** Dedicated
+   tests now cover 2^k leaf-count boundaries and neighbours, wrong height,
+   offset overflow and root truncation.
+5. **Campaign file layout drift.** The plan named frontier.py/index.py even
+   though the single semantic authority intentionally keeps frontier invariants
+   in model.py and no persistent index is needed in ST0. The plan was corrected
+   instead of creating redundant modules.
+
+No hashing, framing, domain, profile, chunking, combine, frontier or root
+semantics changed during these remediations.
+
+Post-review focused mirror:
+
+    PYTHONPATH=. pytest -q tests/unit tests/property tests/differential
+
+Result:
+
+    43 passed
+
+The complete closure-scale ST0 gate was also executed in the same isolated
+TreeCore mirror and passed. The independent KAT generator still yields:
+
+    9c9637c20c6424ba37d55a7781dd620ed7f22c516bd8aa15d5b916d93a7c70a9
+
+### Adversarial obligation disposition
+
+- ST0-O01 PASS — chunk/read partition determinism is differential and property tested.
+- ST0-O02 PASS — accepted leaf framing is uniquely delimited and binds algorithm id.
+- ST0-O03 PASS — accepted node framing uniquely binds geometry and ordered children.
+- ST0-O04 PASS — binary frontier uniqueness is proved structurally and exhausted through 100,000.
+- ST0-O05 PASS — combine consumes only profile and two child summaries.
+- ST0-O06 PASS WITH SCOPE — ST0 proves neutrality of canonical ordered prehashed reduction; a future parallel backend must normalize worker/schedule output to that sequence.
+- ST0-O07 PASS — empty construction has a dedicated domain and frozen KAT.
+- ST0-O08 PASS — legacy v2.2 remains read-only and type/wire/domain separated.
+- ST0-O09 PASS WITH SCOPE — parser bounds apply before TLV traversal; builder internal memory is bounded by one chunk plus O(log N) frontier and canonical counters reject overflow. This is not a host-level ResourcePolicy claim.
+- ST0-O10 PASS — derivation and local scaling evidence agree with O(mB) build and O(m log N) frontier/finalization.
+
+Adversarial review disposition: **PASS**.
+
 ## 11. Candidate conclusion
 
-All ST0-specific blocking obligations have implementation evidence and are ready
-for the required post-candidate adversarial review.
+All ST0-specific blocking obligations have implementation evidence and the
+required post-candidate adversarial review has passed.
 
-No ST1 functionality is authorized to consume TreeCore as COMPLETE until that
-review is recorded.
+ST0 may be marked COMPLETE in the stage/obligation ledgers. ST1 remains a
+separate campaign and must not retroactively alter Sigma Tree V1 wire semantics.

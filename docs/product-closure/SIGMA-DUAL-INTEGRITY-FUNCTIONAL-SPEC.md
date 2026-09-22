@@ -71,7 +71,7 @@ Toda nueva operación declara parámetros de tamaño, fórmula de coste esperada
     │   └── legacy_v22.py
     │
     ├── trajectory/
-    │   ├── audit.py
+    │   ├── audit_v3.py
     │   ├── checkpoint.py
     │   ├── policy.py
     │   ├── receipt.py
@@ -109,8 +109,8 @@ Objetos iniciales:
 - SIGTRSM1 — TreeResumeCheckpoint
 - SIGTDLT1 — TreeDelta
 - SIGTMAN1 — Manifest
-- SIGTAUD1 — TrajectoryAudit
-- SIGTCHK1 — TrajectoryCheckpoint
+- SIG3AUD0 — TrajectoryAuditV3
+- SIG3TCK0 — TrajectoryCheckpoint V1 (reservado; SV1)
 - SIGPOLY1 — VerificationPolicy
 - SIGRCPT1 — VerificationReceipt
 - SIGARTF1 — SigmaArtifact

@@ -114,8 +114,10 @@ def estimate_index_bytes(
 def plan_tree_index(
     byte_length: int,
     operation: TreeIndexedOperationV1,
-    policy: TreeScalePolicyV1 = TreeScalePolicyV1(),
+    policy: TreeScalePolicyV1 | None = None,
 ) -> TreeIndexPlanV1:
+    if policy is None:
+        policy = TreeScalePolicyV1()
     if not isinstance(policy, TreeScalePolicyV1):
         raise TypeError("policy must be TreeScalePolicyV1")
     estimated = estimate_index_bytes(byte_length, operation)
@@ -163,8 +165,10 @@ def prove_leaf_scaled(
     data: bytes,
     leaf_index: int,
     *,
-    policy: TreeScalePolicyV1 = TreeScalePolicyV1(),
+    policy: TreeScalePolicyV1 | None = None,
 ) -> ScaledProofResultV1:
+    if policy is None:
+        policy = TreeScalePolicyV1()
     if not isinstance(data, bytes):
         raise TypeError("proof source must be bytes")
     plan = plan_tree_index(len(data), TreeIndexedOperationV1.PROOF, policy)
@@ -182,8 +186,10 @@ def prove_range_scaled(
     start: int,
     length: int,
     *,
-    policy: TreeScalePolicyV1 = TreeScalePolicyV1(),
+    policy: TreeScalePolicyV1 | None = None,
 ) -> ScaledProofResultV1:
+    if policy is None:
+        policy = TreeScalePolicyV1()
     if not isinstance(data, bytes):
         raise TypeError("proof source must be bytes")
     plan = plan_tree_index(len(data), TreeIndexedOperationV1.PROOF, policy)
@@ -199,8 +205,10 @@ def prove_range_scaled(
 def delta_index_scaled(
     data: bytes,
     *,
-    policy: TreeScalePolicyV1 = TreeScalePolicyV1(),
+    policy: TreeScalePolicyV1 | None = None,
 ) -> tuple[TreeDeltaIndex, TreeIndexPlanV1]:
+    if policy is None:
+        policy = TreeScalePolicyV1()
     if not isinstance(data, bytes):
         raise TypeError("delta source must be bytes")
     plan = plan_tree_index(len(data), TreeIndexedOperationV1.DELTA, policy)

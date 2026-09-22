@@ -5,45 +5,83 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Iterable
 
-from .codec import domain_tag, record, u16, u32, u64
-from .ids import TREE_DIGEST_SIZE, TreeAlgorithmId, TreeDomainId
+from .codec import domain_tag, record, tlv, u16, u32, u64
+from .ids import TREE_DIGEST_SIZE, TREE_WIRE_VERSION, TreeAlgorithmId, TreeDomainId
 from .model import DEFAULT_PROFILE, TreeFrontier, TreeNode, TreeProfileV1, TreeRoot, validate_digests
 
 
-def _hash(algorithm: TreeAlgorithmId, payload: bytes) -> bytes:
+def _new_hasher(algorithm: TreeAlgorithmId):
     if algorithm is TreeAlgorithmId.SHA512:
-        return hashlib.sha512(payload).digest()
+        return hashlib.sha512()
     if algorithm is TreeAlgorithmId.SHA3_512:
-        return hashlib.sha3_512(payload).digest()
+        return hashlib.sha3_512()
     if algorithm is TreeAlgorithmId.BLAKE2B_512:
-        return hashlib.blake2b(payload, digest_size=TREE_DIGEST_SIZE).digest()
+        return hashlib.blake2b(digest_size=TREE_DIGEST_SIZE)
     if algorithm is TreeAlgorithmId.SHAKE256_512:
-        return hashlib.shake_256(payload).digest(TREE_DIGEST_SIZE)
+        return hashlib.shake_256()
     raise ValueError("unsupported Sigma Tree algorithm")  # pragma: no cover
 
 
-def leaf_node(profile: TreeProfileV1, index: int, offset: int, leaf: bytes) -> TreeNode:
-    if not isinstance(leaf, bytes):
-        raise TypeError("leaf must be bytes")
-    if not 1 <= len(leaf) <= profile.chunk_size:
+def _hash_parts(algorithm: TreeAlgorithmId, parts) -> bytes:
+    hasher = _new_hasher(algorithm)
+    for part in parts:
+        hasher.update(part)
+    if algorithm is TreeAlgorithmId.SHAKE256_512:
+        return hasher.digest(TREE_DIGEST_SIZE)
+    return hasher.digest()
+
+
+def _hash(algorithm: TreeAlgorithmId, payload: bytes) -> bytes:
+    return _hash_parts(algorithm, (payload,))
+
+
+def _leaf_node_buffer(
+    profile: TreeProfileV1,
+    index: int,
+    offset: int,
+    leaf: bytes | bytearray | memoryview,
+) -> TreeNode:
+    if not isinstance(leaf, (bytes, bytearray, memoryview)):
+        raise TypeError("leaf buffer must support bytes-like access")
+    leaf_length = len(leaf)
+    if not 1 <= leaf_length <= profile.chunk_size:
         raise ValueError("leaf length is outside profile bounds")
     if offset != index * profile.chunk_size:
         raise ValueError("canonical leaf offset does not match its index")
+
     digests = []
     for algorithm in profile.algorithms:
-        frame = record(
-            b"SIGTLEAF",
+        prefix = tlv(
             (
                 (1, profile.to_bytes()),
                 (2, u16(int(algorithm))),
                 (3, u64(index)),
                 (4, u64(offset)),
-                (5, u32(len(leaf))),
-                (6, leaf),
-            ),
+                (5, u32(leaf_length)),
+            )
         )
-        digests.append(_hash(algorithm, domain_tag(TreeDomainId.LEAF) + frame))
-    return TreeNode(index, 1, len(leaf), 0, tuple(digests))
+        field_header = b"\x00\x06" + u32(leaf_length)
+        body_length = len(prefix) + len(field_header) + leaf_length
+        header = b"SIGTLEAF" + u16(TREE_WIRE_VERSION) + u32(body_length)
+        digests.append(
+            _hash_parts(
+                algorithm,
+                (
+                    domain_tag(TreeDomainId.LEAF),
+                    header,
+                    prefix,
+                    field_header,
+                    leaf,
+                ),
+            )
+        )
+    return TreeNode(index, 1, leaf_length, 0, tuple(digests))
+
+
+def leaf_node(profile: TreeProfileV1, index: int, offset: int, leaf: bytes) -> TreeNode:
+    if not isinstance(leaf, bytes):
+        raise TypeError("leaf must be bytes")
+    return _leaf_node_buffer(profile, index, offset, leaf)
 
 
 def combine_nodes(profile: TreeProfileV1, left: TreeNode, right: TreeNode, *, require_equal_perfect: bool = False) -> TreeNode:
@@ -157,11 +195,19 @@ class TreeBuilder:
             if len(self._buffer) == self.profile.chunk_size:
                 self._push_leaf(bytes(self._buffer))
                 self._buffer.clear()
+        view = memoryview(data)
         while len(data) - offset >= self.profile.chunk_size:
             end = offset + self.profile.chunk_size
-            self._push_leaf(data[offset:end])
+            self._integrate_leaf_node(
+                _leaf_node_buffer(
+                    self.profile,
+                    self._leaf_count,
+                    self._leaf_count * self.profile.chunk_size,
+                    view[offset:end],
+                )
+            )
             offset = end
-        self._buffer.extend(data[offset:])
+        self._buffer.extend(view[offset:])
 
     def _integrate_leaf_node(self, node: TreeNode) -> None:
         if node.start_leaf != self._leaf_count or node.leaf_count != 1 or node.height != 0:

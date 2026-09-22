@@ -325,9 +325,9 @@ def run_gate(
         "tree_result_stream_sha256": tree_stream.hexdigest(),
         "trajectory_result_stream_sha256": trajectory_stream.hexdigest(),
         "composition_stream_sha256": composition_stream.hexdigest(),
-        "dual_security_width_addition_claim": false,
-        "tree_trajectory_claims_independent": true,
-        "empirical_performance_claims": false,
+        "dual_security_width_addition_claim": False,
+        "tree_trajectory_claims_independent": True,
+        "empirical_performance_claims": False,
     }
 
 

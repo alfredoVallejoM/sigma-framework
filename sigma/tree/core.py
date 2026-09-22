@@ -36,6 +36,8 @@ def leaf_node(profile: TreeProfileV1, index: int, offset: int, leaf: bytes) -> T
 def combine_nodes(profile: TreeProfileV1, left: TreeNode, right: TreeNode, *, require_equal_perfect: bool = False) -> TreeNode:
     if left.end_leaf != right.start_leaf:
         raise ValueError("tree nodes are not adjacent")
+    if left.byte_length != left.leaf_count * profile.chunk_size:
+        raise ValueError("left subtree must be full before a right sibling")
     if require_equal_perfect and not (left.is_perfect and right.is_perfect and left.height == right.height):
         raise ValueError("frontier carry requires equal perfect subtrees")
     height = max(left.height, right.height) + 1

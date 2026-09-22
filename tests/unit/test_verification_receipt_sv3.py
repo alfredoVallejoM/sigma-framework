@@ -155,7 +155,7 @@ def test_unsigned_receipt_never_verifies_as_signed():
 
 
 def test_receipt_builder_rejects_policy_decision_mismatch():
-    policy, decision = _accepted_decision()
+    _policy, decision = _accepted_decision()
     other_policy = VerificationPolicyV1(max_input_bytes=1024)
     assert other_policy.policy_id != decision.policy_id
     with pytest.raises(ValueError, match="policy_id"):

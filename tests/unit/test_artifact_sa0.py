@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 import pytest
 
 from sigma.artifact import (
-    ArtifactDecodeError,
     ArtifactDescriptorV1,
     ArtifactIdentityV1,
     ArtifactProfileV1,

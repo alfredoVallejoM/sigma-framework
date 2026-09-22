@@ -224,3 +224,68 @@ def test_full_verification_binds_source_not_only_internal_trajectory(
     )
     assert verify_trajectory_audit_full_v3(BytesSource(b"message-A"), audit)
     assert not verify_trajectory_audit_full_v3(BytesSource(b"message-B"), audit)
+
+
+def test_round_indices_must_be_contiguous():
+    audit = audit_from_evaluation_v3(
+        _evaluation(SuiteIdV3.REFERENCE_IAP_HISTORY_V3)
+    )
+    first = audit.rounds[0]
+    with pytest.raises(ValueError, match="contiguous"):
+        replace(audit, rounds=(replace(first, index=1), *audit.rounds[1:]))
+
+
+def test_compact_rejects_full_only_evidence():
+    audit = audit_from_evaluation_v3(
+        _evaluation(SuiteIdV3.REFERENCE_IAP_V3),
+        mode=TrajectoryAuditModeV3.COMPACT,
+    )
+    first = audit.rounds[0]
+    with pytest.raises(ValueError, match="FULL-only"):
+        replace(
+            audit,
+            rounds=(replace(first, state_frame=b"not-allowed"), *audit.rounds[1:]),
+        )
+
+
+def test_full_deep_rejects_wrong_branch_count():
+    audit = audit_from_evaluation_v3(
+        _evaluation(SuiteIdV3.DEEP_V3),
+        mode=TrajectoryAuditModeV3.FULL,
+    )
+    first = audit.rounds[0]
+    with pytest.raises(ValueError, match="branch-frame count"):
+        replace(
+            audit,
+            rounds=(
+                replace(first, branch_frames=first.branch_frames[:-1]),
+                *audit.rounds[1:],
+            ),
+        )
+
+
+def test_full_deep_requires_fold_but_vector_forbids_it():
+    scalar = audit_from_evaluation_v3(
+        _evaluation(SuiteIdV3.DEEP_V3),
+        mode=TrajectoryAuditModeV3.FULL,
+    )
+    first_scalar = scalar.rounds[0]
+    with pytest.raises(ValueError, match="fold-frame presence"):
+        replace(
+            scalar,
+            rounds=(replace(first_scalar, fold_frame=b""), *scalar.rounds[1:]),
+        )
+
+    vector = audit_from_evaluation_v3(
+        _evaluation(SuiteIdV3.DEEP_VECTOR_V3),
+        mode=TrajectoryAuditModeV3.FULL,
+    )
+    first_vector = vector.rounds[0]
+    with pytest.raises(ValueError, match="fold-frame presence"):
+        replace(
+            vector,
+            rounds=(
+                replace(first_vector, fold_frame=b"unexpected"),
+                *vector.rounds[1:],
+            ),
+        )

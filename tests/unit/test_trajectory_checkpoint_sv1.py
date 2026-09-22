@@ -147,3 +147,49 @@ def test_checkpoint_at_final_index_needs_no_more_rounds():
     assert advance_trajectory_checkpoint_v3(checkpoint, rounds=0) == checkpoint
     continuation = continue_trajectory_checkpoint_v3(checkpoint)
     assert continuation.states == (evaluation.states[-1],)
+
+
+def _top_level_fields(encoded: bytes) -> list[tuple[int, bytes]]:
+    body_length = int.from_bytes(encoded[10:14], "big")
+    assert body_length == len(encoded) - 14
+    fields = []
+    offset = 14
+    while offset < len(encoded):
+        tag = int.from_bytes(encoded[offset : offset + 2], "big")
+        length = int.from_bytes(encoded[offset + 2 : offset + 6], "big")
+        offset += 6
+        fields.append((tag, encoded[offset : offset + length]))
+        offset += length
+    return fields
+
+
+def _rebuild_record(template: bytes, fields: list[tuple[int, bytes]]) -> bytes:
+    body = b"".join(
+        tag.to_bytes(2, "big") + len(value).to_bytes(4, "big") + value
+        for tag, value in fields
+    )
+    return template[:10] + len(body).to_bytes(4, "big") + body
+
+
+def test_checkpoint_codec_rejects_missing_duplicate_reordered_unknown_fields():
+    evaluation = _evaluation(SuiteIdV3.DEEP_HISTORY_V3)
+    encoded = checkpoint_from_evaluation_v3(evaluation, 1).to_bytes()
+    fields = _top_level_fields(encoded)
+
+    mutations = []
+    for index, field in enumerate(fields):
+        mutations.append(_rebuild_record(encoded, fields[:index] + fields[index + 1 :]))
+        mutations.append(
+            _rebuild_record(
+                encoded,
+                fields[: index + 1] + [field] + fields[index + 1 :],
+            )
+        )
+    reordered = list(fields)
+    reordered[0], reordered[1] = reordered[1], reordered[0]
+    mutations.append(_rebuild_record(encoded, reordered))
+    mutations.append(_rebuild_record(encoded, fields + [(0xFFFF, b"")]))
+
+    for mutated in mutations:
+        with pytest.raises(ValueError):
+            TrajectoryCheckpointV1.from_bytes(mutated)

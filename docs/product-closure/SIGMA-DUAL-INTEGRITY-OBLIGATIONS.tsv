@@ -62,27 +62,27 @@ ST5-O01	ST	ST5	Optimized Tree preserves reference bytes	differential suite	COMPL
 ST5-O02	ST	ST5	No hidden large copies	allocation/I/O telemetry	COMPLETE	NO
 ST5-O03	ST	ST5	Streaming memory bounded	scale RSS ledger	COMPLETE	NO
 ST5-O04	ST	ST5	Index policy fallback explicit	resource-policy tests	COMPLETE	YES
-SV0-O01	SV	SV0	Audit projects exact SigmaDigestV3	R12.5 corpus replay	CANDIDATE	YES
-SV0-O02	SV	SV0	Audit replays successfully	v3 differential tests	CANDIDATE	YES
-SV0-O03	SV	SV0	Round cardinality matches t/k	suite property tests	CANDIDATE	YES
-SV0-O04	SV	SV0	Historical causality H_i -> H_i+1 exact	mutation + independent_v3 comparison	CANDIDATE	YES
-SV0-O05	SV	SV0	Audit links exact layout/frame IDs	corpus comparison	CANDIDATE	YES
-SV0-O06	SV	SV0	Deep vs DeepVector semantics preserved	cross-suite tests	CANDIDATE	YES
-SV0-O07	SV	SV0	Compact/full audits project same digest	differential	CANDIDATE	YES
-SV0-O08	SV	SV0	Audit makes no security-width claim	manual claim audit	CANDIDATE	YES
-SV1-O01	SV	SV1	Trajectory continuation equals direct suffix	all checkpoint indices differential	CANDIDATE	YES
-SV1-O02	SV	SV1	Final digest identical after resume	corpus + random tests	CANDIDATE	YES
-SV1-O03	SV	SV1	Binding/context/parameters immutable	negative tests	CANDIDATE	YES
-SV1-O04	SV	SV1	Round index cannot silently rewind/skip	negative tests	CANDIDATE	YES
-SV1-O05	SV	SV1	Internal checkpoint distinct from source verification	API separation review	CANDIDATE	YES
-SV1-O06	SV	SV1	Checkpoint codec canonical	codec fuzz + mutation	CANDIDATE	YES
-SV2-O01	SV	SV2	Parse validity does not imply policy acceptance	policy tests	CANDIDATE	YES
-SV2-O02	SV	SV2	Four-way decision explicit	API exhaustiveness tests	CANDIDATE	YES
-SV2-O03	SV	SV2	Policy cheap checks precede expensive work	instrumentation	CANDIDATE	YES
-SV2-O04	SV	SV2	Policy decision deterministic	repeatability tests	CANDIDATE	YES
-SV2-O05	SV	SV2	Normalized policy identity stable	KAT + codec tests	CANDIDATE	YES
-SV2-O06	SV	SV2	Defined strict-policy subset is monotone	property tests	CANDIDATE	NO
-SV2-O07	SV	SV2	Legacy v2.2 requires explicit opt-in	negative default tests	CANDIDATE	YES
+SV0-O01	SV	SV0	Audit projects exact SigmaDigestV3	R12.5 corpus replay	COMPLETE	YES
+SV0-O02	SV	SV0	Audit replays successfully	v3 differential tests	COMPLETE	YES
+SV0-O03	SV	SV0	Round cardinality matches t/k	suite property tests	COMPLETE	YES
+SV0-O04	SV	SV0	Historical causality H_i -> H_i+1 exact	mutation + independent_v3 comparison	COMPLETE	YES
+SV0-O05	SV	SV0	Audit links exact layout/frame IDs	corpus comparison	COMPLETE	YES
+SV0-O06	SV	SV0	Deep vs DeepVector semantics preserved	cross-suite tests	COMPLETE	YES
+SV0-O07	SV	SV0	Compact/full audits project same digest	differential	COMPLETE	YES
+SV0-O08	SV	SV0	Audit makes no security-width claim	manual claim audit	COMPLETE	YES
+SV1-O01	SV	SV1	Trajectory continuation equals direct suffix	all checkpoint indices differential	COMPLETE	YES
+SV1-O02	SV	SV1	Final digest identical after resume	corpus + random tests	COMPLETE	YES
+SV1-O03	SV	SV1	Binding/context/parameters immutable	negative tests	COMPLETE	YES
+SV1-O04	SV	SV1	Round index cannot silently rewind/skip	negative tests	COMPLETE	YES
+SV1-O05	SV	SV1	Internal checkpoint distinct from source verification	API separation review	COMPLETE	YES
+SV1-O06	SV	SV1	Checkpoint codec canonical	codec fuzz + mutation	COMPLETE	YES
+SV2-O01	SV	SV2	Parse validity does not imply policy acceptance	policy tests	COMPLETE	YES
+SV2-O02	SV	SV2	Four-way decision explicit	API exhaustiveness tests	COMPLETE	YES
+SV2-O03	SV	SV2	Policy cheap checks precede expensive work	instrumentation	COMPLETE	YES
+SV2-O04	SV	SV2	Policy decision deterministic	repeatability tests	COMPLETE	YES
+SV2-O05	SV	SV2	Normalized policy identity stable	KAT + codec tests	COMPLETE	YES
+SV2-O06	SV	SV2	Defined strict-policy subset is monotone	property tests	COMPLETE	NO
+SV2-O07	SV	SV2	Legacy v2.2 requires explicit opt-in	negative default tests	COMPLETE	YES
 SV3-O01	SV	SV3	Receipt binds artifact/policy/verifier/result	mutation tests	PLANNED	YES
 SV3-O02	SV	SV3	Optional receipt signature covers canonical record	signature tests	PLANNED	YES
 SV3-O03	SV	SV3	Receipt does not imply opaque provenance truth	manual claim audit	PLANNED	NO

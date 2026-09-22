@@ -230,6 +230,8 @@ class TrajectoryContinuationV1:
             not isinstance(value, bytes) for value in self.histories
         ):
             raise TypeError("continuation histories must contain bytes")
+        if self.histories and len(self.histories) != len(self.states):
+            raise ValueError("continuation histories must align with states")
         if not isinstance(self.digest, SigmaDigestV3):
             raise TypeError("continuation digest must be SigmaDigestV3")
 
@@ -428,15 +430,11 @@ def advance_trajectory_checkpoint_v3(
     return current
 
 
-def finalize_trajectory_checkpoint_v3(
-    checkpoint: TrajectoryCheckpointV1,
+def _digest_from_final_checkpoint(
+    final: TrajectoryCheckpointV1,
 ) -> SigmaDigestV3:
-    if not isinstance(checkpoint, TrajectoryCheckpointV1):
-        raise TypeError("checkpoint must be TrajectoryCheckpointV1")
-    final = advance_trajectory_checkpoint_v3(
-        checkpoint,
-        rounds=checkpoint.final_round_index - checkpoint.round_index,
-    )
+    if final.round_index != final.final_round_index:
+        raise ValueError("checkpoint is not at final trajectory state")
     window_states = (*final.window_prefix, final.state)
     if len(window_states) != final.parameters.state_count:
         raise RuntimeError("continued checkpoint did not reconstruct full public window")
@@ -451,6 +449,18 @@ def finalize_trajectory_checkpoint_v3(
         header,
         TrajectoryWindow(final.parameters, tuple(window_states)),
     )
+
+
+def finalize_trajectory_checkpoint_v3(
+    checkpoint: TrajectoryCheckpointV1,
+) -> SigmaDigestV3:
+    if not isinstance(checkpoint, TrajectoryCheckpointV1):
+        raise TypeError("checkpoint must be TrajectoryCheckpointV1")
+    final = advance_trajectory_checkpoint_v3(
+        checkpoint,
+        rounds=checkpoint.final_round_index - checkpoint.round_index,
+    )
+    return _digest_from_final_checkpoint(final)
 
 
 def continue_trajectory_checkpoint_v3(
@@ -470,7 +480,7 @@ def continue_trajectory_checkpoint_v3(
         states.append(current.state)
         if current.history is not None:
             histories.append(current.history.to_bytes())
-    digest = finalize_trajectory_checkpoint_v3(checkpoint)
+    digest = _digest_from_final_checkpoint(current)
     return TrajectoryContinuationV1(
         checkpoint.round_index,
         tuple(states),

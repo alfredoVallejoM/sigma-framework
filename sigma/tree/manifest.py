@@ -217,7 +217,7 @@ def _tree_root_from_file(path: Path) -> TreeRoot:
 
         builder = TreeBuilder()
         while True:
-            chunk = os.read(fd, 1024 * 1024)
+            chunk = os.read(fd, DEFAULT_PROFILE.chunk_size)
             if not chunk:
                 break
             builder.update(chunk)

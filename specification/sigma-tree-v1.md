@@ -94,18 +94,22 @@ For canonical leaf `i`, byte offset is:
 
 and leaf length is in `[1,65536]`.
 
-The leaf frame is:
+The leaf frame is branch-bound. For branch algorithm `H_j`:
 
-    record("SIGTLEAF",
-      1: TreeProfileV1,
-      2: leaf_index:u64,
-      3: byte_offset:u64,
-      4: byte_length:u32,
-      5: exact leaf bytes)
+    LeafFrame_i,j =
+      record("SIGTLEAF",
+        1: TreeProfileV1,
+        2: algorithm_id_j:u16,
+        3: leaf_index:u64,
+        4: byte_offset:u64,
+        5: byte_length:u32,
+        6: exact leaf bytes)
 
-For branch algorithm `H_j`:
+    L_i,j = H_j(domain(LEAF) || LeafFrame_i,j)
 
-    L_i,j = H_j(domain(LEAF) || LeafFrame_i)
+Binding the algorithm ID in the canonical leaf frame prevents future registry
+extensions from treating identical leaf transcript bytes as two nominally
+different branches.
 
 A leaf node is:
 
@@ -148,7 +152,18 @@ Given adjacent nodes `L,R`:
 
     L.start_leaf + L.leaf_count = R.start_leaf
 
-define:
+let `n = L.leaf_count + R.leaf_count` and let `p` be the largest power of
+two strictly smaller than `n`. Canonical composition additionally requires:
+
+    L.leaf_count = p
+
+and the left subtree must be byte-full:
+
+    L.byte_length = L.leaf_count * 65536
+
+Only the globally rightmost subtree may contain the final short leaf.
+
+Then define:
 
     start = L.start_leaf
     count = L.leaf_count + R.leaf_count
@@ -344,9 +359,9 @@ Frozen KAT corpus:
 
     specification/test-vectors/sigma-tree-v1-st0.json
 
-SHA-256 of the initial KAT file:
+SHA-256 of the ST0 KAT file after the adversarial framing hardening:
 
-    3fbd83dc80147127e96374a958b1924e18c4a665dc85381051003417dfba5ab9
+    9c9637c20c6424ba37d55a7781dd620ed7f22c516bd8aa15d5b916d93a7c70a9
 
 Independent oracle:
 

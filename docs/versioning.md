@@ -1,8 +1,7 @@
 # Política de versiones de Sigma
 
-Estado actual: `2.2.0a2` sigue siendo el número de paquete del baseline
-histórico mientras Sigma v3 permanece pre-freeze. v2.2 se conserva como oráculo
-de regresión; la línea de investigación activa es Sigma v3 / Sigma-IAP. R12
+Estado actual: `3.0.0a1` es el número de paquete de la línea de investigación
+Sigma v3 / Sigma-IAP. v2.2 se conserva como oráculo histórico de regresión; R12
 permanece byte-frozen y R12.5 usa IDs distintos para feedback histórico.
 Ninguna suite v3 es todavía estable ni ha recibido revisión criptográfica
 externa.
@@ -12,7 +11,7 @@ ellas no implica compatibilidad ni estabilidad.
 
 | Dimensión | Valor actual | Significado |
 |---|---:|---|
-| paquete Python | `2.2.0a2` | evolución de API, herramientas y distribución |
+| paquete Python | `3.0.0a1` | evolución de API, herramientas y distribución |
 | contexto wire | `2` | framing binario de `SigmaContextV2` |
 | digest wire | `2` | framing binario de `SigmaDigestV2` |
 | evidencia wire | `2` | envelope tipado `SIGMAAE` de las suites v2.2 |
@@ -61,6 +60,5 @@ partir de otra.
 - Los IDs R12 no se reciclan ni se reinterpretan.
 - R12.5 puede evolucionar sólo mediante nuevos IDs si cambia cualquier byte
   normativo después de su eventual PASS/freeze.
-- El número de paquete migrará a 3.x únicamente en el gate de release definido
-  por R14; contener código v3 experimental no convierte `2.2.0a2` en una
-  garantía de estabilidad v3.
+- El número de paquete 3.x identifica la línea de API/paquete y no constituye
+  por sí mismo una garantía de estabilidad o seguridad de las suites v3.

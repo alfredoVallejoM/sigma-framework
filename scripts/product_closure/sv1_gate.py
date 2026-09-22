@@ -72,7 +72,7 @@ def run_gate(
 
     for suite_position, suite_id in enumerate(ALL_SUITES):
         suite_cases = per_suite + (1 if suite_position < remainder else 0)
-        for case_index in range(suite_cases):
+        for _case_index in range(suite_cases):
             message = rng.randbytes(rng.randrange(0, 65))
             salt = rng.randbytes(rng.randrange(0, 9))
             challenge = rng.randbytes(rng.randrange(0, 9))

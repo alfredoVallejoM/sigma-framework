@@ -92,3 +92,25 @@ Evidencia normativa de cierre:
 - ST2-IMPLEMENTATION-EVIDENCE.md
 
 ST3 permanece PLANNED.
+
+
+ST3 — Portable Tree Resume — está **COMPLETE** tras revisión adversaria.
+
+Cierre ST3:
+- 100,000 split/resume cases PASS;
+- 13 directed chunk-boundary cases PASS;
+- 500 independent differential cases PASS;
+- 1,000 repeated checkpoint cycles PASS;
+- 20,000 checkpoint-wire mutations: 8,503 rejected, 11,497 accepted-but-invalid, 0 still-valid;
+- transactional write failure preserves previous checkpoint;
+- restore serializa sólo frontier + tail, nunca estado interno de hashlib;
+- checkpoint wire crece 350 bytes por frontier node en el sweep estructural;
+- KAT ST3 SHA-256:
+  `c46ad683e2c295aa251873c3de6b08eff8b78055f7bf3e5d80a4b308b9499e62`.
+
+SourceHint permanece explícitamente heurístico y no forma parte de la seguridad semántica.
+
+Evidencia normativa:
+- ST3-IMPLEMENTATION-EVIDENCE.md
+
+ST4 permanece PLANNED.

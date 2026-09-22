@@ -93,3 +93,27 @@ def test_prehashed_reducer_rejects_data_after_short_leaf():
     digest = (b"a" * 64,) * 4
     with pytest.raises(ValueError):
         TreeBuilder.from_prehashed_leaves(((digest, 1), (digest, 65_536)))
+
+
+def test_combine_rejects_noncanonical_split():
+    d = (b"d" * 64,) * 4
+    left = TreeNode(0, 3, 3 * 65_536, 2, d)
+    right = TreeNode(3, 2, 2 * 65_536, 1, d)
+    with pytest.raises(ValueError, match="canonical recursive split"):
+        combine_nodes(DEFAULT_PROFILE, left, right)
+
+
+def test_combine_rejects_short_left_subtree():
+    d = (b"d" * 64,) * 4
+    left = TreeNode(0, 2, 65_537, 1, d)
+    right = TreeNode(2, 1, 1, 0, d)
+    with pytest.raises(ValueError, match="left subtree must be full"):
+        combine_nodes(DEFAULT_PROFILE, left, right)
+
+
+def test_frontier_rejects_short_non_rightmost_subtree():
+    d = (b"d" * 64,) * 4
+    left = TreeNode(0, 2, 65_537, 1, d)
+    right = TreeNode(2, 1, 1, 0, d)
+    with pytest.raises(ValueError, match="rightmost"):
+        TreeFrontier((left, right))

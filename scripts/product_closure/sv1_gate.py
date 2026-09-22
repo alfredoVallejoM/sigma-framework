@@ -135,12 +135,20 @@ def run_gate(
                         _mutate(checkpoint.history.digest),
                     )
                     corrupted_history = replace(checkpoint, history=bad_history)
-                    changed_history = continue_trajectory_checkpoint_v3(
-                        corrupted_history
-                    )
-                    if changed_history.digest.to_bytes() == expected_digest:
+                    if index < checkpoint.final_round_index:
+                        changed_history = continue_trajectory_checkpoint_v3(
+                            corrupted_history
+                        )
+                        if changed_history.digest.to_bytes() == expected_digest:
+                            raise AssertionError(
+                                "mutated checkpoint history preserved final digest"
+                            )
+                    elif verify_trajectory_checkpoint_source_v3(
+                        BytesSource(message),
+                        corrupted_history,
+                    ):
                         raise AssertionError(
-                            "mutated checkpoint history preserved final digest"
+                            "mutated final history incorrectly rebound to source"
                         )
                     mutations += 1
 

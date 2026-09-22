@@ -20,7 +20,7 @@ from sigma.trajectory.policy_v1 import (
 )
 from sigma.tree.core import TreeBuilder, build_tree
 from sigma.tree.ids import ManifestEntryKind
-from sigma.tree.manifest import ManifestEntryV1, ManifestV1
+from sigma.tree.manifest import ManifestV1
 from sigma.tree.model import TreeRoot
 
 from .ids import ArtifactProfileV1

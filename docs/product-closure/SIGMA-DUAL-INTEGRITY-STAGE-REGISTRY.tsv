@@ -1,0 +1,20 @@
+stage	track	title	status	depends_on	blocking_for_release	closure_rule
+BASE	BASE	Compatibility and claim boundary	ACTIVE		YES	All DI-INV blocking obligations COMPLETE
+ST0	ST	Sigma Tree core extraction	PLANNED	BASE	YES	ST0 blocking obligations + adversarial review
+ST1	ST	Canonical manifest	PLANNED	ST0	YES	ST1 blocking obligations + cross-platform fixtures
+ST2	ST	Inclusion and range proofs	PLANNED	ST0	YES	ST2 blocking obligations + independent verifier
+ST3	ST	Portable tree resume	PLANNED	ST0	YES	ST3 blocking obligations + 100k split differential
+ST4	ST	Delta and append	PLANNED	ST0;ST3	YES	ST4 blocking obligations + performance gate
+ST5	ST	Tree performance and scale closure	PLANNED	ST2;ST3;ST4	NO	Performance ledger frozen and reviewed
+SV0	SV	Trajectory audit	PLANNED	BASE	YES	SV0 blocking obligations + R12.5 corpus replay
+SV1	SV	Trajectory checkpoint	PLANNED	SV0	YES	SV1 blocking obligations + all-index differential
+SV2	SV	Verification policy	PLANNED	SV0	YES	SV2 blocking obligations + policy adversarial suite
+SV3	SV	Receipts and batch	PLANNED	SV2	NO	SV3 blocking obligations
+SA0	SA	Canonical Sigma Artifact	PLANNED	ST1;SV0	YES	SA0 blocking obligations + canonical corpus
+SA1	SA	Dual verification	PLANNED	SA0;ST2;SV2	YES	SA1 blocking obligations + independent side verification
+SA2	SA	Provenance and signature	PLANNED	SA0	NO	SA2 blocking obligations
+SA3	SA	Product API and CLI closure	PLANNED	SA1	YES	All mandatory workflows pass from clean wheel
+REL0	REL	Historical compatibility gate	PLANNED	ST4;SV2;SA1	YES	All frozen historical corpora byte exact
+REL1	REL	Independent consumer	PLANNED	REL0	YES	Independent consumer zero divergences
+REL2	REL	Packaging documentation examples	PLANNED	REL1;SA3	YES	Clean wheel/SBOM/examples pass
+REL3	REL	Adversarial release review	PLANNED	REL2	YES	Manual obligation-by-obligation PASS

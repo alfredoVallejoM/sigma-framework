@@ -16,9 +16,13 @@ def test_independent_delta_root_matches_product():
         size = rng.randrange(1, 10 * 65_536 + 257)
         data = rng.randbytes(size)
         edits = []
-        for _ in range(rng.randrange(1, 5)):
-            start = rng.randrange(size)
-            width = rng.randrange(1, min(256, size - start) + 1)
+        available_leaves = list(range((size + 65_535) // 65_536))
+        rng.shuffle(available_leaves)
+        for leaf in available_leaves[: rng.randrange(1, min(5, len(available_leaves) + 1))]:
+            leaf_start = leaf * 65_536
+            leaf_end = min(leaf_start + 65_536, size)
+            start = rng.randrange(leaf_start, leaf_end)
+            width = rng.randrange(1, min(256, leaf_end - start) + 1)
             edits.append(TreeEditV1(start, width, rng.randbytes(width)))
 
         index = TreeDeltaIndex(data)

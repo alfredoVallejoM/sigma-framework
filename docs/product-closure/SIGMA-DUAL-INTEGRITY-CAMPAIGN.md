@@ -1747,67 +1747,399 @@ COMPLETE:
 
 ## 10. SV1 — Trajectory Checkpoint
 
+### Objetivo
+
+Reanudar la trayectoria iterada después de haber fijado C, P_X y (t,k), sin
+volver a ejecutar source preparation/anchor.
+
+SV1 es distinto de `IncrementalSigmaV3/SigmaCheckpointV3`, que checkpointa
+prefijos de source y produce digests provisionales.
+
+### Implementación
+
+- `sigma/trajectory/checkpoint_v3.py`
+  - TrajectoryCheckpointV1;
+  - TrajectoryContinuationV1;
+  - checkpoint_from_evaluation_v3;
+  - advance_trajectory_checkpoint_v3;
+  - continue_trajectory_checkpoint_v3;
+  - finalize_trajectory_checkpoint_v3;
+  - verify_trajectory_checkpoint_source_v3.
+- `reference/trajectory_checkpoint_v3.py`
+  - encoder stdlib independiente.
+- `scripts/product_closure/sv1_gate.py`.
+- tests unit/differential SV1.
+
+### Estado mínimo all-index
+
+Para estado index i:
+
+    Q_i =
+      context,
+      PersistentBinding,
+      TrajectoryParameters,
+      i,
+      S_i,
+      H_i?,
+      window_prefix.
+
+Con:
+
+    window_prefix = ()
+      si i <= t
+
+y:
+
+    window_prefix = (S_t,...,S_(i-1))
+      si i > t.
+
+Este campo corrige la planificación mínima original: sin él un checkpoint dentro
+de la ventana pública no puede reconstruir exactamente el digest final.
+
 ### Obligaciones
 
 SV1-O01 — Continuation equivalence
 
-    continue(checkpoint(Eval(X),i)) = suffix(Eval(X),i)
+Para todo índice válido:
 
-SV1-O02 — Final digest identity  
-Continuación produce mismo SigmaDigestV3.
+    continue(Q_i).states
+      = states[i:].
 
-SV1-O03 — Binding immutability  
-No puede cambiar C, P_X, t,k ni suite.
+History suites:
 
-SV1-O04 — Round index exactness  
-No rewind/skip silencioso.
+    continue(Q_i).histories
+      = histories[i:].
 
-SV1-O05 — Source rebind distinction  
-Checkpoint interno y verificación contra X son APIs distintas.
+SV1-O02 — Final digest identity
 
-SV1-O06 — Codec canonicality  
-Checkpoint wire injectivo y versionado.
+    finalize(Q_i)
+      = digest_from_evaluation_v3(E)
 
-### Tests
+para todo i.
 
-Todos los i válidos sobre corpus de conformidad + random inputs.
+SV1-O03 — Binding immutability
+
+Constructor/parser exige:
+
+    derive_parameters(context,binding)
+      = checkpoint.parameters.
+
+No puede cambiar:
+- C;
+- P_X;
+- t/k;
+- suite/profile;
+- state width.
+
+SV1-O04 — Round index exactness
+
+    0 <= i <= t+k-1.
+
+`advance(...,rounds=n)`:
+- rechaza n<0;
+- rechaza i+n>final;
+- no rewind;
+- no wrap;
+- no silent skip.
+
+SV1-O05 — Source rebind distinction
+
+Internal continuation:
+
+    continue(Q_i)
+
+no necesita source.
+
+Source binding:
+
+    verify_trajectory_checkpoint_source_v3(X,Q_i)
+
+reevalúa v3 y compara el checkpoint canónico en el mismo i.
+
+SV1-O06 — Codec canonicality
+
+Magic:
+
+    SIG3TCK0
+
+Strict record v3 con:
+- context;
+- binding;
+- parameters;
+- i;
+- state;
+- optional history;
+- window prefix.
+
+Missing/duplicate/reordered/unknown fields se rechazan.
+
+### Differential tests
+
+`tests/differential/test_trajectory_checkpoint_reference_sv1.py`:
+
+- las seis suites ejecutables;
+- múltiples inputs por suite;
+- **todos los índices i válidos**;
+- product checkpoint wire == independent encoder;
+- continuation suffix exacto;
+- final digest exacto;
+- history suffix exacto.
+
+### Adversarial/unit
+
+- parameter mutation;
+- cross-suite context;
+- wrong history index;
+- wrong window-prefix length;
+- advance before zero/after final;
+- final-index checkpoint;
+- correct/wrong source rebind;
+- TLV missing/duplicate/reorder/unknown.
+
+### Gate SV1
+
+`sv1_gate.py` exige al menos:
+
+    60 evaluations
+    all valid indices per evaluation
+    >=500 directed checkpoint mutations
+    >=30 source-rebind checks
+
+y produce stream hashes de:
+- checkpoint wires;
+- continuation final digests.
+
+No fija todavía performance thresholds.
+
+### Complexity contract
+
+Desde Q_i:
+
+    T_continue
+      = O((t+k-1-i) * round_cost)
+
+sin source I/O ni anchor/preparation.
+
+Checkpoint size:
+
+    O(context + binding + state + history + k*state_size)
+
+por el window_prefix, acotado por k<=64.
+
+### Cierre
+
+CANDIDATE:
+- implementation/reference/tests/gate completos;
+- review de invariantes sin blocker.
+
+COMPLETE:
+- SV0 COMPLETE;
+- sv1_gate ejecutado y report congelado;
+- all-index differential PASS;
+- revisión post-ejecución O01..O06 PASS.
+
+Los benchmarks/empíricos finos se difieren por decisión de campaña.
 
 ## 11. SV2 — Verification Policy
 
+### Objetivo
+
+Convertir parseabilidad/verificabilidad/aceptabilidad en contratos separados y
+dar una decisión semántica exhaustiva sin trabajo caro innecesario.
+
+### Implementación
+
+- `sigma/trajectory/policy_v1.py`
+  - VerificationPolicyV1;
+  - VerificationCapabilitiesV1;
+  - ParsedVerificationEvidenceV1;
+  - VerificationDecisionV1;
+  - four-way decision enums/codes;
+  - parse_verification_evidence_v1;
+  - verify_with_policy_v1;
+  - policy_is_stricter_or_equal_v1.
+- `scripts/product_closure/sv2_gate.py`.
+- unit/property/vector tests.
+- frozen policy-ID KAT:
+  `specification/test-vectors/sigma-verification-policy-v1.json`.
+
+### Wire
+
+Magic:
+
+    SIGPOLY1
+
+Policy format version:
+
+    1
+
+Strict TLV independiente del wire v2/v3.
+
 ### Obligaciones
 
-SV2-O01 — Parse vs accept separation  
-Parse válido no implica policy accept.
+SV2-O01 — Parse vs accept separation
 
-SV2-O02 — Explicit four-way decision  
-Accepted / Rejected / Inconclusive / Unsupported.
+Known evidence puede parsear correctamente y después:
 
-SV2-O03 — Cheap checks first  
-Policy bounds se aplican antes de trabajo caro.
+    Rejected(policy reason).
 
-SV2-O04 — Determinism  
-Mismo objeto/policy/verifier produce misma decision semántica.
+Parser soporta:
+- SigmaDigestV3;
+- TrajectoryAuditV3;
+- SigmaDigestV2 v2.2.
 
-SV2-O05 — Normalized policy identity  
-Policies canónicas tienen hash/ID estable.
+SV2-O02 — Explicit four-way decision
 
-SV2-O06 — Monotonic subset  
-Para subset de policies donde P_strict <= P_weak está definido:
+Exhaustivo:
 
-    Accept(P_strict,x) => Accept(P_weak,x)
+    Accepted
+    Rejected
+    Inconclusive
+    Unsupported.
 
-SV2-O07 — Legacy control  
-v2.2 aceptación exige opt-in explícito.
+Decision conserva kind/code/reason/policy_id/evidence_id y flags de verification
+cuando existen.
 
-### Tests
+SV2-O03 — Cheap checks first
 
-- policy mutation;
-- wrong suite;
-- oversized input;
-- disallowed symlink;
-- require dual evidence;
-- require signature;
-- unsupported future profile.
+Orden bloqueado:
+
+    parse
+      -> capabilities
+      -> suite/history
+      -> committed input size
+      -> round bound
+      -> audit requirement
+      -> structural replay
+      -> source reevaluation.
+
+Bomb tests/sources garantizan que oversized/disallowed objects no llegan al
+verifier caro.
+
+SV2-O04 — Determinism
+
+Mismo:
+- evidence;
+- canonical policy;
+- capabilities;
+- source/verifier;
+
+produce la misma VerificationDecisionV1.
+
+Gate y property suite generan policies de forma determinista.
+
+SV2-O05 — Normalized policy identity
+
+    policy_id = SHA256(canonical SIGPOLY1 wire).
+
+Es content ID, no security-width claim.
+
+Frozen KAT IDs:
+
+    default
+    strict-history-audit
+    weak-all-v3
+    legacy-opt-in.
+
+Codec rechaza:
+- missing;
+- duplicate;
+- reordered;
+- unknown fields.
+
+SV2-O06 — Monotonic subset
+
+Para subset normalizado:
+
+    policy_is_stricter_or_equal_v1(strict,weak).
+
+Se exige:
+
+    Accept(strict,x)
+      => Accept(weak,x).
+
+El property corpus cubre generated strict/weak history-suite pairs.
+
+SV2-O07 — Legacy control
+
+Default:
+
+    allow_legacy_v22 = false.
+
+Legacy válido:
+- default -> Rejected(LegacyDisabled);
+- explicit opt-in + valid bytes source -> Accepted.
+
+No puede satisfacer history/audit requirements.
+
+### Artifact-facing requirements
+
+Aunque SA todavía no existe, policy wire ya fija:
+- Tree required;
+- DUAL required;
+- signature required;
+- provenance required;
+- Tree-proof size;
+- artifact metadata profiles;
+- symlink mode;
+- working-memory estimate.
+
+`VerificationCapabilitiesV1` aporta esos hechos sin cambiar PolicyId.
+
+Falta de requirement conocida:
+
+    Rejected.
+
+Falta de estimación necesaria para un bound activo:
+
+    Inconclusive.
+
+### Gate SV2
+
+`sv2_gate.py` exige:
+
+    >=400 decision cases
+    >=100 normalized monotonic cases
+    >=100 cheap-reject bomb-source cases
+
+además de:
+- four-way coverage exacta;
+- codec/PolicyId round-trip;
+- determinism;
+- default legacy reject;
+- explicit legacy accept;
+- future unknown evidence -> Unsupported;
+- DUAL capability requirements.
+
+No fija timings/throughput.
+
+### Complexity contract
+
+Policy parsing/preflight:
+
+    O(policy wire + evidence header/codec).
+
+Cheap rejection no ejecuta source replay.
+
+Cuando policy exige message binding:
+
+    cost = cost(selected verifier).
+
+Los benchmarks de policy throughput, memoria y decisiones por segundo se difieren
+a la futura campaña empírica.
+
+### Cierre
+
+CANDIDATE:
+- canonical wire/KAT;
+- implementation/tests/gate;
+- semantic/adversarial review.
+
+COMPLETE:
+- SV0 COMPLETE;
+- sv2_gate ejecutado y report congelado;
+- policy adversarial/property suite PASS;
+- revisión post-ejecución O01..O07 PASS.
 
 ## 12. SV3 — Receipts and Batch
 

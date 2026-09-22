@@ -34,6 +34,15 @@ def test_boundaries_roundtrip(size):
     assert TreeRoot.from_bytes(root.to_bytes()) == root
 
 
+@pytest.mark.parametrize("leaf_count", [1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17])
+def test_power_of_two_leaf_count_boundaries(leaf_count):
+    size = leaf_count * DEFAULT_PROFILE.chunk_size
+    root = build_tree(b"p" * size)
+    assert root.leaf_count == leaf_count
+    assert root.byte_length == size
+    assert TreeRoot.from_bytes(root.to_bytes()) == root
+
+
 def test_frontier_canonical_order_after_three_leaves():
     from sigma.tree import TreeBuilder
 
@@ -59,10 +68,29 @@ def test_nonadjacent_parent_rejected():
         combine_nodes(DEFAULT_PROFILE, a, c)
 
 
+def test_wrong_height_rejected():
+    digests = (b"d" * 64,) * 4
+    with pytest.raises(ValueError, match="height"):
+        TreeNode(0, 2, 2 * 65_536, 0, digests)
+
+
+def test_leaf_offset_overflow_rejected():
+    index = 1 << 64
+    with pytest.raises(ValueError, match="out of range"):
+        leaf_node(DEFAULT_PROFILE, index, index * DEFAULT_PROFILE.chunk_size, b"a")
+
+
 def test_node_codec_rejects_trailing_bytes():
     node = leaf_node(DEFAULT_PROFILE, 0, 0, b"a")
     with pytest.raises(TreeDecodeError):
         TreeNode.from_bytes(node.to_bytes() + b"x")
+
+
+def test_root_codec_rejects_truncation():
+    encoded = build_tree(b"abc").to_bytes()
+    for cut in (1, 7, 13, len(encoded) - 1):
+        with pytest.raises(TreeDecodeError):
+            TreeRoot.from_bytes(encoded[:cut])
 
 
 def test_canonical_frontier_heights_exhaustive_100k():

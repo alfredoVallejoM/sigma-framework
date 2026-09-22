@@ -53,3 +53,10 @@ def test_root_rejects_impossible_byte_leaf_relation():
     root = build_tree(b"abc")
     with pytest.raises(ValueError, match="canonical chunking"):
         TreeRoot(root.profile, 65_537, 1, root.digests)
+
+
+def test_parser_rejects_oversized_record_before_tlv_walk():
+    from sigma.tree.codec import MAX_TREE_RECORD_BYTES
+
+    with pytest.raises(TreeDecodeError, match="total-size limit"):
+        TreeRoot.from_bytes(b"X" * (MAX_TREE_RECORD_BYTES + 1))

@@ -1,0 +1,97 @@
+{
+  "schema": "sigma-tree-v1-st2-kat",
+  "cases": [
+    {
+      "kind": "inclusion",
+      "name": "abc-leaf-0",
+      "source": "abc",
+      "source_sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "root_wire_sha256": "588886c71d3f45ef06e99f8c70542f77bb8f378377ee0283d879069394289a2d",
+      "leaf_index": 0,
+      "leaf_length": 3,
+      "steps": 0,
+      "proof_wire_bytes": 482,
+      "proof_wire_sha256": "7bbb0c59b3c9e402e1752648c6021ab6c38382b5e3fb4396daf27218d95e7b99"
+    },
+    {
+      "kind": "inclusion",
+      "name": "chunk_plus_one-leaf-1",
+      "source": "chunk_plus_one",
+      "source_sha256": "237356e18b503616912abb8ffaed3a72591e397d4ac294c4637917d48a3f529d",
+      "root_wire_sha256": "f47a424ba77b24df5caa875f8899267905a572374c897f6f4e54d574b814a6e8",
+      "leaf_index": 1,
+      "leaf_length": 1,
+      "steps": 1,
+      "proof_wire_bytes": 860,
+      "proof_wire_sha256": "7758da77a169d109871fc429270468ae67c8285b40ff224e5f2ba6163bf2f70a"
+    },
+    {
+      "kind": "inclusion",
+      "name": "nine_chunks-leaf-4",
+      "source": "nine_chunks",
+      "source_sha256": "176b3b496196059c51d056b210dbfb3ea9ab0318373994e081e8755708e50888",
+      "root_wire_sha256": "227f96829588b28c6e4d34781647e996007ebe84040c765c8a642a918b853c50",
+      "leaf_index": 4,
+      "leaf_length": 65536,
+      "steps": 4,
+      "proof_wire_bytes": 1994,
+      "proof_wire_sha256": "07f3b5f844e16c2d4eec0e259a660868a361a95ffaa96724c97e7bfd25df893c"
+    },
+    {
+      "kind": "range",
+      "name": "abc-first-byte",
+      "source": "abc",
+      "source_sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "root_wire_sha256": "588886c71d3f45ef06e99f8c70542f77bb8f378377ee0283d879069394289a2d",
+      "start": 0,
+      "length": 1,
+      "prefix_bytes": 0,
+      "suffix_bytes": 2,
+      "witnesses": 0,
+      "proof_wire_bytes": 500,
+      "proof_wire_sha256": "ecdb8a65fe7cc282d65c76a68a1e85d71963504c0ae2e82ccb84df8b5a3eb168"
+    },
+    {
+      "kind": "range",
+      "name": "two_chunks_tail-cross-chunk",
+      "source": "two_chunks_tail",
+      "source_sha256": "1a97788ed6b18ba48c395c3a9733648ddcd3f638593ea8b32fdef327d65f1050",
+      "root_wire_sha256": "2a8ff7c568b875ef3345e21cbc9ceb118cec4b8ed94e86bc4e3bb3e997c504c1",
+      "start": 65535,
+      "length": 3,
+      "prefix_bytes": 65535,
+      "suffix_bytes": 65534,
+      "witnesses": 1,
+      "proof_wire_bytes": 131917,
+      "proof_wire_sha256": "022904f110f61d7023482e935553ee3d9f7d0d6004e17c5510df7002b5db3e93"
+    },
+    {
+      "kind": "range",
+      "name": "five_chunks_tail-multi-chunk",
+      "source": "five_chunks_tail",
+      "source_sha256": "bc7e9e093fe74fa72d8eee5454d5cfd636b27099b6b239545b4323f5dc9c3fb9",
+      "root_wire_sha256": "a597a65638c7f312f7508e75369c86766261c5324bda10f8a898e4369f872872",
+      "start": 65543,
+      "length": 131083,
+      "prefix_bytes": 7,
+      "suffix_bytes": 65518,
+      "witnesses": 2,
+      "proof_wire_bytes": 66723,
+      "proof_wire_sha256": "20faeb9635072ffb4baea552b167f666497d4b7969f719507a7e11386ba5f6a9"
+    },
+    {
+      "kind": "range",
+      "name": "three_chunks_tail-full-object",
+      "source": "three_chunks_tail",
+      "source_sha256": "33265e7233cfa1f41b186ff39c4bf75776ceb6709faa4a6148991499f1794ead",
+      "root_wire_sha256": "af735ab0bf81b2cc27cd1df7a5d971fe3474bffe95a55e6ac134e9841abeda08",
+      "start": 0,
+      "length": 196613,
+      "prefix_bytes": 0,
+      "suffix_bytes": 0,
+      "witnesses": 0,
+      "proof_wire_bytes": 498,
+      "proof_wire_sha256": "aa9a68a30ba678e319c335531061d9ccfc2df4acc75c51a4e49a474a9e546e0a"
+    }
+  ]
+}

@@ -24,6 +24,12 @@ MAN-SYM-001	ST1	T4	Symlink TEXT no-follow	independent scanner	loop and ../ targe
 MAN-TRAJ-001	ST1	T4	Optional trajectory exact binding	canonical manifest	single-byte trajectory-wire mutation	manifest changes	REQUIRED
 MAN-FUZZ-001	ST1	T5	Manifest/entry codecs	round-trip invariant	>=50k deterministic bit mutations + structural TLV mutations	no semantic aliases	BLOCKING
 MAN-XPLAT-001	ST1	T7	Cross-platform fixture	matching peer reports	Linux + macOS logical fixture	identical manifest SHA-256	BLOCKING
+PRF-KAT-001	ST2	T1	Frozen inclusion/range wires	independent verifier	7 deterministic vector cases	exact proof-wire hashes	BLOCKING
+PRF-FUZZ-001	ST2	T5	Proof codecs	product+independent verifier	>=20k deterministic bit mutations + TLV schema mutations	changed accepted wires never verify original bytes	BLOCKING
+RNG-COVER-001	ST2	T2	Canonical complement cover	independent recursive cover	all non-empty intervals for N=1..64	exact unique maximal cover	BLOCKING
+RNG-DIFF-001	ST2	T7	Independent range verifier	stdlib-only verifier	random exact byte ranges	zero divergence	BLOCKING
+RNG-CHEAP-001	ST2	T4	Cheap invalid-range rejection	index-build/hash spy	zero/negative/overflow/out-of-bounds	reject before TreeProofIndex/hash	BLOCKING
+RNG-DISC-001	ST2	T4	Edge disclosure boundary	proof geometry	partial first/last chunks	leakage <=2*(chunk-1), explicitly documented	REQUIRED
 PRF-PROP-001	ST2	T2	Inclusion proof	production TreeRoot	random trees/leaves	verify true	BLOCKING
 PRF-MUT-001	ST2	T4	Sibling corruption	production verifier	single bit per sibling	reject	BLOCKING
 PRF-MUT-002	ST2	T4	Position corruption	production verifier	leaf_index changes	reject	BLOCKING

@@ -52,6 +52,7 @@ from sigma.spec.codec_v3 import (
     encode_record,
 )
 from sigma.spec.encoding import DecodeError, decode_uint, encode_uint
+from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import (
     DomainIdV3,
     LayoutKindV3,
@@ -504,7 +505,7 @@ def audit_from_evaluation_v3(
 
 
 def evaluate_audit_v3(
-    context,
+    context: SigmaContextV3,
     source: CanonicalSource,
     *,
     mode: TrajectoryAuditModeV3 = TrajectoryAuditModeV3.COMPACT,

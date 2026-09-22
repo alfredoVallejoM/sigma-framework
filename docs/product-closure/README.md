@@ -337,3 +337,40 @@ Reports/evidence:
 - `SA0-IMPLEMENTATION-EVIDENCE.md`.
 
 SA0 does not yet define the DUAL verification conjunction; that remains SA1.
+
+
+SA1 — Dual Verification — está **COMPLETE**.
+
+Implementado:
+- independent Tree and Trajectory side verification;
+- exact DUAL conjunction;
+- side-specific status/code/expected/actual wires;
+- preserved failure attribution;
+- VerificationPolicyV1 artifact-level preflight;
+- explicit TREE / TRAJECTORY / DUAL requirements;
+- attached TrajectoryAudit replay;
+- TREE_ONLY / DECLARED / REQUIRE_ALL_FILES manifest modes;
+- stdlib-only independent side verifier.
+
+Cierre ejecutado:
+- GitHub Actions run `35792567055`;
+- compile/Ruff/Mypy PASS;
+- pytest: 36 passed;
+- 300 valid DUAL cases;
+- 300 Tree-only failures;
+- 300 Trajectory-only failures;
+- 300 both-fail cases;
+- 200 policy cases;
+- 100 mixed manifest cases;
+- `closure_eligible=true`.
+
+Frozen streams:
+- Tree: `e5154d09e09d6bd9f773f62412fe4d3e7113c964e4d096898340acc50a6123c1`;
+- Trajectory: `af0ea2e9b2b87f6feffc7bedb8d6793138adebf3b77309f8681c6889446154f7`;
+- composition: `82fa259392e63533a63ef513f775dc7167c62c01c9c8dd7196f5d43487bc8774`.
+
+Evidence:
+- `SA1-GATE-REPORT.json`;
+- `SA1-IMPLEMENTATION-EVIDENCE.md`.
+
+SA1 establishes conjunction, not additive security bits.

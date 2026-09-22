@@ -41,14 +41,14 @@ ST2-O09	ST	ST2	Range cover is canonical	exhaustive small-tree proof + properties
 ST2-O10	ST	ST2	Partial edge chunks are exact	boundary fixtures	COMPLETE	YES
 ST2-O11	ST	ST2	Range verification needs no rest-of-object	I/O instrumentation	COMPLETE	YES
 ST2-O12	ST	ST2	Invalid ranges reject before expensive hashing	negative + instrumentation	COMPLETE	YES
-ST3-O01	ST	ST3	Resume equals direct build	random split differential	PLANNED	YES
-ST3-O02	ST	ST3	Checkpoint frontier normalized	codec + property	PLANNED	YES
-ST3-O03	ST	ST3	Tail strictly below chunk size	boundary tests	PLANNED	YES
-ST3-O04	ST	ST3	Offset arithmetic consistent	property tests	PLANNED	YES
-ST3-O05	ST	ST3	Profile cannot change on restore	negative tests	PLANNED	YES
-ST3-O06	ST	ST3	Checkpoint persistence transactional	failure injection	PLANNED	YES
-ST3-O07	ST	ST3	Source hints are not security evidence	API/docs audit	PLANNED	NO
-ST3-O08	ST	ST3	Restore cost O(m log N)	benchmark ledger	PLANNED	NO
+ST3-O01	ST	ST3	Resume equals direct build	random split differential	ACTIVE	YES
+ST3-O02	ST	ST3	Checkpoint frontier normalized	codec + property	ACTIVE	YES
+ST3-O03	ST	ST3	Tail strictly below chunk size	boundary tests	ACTIVE	YES
+ST3-O04	ST	ST3	Offset arithmetic consistent	property tests	ACTIVE	YES
+ST3-O05	ST	ST3	Profile cannot change on restore	negative tests	ACTIVE	YES
+ST3-O06	ST	ST3	Checkpoint persistence transactional	failure injection	ACTIVE	YES
+ST3-O07	ST	ST3	Source hints are not security evidence	API/docs audit	ACTIVE	NO
+ST3-O08	ST	ST3	Restore cost O(m log N)	benchmark ledger	ACTIVE	NO
 ST4-O01	ST	ST4	Delta update equals full rebuild	random differential	PLANNED	YES
 ST4-O02	ST	ST4	All affected leaves recomputed	instrumented dependency tests	PLANNED	YES
 ST4-O03	ST	ST4	Unaffected subtrees reused	instrumented dependency tests	PLANNED	YES

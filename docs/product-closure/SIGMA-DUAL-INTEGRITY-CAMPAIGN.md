@@ -554,50 +554,220 @@ COMPLETE requiere:
 
 ### Objetivo
 
-Reanudar construcción SigmaTree sin serializar estado interno de hashlib.
+Reanudar Sigma Tree V1 desde estado estructural portable sin serializar state de
+hashlib y sin rehashear el prefijo ya comprometido.
+
+### Implementación
+
+- `sigma/tree/checkpoint.py`
+  - TreeResumeCheckpointV1;
+  - TreeSourceHintV1;
+  - checkpoint_builder / checkpoint_bytes;
+  - restore_builder / resume_tree;
+  - read_checkpoint / write_checkpoint_atomic;
+  - source_hint_from_path / source_hint_matches_path.
+- extensión aditiva de `TreeBuilder`:
+  - checkpoint_state();
+  - from_checkpoint_state().
+- `reference/tree_checkpoint_v1.py`
+  - parser y resume stdlib independiente;
+  - no importa `sigma`.
+- `scripts/product_closure/st3_gate.py`
+  - 100k split/resume;
+  - differential independiente;
+  - repeated checkpoint cycles;
+  - corruption/mutation;
+  - atomic persistence failure injection.
+- `scripts/product_closure/st3_benchmark.py`
+  - wire/decode/restore vs frontier size.
+- `scripts/product_closure/generate_st3_vectors.py`
+  - KAT checkpoint/resume.
+- tests unit/property/differential/vectors + CLI provisional.
 
 ### Obligaciones
 
 ST3-O01 — Resume equivalence
 
-    finalize(resume(checkpoint(P), S)) = tree(P || S)
+    resume_tree(checkpoint(P), S)
+      = tree(P || S)
+
+para todo split cubierto.
 
 ST3-O02 — Frontier canonicality  
-Checkpoint sólo contiene una frontier normalizada.
+Checkpoint sólo conserva la canonical frontier de hojas completas. Un short
+rightmost subtree se rechaza aunque sea legal como ST0 final frontier.
 
-ST3-O03 — Tail bound  
-tail < chunk_size.
+ST3-O03 — Tail bound
 
-ST3-O04 — Offset consistency  
-completed_bytes = completed_leaf_count * chunk_size + len(tail), salvo último prefijo parcial explícito.
+    0 <= len(tail) < 65,536
+
+ST3-O04 — Offset consistency
+
+    completed_bytes
+      = completed_leaf_count * 65,536 + len(tail)
 
 ST3-O05 — Profile consistency  
-No se restaura con otro TreeProfile.
+Checkpoint profile, frontier profile y restored builder deben usar exactamente
+TreeProfile V1. Unknown/cross-profile wire se rechaza.
 
 ST3-O06 — Transactional checkpoint write  
-Un fallo de persistencia no destruye checkpoint anterior.
+La persistencia usa temporal same-directory + fsync + atomic replace. Fallo
+antes de replace conserva el checkpoint anterior y limpia temporales.
 
 ST3-O07 — Source hint honesty  
-mtime/inode/size se marcan heurísticos; no evidence.
+size/mtime_ns/inode/device son hints heurísticos. No son evidencia
+criptográfica ni demuestran igualdad del prefijo.
 
-ST3-O08 — Restore cost  
-O(m log N).
+ST3-O08 — Restore cost
+
+    O(m log N + tail)
+
+con tail < fixed chunk, por tanto O(m log N) en N para V1.
 
 ### Tests
 
-- crash after every leaf boundary;
-- crash mid-tail;
-- resume multiple times;
-- checkpoint corruption;
-- wrong source;
+Boundary:
+- empty;
+- 1 byte;
+- chunk-1;
+- exact chunk;
+- chunk+1;
+- multi-chunk;
+- tail corto final.
+
+Property:
+- random prefix/suffix;
+- checkpoint codec round-trip;
+- repeated checkpoint->restore->checkpoint cycles;
+- frontier completa + tail bounded tras random updates.
+
+Differential:
+- product checkpoint wire vs `reference/tree_checkpoint_v1.py`;
+- product resumed root vs independent resumed root;
+- ambos vs direct ST0 root.
+
+Adversarial:
+- tail de tamaño chunk;
+- byte/leaf accounting drift;
+- short node dentro de checkpoint frontier;
+- finalized builder checkpoint;
 - wrong profile;
-- append after resume;
-- direct vs resumed differential.
+- corrupted frontier;
+- checkpoint bit mutations;
+- TLV missing/duplicate/reordered/unknown;
+- source hint mutation no debe cambiar root;
+- destination replace failure conserva checkpoint previo.
+
+Persistence:
+- successful atomic write/read;
+- failure injection en `os.replace`;
+- no leaked temporary file.
 
 ### Gate ST3
 
-Property campaign sobre particiones aleatorias del mismo objeto:
-100k prefix/suffix splits sin divergencia.
+Closure-scale gate exige:
+- >=100,000 random split/resume cases;
+- directed checks en todas las fronteras canónicas relevantes;
+- >=500 independent differential cases;
+- >=1,000 repeated resume/checkpoint cycles;
+- >=20,000 checkpoint-wire mutations;
+- structural TLV mutation suite;
+- atomic persistence failure injection;
+- independent checkpoint oracle zero divergences;
+- KAT ST3 frozen;
+- restore complexity ledger compatible con O(m log N);
+- adversarial review O01..O08.
+
+#### Diseño de los 100k splits
+
+Para no convertir el gate en rehash redundante de terabytes:
+
+- objeto: 4 full chunks + 4 KiB tail;
+- los 100k offsets aleatorios viven dentro del tail final;
+- todos parten de una frontier no trivial de cuatro hojas completas;
+- cada caso restaura esa frontier y recomputa sólo la última leaf parcial;
+- 13 offsets dirigidos adicionales cubren empty/chunk-1/chunk/chunk+1 y
+  fronteras intermedias.
+
+Esto conserva la semántica del gate sin bajar ningún umbral.
+
+### Ejecución de cierre
+
+Resultado del gate lógico sobre mirror ST0+ST3 exact-wire:
+
+- split cases: 100,000 PASS;
+- directed boundary splits: 13 PASS;
+- independent differential: 500 PASS;
+- repeated cycles: 1,000 PASS;
+- checkpoint mutations: 20,000 PASS;
+- malformed/rejected mutations: 8,503;
+- accepted-but-invalid mutations: 11,497;
+- altered checkpoints still reconstructing original root: 0;
+- structural TLV mutations: 14 PASS.
+
+Hashes de campaña:
+
+    split:
+    c2c4a71ef974e409e2c152adb5981bb509ebe4a33244bfe9b0875aa117b25787
+
+    differential:
+    5bc96789df2b68d77d2ad6cfe3aae7daa29ecdb247ebe0c32ba9407c87831f38
+
+    repeated cycles:
+    640780401d57d755f5618008397448117a2beed6ce45fb1277b3bfed054815c4
+
+    mutation:
+    5314999f5cf6ba3b6d4fc7a2d01cf07e98bfa1ca2ef467683985305022d46674
+
+Expected direct root wire SHA-256:
+
+    0fc0697e078c61df690bddec3a8e5bd01085c52bb1d46815d803745df38d42bc
+
+### KAT freeze
+
+Corpus:
+
+    specification/test-vectors/sigma-tree-v1-st3.json
+
+SHA-256:
+
+    c46ad683e2c295aa251873c3de6b08eff8b78055f7bf3e5d80a4b308b9499e62
+
+Casos:
+- empty -> abc;
+- one-byte prefix;
+- exact chunk boundary;
+- chunk + partial tail;
+- three chunks + tail.
+
+### Complexity evidence
+
+Frontier synthetic sweep with 1,2,4,8,16,24,32,40 nodes.
+
+Checkpoint wire growth observed:
+
+    exactly 350 bytes / frontier node
+
+más overhead fijo/tail.
+
+Decode/restore grow linealmente con el número de frontier nodes, compatible con:
+
+    O(m log N + tail).
+
+No se rehashea ningún byte del prefijo al restaurar.
+
+### Criterio de cierre
+
+COMPLETE requiere:
+1. ST3-O01..O08 con evidencia exacta;
+2. 100k split gate PASS;
+3. independent oracle zero divergence;
+4. transactional failure injection PASS;
+5. KAT checkpoint/resume frozen;
+6. complexity ledger compatible;
+7. ST0 root semantics/KAT intactos;
+8. no cambios Sigma v3;
+9. post-candidate adversarial review PASS.
 
 ## 7. ST4 — Delta and Append
 

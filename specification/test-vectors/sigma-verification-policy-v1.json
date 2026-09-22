@@ -1,0 +1,25 @@
+{
+  "schema": "sigma-verification-policy-v1-kat",
+  "cases": [
+    {
+      "name": "default",
+      "wire_bytes": 165,
+      "policy_id_sha256": "40955b5f49245614b2e9c7af5290725b47beee193a837e2247c17b3991073fbb"
+    },
+    {
+      "name": "strict-history-audit",
+      "wire_bytes": 161,
+      "policy_id_sha256": "7d4965139e126e60ffae4d0d1746ab61cac1e08600b265fdb7fe06e638ed470a"
+    },
+    {
+      "name": "weak-all-v3",
+      "wire_bytes": 173,
+      "policy_id_sha256": "730333e62dbfd83fc5321b7f24a23634576ab9951b8bc3aa31f37ab68b6c62be"
+    },
+    {
+      "name": "legacy-opt-in",
+      "wire_bytes": 159,
+      "policy_id_sha256": "990f24a64501efc5d24f829784fd2c26c1c5334870d9c10a23d23bd70bab82bf"
+    }
+  ]
+}

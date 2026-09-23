@@ -112,10 +112,10 @@ REL2-O01	REL	REL2	Clean wheel works outside checkout	isolated install smoke	PLAN
 REL2-O02	REL	REL2	SBOM/package data complete	release artifact audit	PLANNED	YES
 REL2-O03	REL	REL2	Documentation examples execute	doctest/example runner	PLANNED	YES
 REL3-O01	REL	REL3	Manual adversarial release review closes all blocking obligations	obligation-by-obligation review	PLANNED	YES
-PX0-O01	PX	PX0	Persistent index never changes TreeRoot or ArtifactId	index/no-index identity differential	ACTIVE	YES
-PX0-O02	PX	PX0	Persistent proof/delta/append results equal existing references	proof/delta differential corpus	ACTIVE	YES
-PX0-O03	PX	PX0	Stale or corrupt sidecar is detected before trusted use	mutation + stale-source tests	ACTIVE	YES
-PX0-O04	PX	PX0	Index publication is atomic and resource-bounded	failure injection + mmap/RSS ledger	ACTIVE	YES
+PX0-O01	PX	PX0	Persistent index never changes TreeRoot or ArtifactId	index/no-index identity differential	COMPLETE	YES
+PX0-O02	PX	PX0	Persistent proof/delta/append results equal existing references	proof/delta differential corpus	COMPLETE	YES
+PX0-O03	PX	PX0	Stale or corrupt sidecar is detected before trusted use	mutation + stale-source tests	COMPLETE	YES
+PX0-O04	PX	PX0	Index publication is atomic and resource-bounded	failure injection + mmap/RSS ledger	COMPLETE	YES
 PX1-O01	PX	PX1	Store recomputes canonical ArtifactId before publication	wrong-key/ID negative tests	PLANNED	YES
 PX1-O02	PX	PX1	Repeated put of identical artifact is idempotent	dedup/concurrency tests	PLANNED	YES
 PX1-O03	PX	PX1	Crash cannot publish partial artifact/store metadata	failure injection	PLANNED	YES

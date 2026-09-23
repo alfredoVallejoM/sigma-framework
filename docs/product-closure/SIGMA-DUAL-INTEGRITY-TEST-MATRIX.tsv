@@ -170,8 +170,14 @@ PX2-ADV-001	PX2	T4	Cycle/unresolved parent policy	reference graph	cycles + missi
 PX2-QRY-001	PX2	T3	Deterministic transitive lineage queries	independent lineage oracle	random DAG/query corpus	ancestors descendants topology and explain_path match oracle	BLOCKING
 PX2-SNAP-001	PX2	T4	Canonical store lineage snapshot	canonical artifact wires + PX1 metadata	metadata divergence and bounded snapshots	graph derives from identity parents and mutable-index divergence fails closed	BLOCKING
 PX2-LIMIT-001	PX2	T3	Lineage resource bounds	configured A/E/B/traversal limits	generator overrun long cycle and traversal overflow	limits fail closed before unbounded work	BLOCKING
-PX3-RT-001	PX3	T3	Remote/local backend round-trip	local CAS	filesystem/S3-compatible fixtures	canonical bytes identical	BLOCKING
-PX3-FAULT-001	PX3	T4	Interrupted remote transfer	full local object	retry/resume/failure injection	verify before publication; idempotent	BLOCKING
+PX3-RT-001	PX3	T3	Remote/local backend round-trip	independent Artifact V1 wire	provider-neutral random corpus	local remote destination bytes identical	BLOCKING
+PX3-FAULT-001	PX3	T4	Interrupted remote transfer	full local object	accepted-response-loss session-ahead expiry and download interruption	verify before publication; idempotent	BLOCKING
+PX3-S3-001	PX3	T3	S3-compatible multipart parity	PX1 canonical artifact + part checksums	multipart resume ListParts duplicate writes	canonical bytes and contiguous parts preserved	BLOCKING
+PX3-OCI-001	PX3	T3	OCI Distribution storage parity	PX1 canonical artifact + OCI digest	chunked upload 416 reconciliation locator manifest range pull	canonical bytes preserved and OCI metadata remains auxiliary	BLOCKING
+PX3-HTTP-001	PX3	T3	HTTP mirror pull parity	PX1 canonical artifact	Range and Range-ignored offset-zero fixtures	canonical bytes preserved; write attempts reject	BLOCKING
+PX3-CACHE-001	PX3	T3	Verified cache non-interference	remote canonical artifact	cache hit corruption eviction refetch	accepted bytes independent of cache state	BLOCKING
+PX3-ID-001	PX3	T2	Remote metadata identity boundary	fixed ArtifactId	credentials endpoint metadata ETag OCI tag cache variants	ArtifactId unchanged	BLOCKING
+PX3-LIMIT-001	PX3	T4	Remote resource preflight	max_object_bytes and retry limits	oversize HEAD retry exhaustion checkpoint variants	fail closed before unbounded body work	BLOCKING
 PX4-DIFF-001	PX4	T3	Gateway vs local verification	Python product API	random artifacts/policies	exact decision/receipt parity	BLOCKING
 PX4-CHEAP-001	PX4	T4	Gateway preflight resource rejection	bomb body/source	oversize/timeout policies	no expensive hashing/buffering	BLOCKING
 PX4-CONC-001	PX4	T4	Gateway cancellation isolation	pointwise local verifier	concurrent cancel/timeout	other requests unaffected	BLOCKING

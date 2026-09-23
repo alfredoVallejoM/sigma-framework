@@ -115,3 +115,29 @@ Evidence:
 
 PX1 is not COMPLETE until the repository-native pytest/Ruff/Mypy checks and
 scripts/product_closure/px1_gate.py execute successfully.
+
+PX2 — Artifact Lineage Graph — está **ACTIVE / IMPLEMENTED, GATE PENDING**.
+
+Implementación PX2:
+- DAG inmutable derivado de los parent ArtifactIds de SA0;
+- políticas explícitas STRICT / EXTERNAL / UNRESOLVED;
+- detección lineal de ciclos con witness determinista;
+- parents / children / ancestors / descendants;
+- roots / local_entrypoints;
+- topological_order;
+- explain_path determinista y acotado;
+- snapshot transaccional desde PX1 reconciliado contra bytes canónicos;
+- oráculo stdlib independiente;
+- gate PX2 preparado pero no ejecutado.
+
+Frontera de autoridad:
+- SigmaArtifactV1.parent_artifact_ids es la única fuente de verdad;
+- artifact_parents en SQLite es sólo índice y debe coincidir exactamente;
+- padres externos/no resueltos nunca se descartan silenciosamente.
+
+Evidence:
+- PX2-IMPLEMENTATION-EVIDENCE.md;
+- PX2-COMPLEXITY-AUDIT.md.
+
+PX2 no pasa a COMPLETE hasta ejecutar pytest/Ruff/Mypy y
+scripts/product_closure/px2_gate.py, y promover PX2-O01..O04.

@@ -16,7 +16,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 from sigma.tree.manifest import ManifestV1
 from sigma.tree.persistent import TreePersistentIndexV1
@@ -402,7 +402,7 @@ class LocalArtifactStoreV1:
     @staticmethod
     def _validate_artifact_blob(
         artifact_id: bytes,
-        row: tuple[object, ...],
+        row: tuple[Any, ...],
         parents: tuple[bytes, ...],
         payload: bytes,
     ) -> SigmaArtifactV1:
@@ -469,13 +469,13 @@ class LocalArtifactStoreV1:
         self._validate_artifact_blob(artifact_id, row, parents, payload)
         return payload
 
-    def _lineage_snapshot_wires(
+    def _lineage_snapshot_artifacts(
         self,
         *,
         max_artifacts: int,
         max_edges: int,
         max_total_wire_bytes: int,
-    ) -> tuple[bytes, ...]:
+    ) -> tuple[SigmaArtifactV1, ...]:
         """Return one bounded metadata-consistent artifact snapshot for PX2."""
         for name, value in (
             ("max_artifacts", max_artifacts),
@@ -532,7 +532,7 @@ class LocalArtifactStoreV1:
                     "artifact parent index references missing child metadata"
                 )
 
-            payloads: list[bytes] = []
+            artifacts: list[SigmaArtifactV1] = []
             total_wire_bytes = 0
             for row in rows:
                 artifact_id = row[0]
@@ -549,15 +549,15 @@ class LocalArtifactStoreV1:
                     raise ArtifactStoreError(
                         "lineage snapshot exceeds max_total_wire_bytes"
                     )
-                self._validate_artifact_blob(
+                artifact = self._validate_artifact_blob(
                     artifact_id,
                     metadata,
                     parents,
                     payload,
                 )
-                payloads.append(payload)
+                artifacts.append(artifact)
             connection.commit()
-            return tuple(payloads)
+            return tuple(artifacts)
         except Exception:
             with contextlib.suppress(sqlite3.Error):
                 connection.rollback()

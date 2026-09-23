@@ -19,7 +19,7 @@ REL1	REL	Independent consumer	PLANNED	REL0	YES	Independent consumer zero diverge
 REL2	REL	Packaging documentation examples	PLANNED	REL1;SA3	YES	Clean wheel/SBOM/examples pass
 REL3	REL	Adversarial release review	PLANNED	REL2	YES	Manual obligation-by-obligation PASS
 PX0	PX	Persistent Tree Index	COMPLETE	ST5	NO	PX0 obligations + persistent/no-index differential
-PX1	PX	Artifact CAS and Local Store	PLANNED	SA0;SA1;PX0	NO	PX1 obligations + crash/idempotency gate
+PX1	PX	Artifact CAS and Local Store	ACTIVE	SA0;SA1;PX0	NO	PX1 obligations + crash/idempotency gate
 PX2	PX	Artifact Lineage Graph	PLANNED	PX1;SA0	NO	PX2 obligations + DAG/cycle/query gate
 PX3	PX	Remote Storage Backends	PLANNED	PX1	NO	PX3 obligations + local/remote byte parity
 PX4	PX	Verification Gateway and Daemon	PLANNED	SA1;SV2;SV3	NO	PX4 obligations + API/local decision parity

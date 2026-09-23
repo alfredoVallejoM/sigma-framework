@@ -141,3 +141,29 @@ Evidence:
 
 PX2 no pasa a COMPLETE hasta ejecutar pytest/Ruff/Mypy y
 scripts/product_closure/px2_gate.py, y promover PX2-O01..O04.
+
+PX3 — Remote Storage Backends — está **ACTIVE / IMPLEMENTED, GATE PENDING**.
+
+Implementación PX3:
+- RemoteArtifactRepositoryV1 provider-neutral;
+- upload/download resumible con checkpoints canónicos;
+- retry acotado y recuperación accepted-but-response-lost;
+- verified cache desechable;
+- HTTP read-only mirror;
+- S3-compatible multipart + Boto3 adapter sin dependencia obligatoria;
+- OCI Distribution blob sessions + locator manifest portable;
+- preflight max_object_bytes antes de body read;
+- verificación canónica completa antes de publicación local PX1;
+- post-upload full remote verification por defecto.
+
+Frontera:
+- ETag, OCI digest/tag, bucket, URL, credentials, cache y checkpoints no entran en ArtifactId;
+- el único valor ArtifactId-addressed aceptable es el canonical no-audit SigmaArtifactV1 envelope.
+
+Evidence:
+- PX3-BACKEND-CONTRACT.md;
+- PX3-COMPLEXITY-AUDIT.md;
+- PX3-IMPLEMENTATION-EVIDENCE.md.
+
+PX3 permanece ACTIVE hasta ejecutar tests/quality y
+scripts/product_closure/px3_gate.py, y promover PX3-O01..O04.

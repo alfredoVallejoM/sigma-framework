@@ -18,6 +18,7 @@ from reference.lineage_v1 import (
     topological_order as reference_topological_order,
 )
 from sigma.artifact import (
+    ArtifactLineageGraphV1,
     ArtifactProfileV1,
     LineageCycleError,
     LineageCyclePolicyV1,
@@ -131,7 +132,7 @@ def run_gate(
     store_artifacts_checked = 0
 
     graph_fixtures: list[
-        tuple[object, dict[bytes, tuple[bytes, ...]]]
+        tuple[ArtifactLineageGraphV1, dict[bytes, tuple[bytes, ...]]]
     ] = []
 
     for case in range(dag_cases):

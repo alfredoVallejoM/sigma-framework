@@ -489,7 +489,7 @@ class LocalArtifactStoreV1:
 
         connection = self._connect()
         try:
-            connection.execute("BEGIN")
+            self._begin(connection)
             artifact_count = int(
                 connection.execute("SELECT COUNT(*) FROM artifacts").fetchone()[0]
             )

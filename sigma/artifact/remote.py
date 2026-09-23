@@ -64,7 +64,7 @@ class RemoteCheckpointError(RemoteStoreError):
     """Resume checkpoint is malformed or does not match the requested transfer."""
 
 
-class RemoteSessionExpiredError(RemoteRetryableError):
+class RemoteSessionExpiredError(RemoteStoreError):
     """Provider no longer recognizes a resumable upload session."""
 
 
@@ -218,8 +218,11 @@ class RemoteUploadSessionV1:
                 not isinstance(key, str) or not isinstance(value, str)
                 for key, value in self.opaque
             )
+            or len({key for key, _ in self.opaque}) != len(self.opaque)
         ):
-            raise ValueError("opaque upload state must be sorted unique str pairs")
+            raise ValueError(
+                "opaque upload state must be sorted unique-key str pairs"
+            )
 
     def opaque_dict(self) -> dict[str, str]:
         return dict(self.opaque)
@@ -796,7 +799,7 @@ class RemoteArtifactRepositoryV1:
                 artifact_id=artifact_id,
                 key=key,
                 bytes_transferred=transferred,
-                resumed_from=len(payload),
+                resumed_from=0,
                 retry_count=retry.retry_count,
                 source=RemoteTransferSourceV1.LOCAL,
                 remote_revision=verified_info.revision,
@@ -821,17 +824,32 @@ class RemoteArtifactRepositoryV1:
                 raise RemoteCheckpointError(
                     "upload checkpoint does not match requested artifact/backend"
                 )
-            session = retry.call(lambda: self.backend.resume_upload(record.session))
-            if (
-                session.backend_fingerprint != self.backend.fingerprint
-                or session.key != key
-                or session.total_size != len(payload)
-                or session.wire_sha256 != wire_sha256
-            ):
-                raise RemoteCheckpointError(
-                    "provider resumed a session with incompatible identity"
+            try:
+                session = retry.call(
+                    lambda: self.backend.resume_upload(record.session)
                 )
-            resumed_from = session.accepted_offset
+            except RemoteSessionExpiredError:
+                checkpoint.unlink(missing_ok=True)
+                session = retry.call(
+                    lambda: self.backend.begin_upload(
+                        key,
+                        total_size=len(payload),
+                        wire_sha256=wire_sha256,
+                        preferred_chunk_size=self.policy.chunk_size,
+                    )
+                )
+                resumed_from = 0
+            else:
+                if (
+                    session.backend_fingerprint != self.backend.fingerprint
+                    or session.key != key
+                    or session.total_size != len(payload)
+                    or session.wire_sha256 != wire_sha256
+                ):
+                    raise RemoteCheckpointError(
+                        "provider resumed a session with incompatible identity"
+                    )
+                resumed_from = session.accepted_offset
         else:
             session = retry.call(
                 lambda: self.backend.begin_upload(

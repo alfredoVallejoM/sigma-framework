@@ -97,10 +97,20 @@ def _validate_id(name: str, value: bytes) -> bytes:
     return value
 
 
-def _canonical_id_tuple(name: str, values: Iterable[bytes]) -> tuple[bytes, ...]:
-    materialized = tuple(values)
-    for value in materialized:
+def _canonical_id_tuple(
+    name: str,
+    values: Iterable[bytes],
+    *,
+    max_items: int,
+) -> tuple[bytes, ...]:
+    materialized: list[bytes] = []
+    for value in values:
         _validate_id(name, value)
+        materialized.append(value)
+        if len(materialized) > max_items:
+            raise LineageResourceLimitError(
+                f"{name} declarations exceed configured resource bound"
+            )
     return tuple(sorted(set(materialized)))
 
 
@@ -206,36 +216,31 @@ def _topological_or_cycle(
     remaining = frozenset(
         artifact_id for artifact_id, degree in indegree.items() if degree > 0
     )
-    state: dict[bytes, int] = {}
-    stack: list[bytes] = []
+
+    # Kahn's remainder has at least one remaining local parent per node.
+    # Following the lexicographically first such parent is a bounded functional
+    # walk and must eventually repeat, yielding a cycle without Python recursion.
+    current = min(remaining)
+    walk: list[bytes] = []
     position: dict[bytes, int] = {}
+    while current not in position:
+        position[current] = len(walk)
+        walk.append(current)
+        local_parents = tuple(
+            parent
+            for parent in parent_map[current]
+            if parent in remaining
+        )
+        if not local_parents:
+            raise AssertionError(
+                "Kahn cycle remainder contains node without remaining parent"
+            )
+        current = min(local_parents)
 
-    def visit(node: bytes) -> tuple[bytes, ...] | None:
-        state[node] = 1
-        position[node] = len(stack)
-        stack.append(node)
-        for child in children.get(node, ()):
-            if child not in remaining:
-                continue
-            child_state = state.get(child, 0)
-            if child_state == 0:
-                cycle = visit(child)
-                if cycle is not None:
-                    return cycle
-            elif child_state == 1:
-                start = position[child]
-                return _canonical_cycle(tuple(stack[start:]) + (child,))
-        stack.pop()
-        position.pop(node, None)
-        state[node] = 2
-        return None
-
-    for node in sorted(remaining):
-        if state.get(node, 0) == 0:
-            cycle = visit(node)
-            if cycle is not None:
-                return tuple(order), cycle
-    raise AssertionError("Kahn detected a cycle but DFS could not reconstruct one")
+    start = position[current]
+    reverse_ring = tuple(walk[start:])
+    forward_ring = tuple(reversed(reverse_ring))
+    return tuple(order), _canonical_cycle(forward_ring + (forward_ring[0],))
 
 
 def _resolve_missing(
@@ -541,11 +546,13 @@ def build_lineage_graph_v1(
     if not isinstance(limits, LineageResourceLimitsV1):
         raise TypeError("limits must be LineageResourceLimitsV1")
 
-    values = tuple(nodes)
-    if len(values) > limits.max_artifacts:
-        raise LineageResourceLimitError("lineage exceeds max_artifacts")
-    if any(not isinstance(node, LineageNodeV1) for node in values):
-        raise TypeError("nodes must contain only LineageNodeV1 values")
+    values: list[LineageNodeV1] = []
+    for node in nodes:
+        if not isinstance(node, LineageNodeV1):
+            raise TypeError("nodes must contain only LineageNodeV1 values")
+        values.append(node)
+        if len(values) > limits.max_artifacts:
+            raise LineageResourceLimitError("lineage exceeds max_artifacts")
 
     parent_map: dict[bytes, tuple[bytes, ...]] = {}
     edge_count = 0
@@ -561,6 +568,7 @@ def build_lineage_graph_v1(
     declared_external = _canonical_id_tuple(
         "external parent ArtifactId",
         external_parent_ids,
+        max_items=limits.max_edges,
     )
     missing, external, unresolved = _resolve_missing(
         stored=stored,
@@ -613,11 +621,14 @@ def lineage_from_artifacts_v1(
     cycle_policy: LineageCyclePolicyV1 = LineageCyclePolicyV1.REJECT,
     limits: LineageResourceLimitsV1 | None = None,
 ) -> LineageBuildResultV1:
-    values = tuple(artifacts)
-    if any(not isinstance(artifact, SigmaArtifactV1) for artifact in values):
-        raise TypeError("artifacts must contain only SigmaArtifactV1 values")
+    def nodes() -> Iterable[LineageNodeV1]:
+        for artifact in artifacts:
+            if not isinstance(artifact, SigmaArtifactV1):
+                raise TypeError("artifacts must contain only SigmaArtifactV1 values")
+            yield LineageNodeV1.from_artifact(artifact)
+
     return build_lineage_graph_v1(
-        (LineageNodeV1.from_artifact(artifact) for artifact in values),
+        nodes(),
         parent_policy=parent_policy,
         external_parent_ids=external_parent_ids,
         cycle_policy=cycle_policy,

@@ -346,6 +346,23 @@ OCI:
     -> locator manifest
     -> one payload blob
 
+## 18A. Provider metadata hard limits
+
+OCI locator manifest body:
+
+    M_oci <= 1 MiB
+
+is checked before JSON decoding.
+
+S3 multipart metadata:
+
+    P <= 10,000
+
+is enforced both by part-number validation and by the boto3 ListParts accumulator.
+
+Thus control-plane/provider metadata cannot grow without a PX3 bound merely
+because B is small.
+
 ## 19. Complexity verdict
 
 Mainstream Artifact V1 transfer:

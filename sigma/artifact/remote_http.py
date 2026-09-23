@@ -34,6 +34,7 @@ _OCI_EMPTY_DIGEST = (
 )
 _SIGMA_PX3_ARTIFACT_TYPE = "application/vnd.sigma.px3.remote-object.v1"
 _SIGMA_PX3_PAYLOAD_MEDIA_TYPE = "application/vnd.sigma.px3.remote-payload.v1"
+_OCI_MAX_LOCATOR_MANIFEST_BYTES = 1 * 1024 * 1024
 _RANGE_RE = re.compile(r"^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
 _OCI_UPLOAD_RANGE_RE = re.compile(r"^(?:bytes=)?([0-9]+)-([0-9]+)$")
 
@@ -465,6 +466,10 @@ class OciRegistryBackendV1(RemoteBlobBackendV1):
             return None
         if response.status != 200:
             _remote_failure(response, operation="OCI manifest GET")
+        if len(response.body) > _OCI_MAX_LOCATOR_MANIFEST_BYTES:
+            raise RemoteIntegrityError(
+                "OCI locator manifest exceeds PX3 metadata size limit"
+            )
         try:
             manifest = json.loads(response.body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:

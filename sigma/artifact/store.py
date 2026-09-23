@@ -399,6 +399,42 @@ class LocalArtifactStoreV1:
             connection.close()
         return row is not None and self._artifact_path(artifact_id).is_file()
 
+    @staticmethod
+    def _validate_artifact_blob(
+        artifact_id: bytes,
+        row: tuple[object, ...],
+        parents: tuple[bytes, ...],
+        payload: bytes,
+    ) -> SigmaArtifactV1:
+        if len(payload) != int(row[4]):
+            raise ArtifactStoreCorruptionError(
+                "artifact CAS length differs from metadata"
+            )
+        try:
+            artifact = SigmaArtifactV1.from_bytes(payload)
+        except (TypeError, ValueError) as exc:
+            raise ArtifactStoreCorruptionError(
+                "stored artifact wire is invalid"
+            ) from exc
+        if artifact.artifact_id != artifact_id or artifact.to_bytes() != payload:
+            raise ArtifactStoreCorruptionError(
+                "stored artifact identity is non-canonical"
+            )
+        expected_tree = (
+            None if artifact.tree_root is None else artifact.tree_root.to_bytes()
+        )
+        if (
+            int(row[0]) != int(artifact.profile)
+            or row[1] != artifact.manifest_id
+            or row[2] != expected_tree
+            or int(row[3]) != _artifact_committed_bytes(artifact)
+            or parents != artifact.parent_artifact_ids
+        ):
+            raise ArtifactStoreCorruptionError(
+                "artifact metadata differs from canonical wire"
+            )
+        return artifact
+
     def get_artifact_bytes(self, artifact_id: bytes) -> bytes:
         _validate_id("artifact_id", artifact_id)
         connection = self._connect()
@@ -430,24 +466,104 @@ class LocalArtifactStoreV1:
             raise ArtifactStoreCorruptionError(
                 "artifact metadata is visible but CAS blob is missing"
             ) from exc
-        if len(payload) != int(row[4]):
-            raise ArtifactStoreCorruptionError("artifact CAS length differs from metadata")
-        try:
-            artifact = SigmaArtifactV1.from_bytes(payload)
-        except (TypeError, ValueError) as exc:
-            raise ArtifactStoreCorruptionError("stored artifact wire is invalid") from exc
-        if artifact.artifact_id != artifact_id or artifact.to_bytes() != payload:
-            raise ArtifactStoreCorruptionError("stored artifact identity is non-canonical")
-        expected_tree = None if artifact.tree_root is None else artifact.tree_root.to_bytes()
-        if (
-            int(row[0]) != int(artifact.profile)
-            or row[1] != artifact.manifest_id
-            or row[2] != expected_tree
-            or int(row[3]) != _artifact_committed_bytes(artifact)
-            or parents != artifact.parent_artifact_ids
-        ):
-            raise ArtifactStoreCorruptionError("artifact metadata differs from canonical wire")
+        self._validate_artifact_blob(artifact_id, row, parents, payload)
         return payload
+
+    def _lineage_snapshot_wires(
+        self,
+        *,
+        max_artifacts: int,
+        max_edges: int,
+        max_total_wire_bytes: int,
+    ) -> tuple[bytes, ...]:
+        """Return one bounded metadata-consistent artifact snapshot for PX2."""
+        for name, value in (
+            ("max_artifacts", max_artifacts),
+            ("max_edges", max_edges),
+            ("max_total_wire_bytes", max_total_wire_bytes),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{name} must be a non-negative integer")
+        if max_artifacts == 0:
+            raise ValueError("max_artifacts must be positive")
+
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN")
+            artifact_count = int(
+                connection.execute("SELECT COUNT(*) FROM artifacts").fetchone()[0]
+            )
+            if artifact_count > max_artifacts:
+                raise ArtifactStoreError(
+                    "lineage snapshot exceeds max_artifacts"
+                )
+            edge_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM artifact_parents"
+                ).fetchone()[0]
+            )
+            if edge_count > max_edges:
+                raise ArtifactStoreError(
+                    "lineage snapshot exceeds max_edges"
+                )
+
+            rows = connection.execute(
+                """
+                SELECT artifact_id, profile, manifest_id, tree_root_wire,
+                       committed_bytes, payload_bytes
+                FROM artifacts ORDER BY artifact_id
+                """
+            ).fetchall()
+            parent_rows = connection.execute(
+                """
+                SELECT child_id, parent_id FROM artifact_parents
+                ORDER BY child_id, parent_id
+                """
+            ).fetchall()
+
+            parents_by_child: dict[bytes, list[bytes]] = {}
+            for child_id, parent_id in parent_rows:
+                parents_by_child.setdefault(child_id, []).append(parent_id)
+
+            stored_ids = {row[0] for row in rows}
+            indexed_children = set(parents_by_child)
+            if not indexed_children.issubset(stored_ids):
+                raise ArtifactStoreCorruptionError(
+                    "artifact parent index references missing child metadata"
+                )
+
+            payloads: list[bytes] = []
+            total_wire_bytes = 0
+            for row in rows:
+                artifact_id = row[0]
+                metadata = row[1:]
+                parents = tuple(parents_by_child.get(artifact_id, ()))
+                try:
+                    payload = self._artifact_path(artifact_id).read_bytes()
+                except FileNotFoundError as exc:
+                    raise ArtifactStoreCorruptionError(
+                        "artifact metadata is visible but CAS blob is missing"
+                    ) from exc
+                total_wire_bytes += len(payload)
+                if total_wire_bytes > max_total_wire_bytes:
+                    raise ArtifactStoreError(
+                        "lineage snapshot exceeds max_total_wire_bytes"
+                    )
+                self._validate_artifact_blob(
+                    artifact_id,
+                    metadata,
+                    parents,
+                    payload,
+                )
+                payloads.append(payload)
+            connection.commit()
+            return tuple(payloads)
+        except Exception:
+            with contextlib.suppress(sqlite3.Error):
+                connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def get_artifact(self, artifact_id: bytes) -> SigmaArtifactV1:
         return SigmaArtifactV1.from_bytes(self.get_artifact_bytes(artifact_id))

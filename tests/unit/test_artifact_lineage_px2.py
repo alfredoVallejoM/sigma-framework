@@ -226,6 +226,44 @@ def test_px2_build_limits_artifacts_and_edges_before_graph_acceptance():
         )
 
 
+
+def test_px2_artifact_limit_stops_generator_before_unbounded_materialization():
+    consumed = 0
+
+    def nodes():
+        nonlocal consumed
+        for index in range(100):
+            consumed += 1
+            if consumed > 4:
+                raise AssertionError("lineage builder over-consumed bounded input")
+            yield LineageNodeV1(_id(index + 1), ())
+
+    with pytest.raises(LineageResourceLimitError, match="max_artifacts"):
+        build_lineage_graph_v1(
+            nodes(),
+            parent_policy=ParentResolutionPolicyV1.STRICT,
+            limits=LineageResourceLimitsV1(max_artifacts=3),
+        )
+    assert consumed == 4
+
+
+def test_px2_long_cycle_detection_is_iterative_not_recursive():
+    count = 2_000
+    nodes = tuple(
+        LineageNodeV1(
+            _id(index),
+            (_id(count if index == 1 else index - 1),),
+        )
+        for index in range(1, count + 1)
+    )
+    with pytest.raises(LineageCycleError) as exc:
+        build_lineage_graph_v1(
+            nodes,
+            parent_policy=ParentResolutionPolicyV1.STRICT,
+        )
+    assert len(exc.value.cycle_path) == count + 1
+    assert exc.value.cycle_path[0] == exc.value.cycle_path[-1]
+
 def test_px2_store_snapshot_reconstructs_from_canonical_artifact_bytes(tmp_path: Path):
     store = LocalArtifactStoreV1(tmp_path / "store")
     root = _artifact(b"store-root")

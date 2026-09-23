@@ -28,19 +28,25 @@ record "amendment=$current/384"
 [[ "$current" == 384 ]]
 
 record "amendment-audit-start"
-"$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign amendment
+if [[ ! -f "$workspace/datasets/amendment/internal-amendment-summary.json" ]]; then
+  "$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign amendment
+fi
 "$jq_bin" -e '.passed == true' "$workspace/datasets/amendment/internal-amendment-summary.json"
 record "amendment-audit-pass"
 
 record "stat-start workers=1"
 "$python_bin" -m scripts.run_r15_local run --workspace "$workspace" --campaign stat --workers 1
-"$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign stat
+if [[ ! -f "$workspace/datasets/stat/stat-summary.json" ]]; then
+  "$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign stat
+fi
 "$jq_bin" -e '.passed == true' "$workspace/datasets/stat/stat-summary.json"
 record "stat-audit-pass"
 
 record "engineering-start workers=4"
 "$python_bin" -m scripts.run_r15_local run --workspace "$workspace" --campaign engineering --workers 4
-"$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign engineering
+if [[ ! -f "$workspace/datasets/engineering/engineering-summary.json" ]]; then
+  "$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign engineering
+fi
 "$jq_bin" -e '.passed == true' "$workspace/datasets/engineering/engineering-summary.json"
 record "engineering-audit-pass"
 

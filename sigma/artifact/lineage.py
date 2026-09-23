@@ -9,7 +9,11 @@ from enum import IntEnum
 from typing import Iterable, Mapping, Sequence
 
 from .record import SigmaArtifactV1
-from .store import LocalArtifactStoreV1, MAX_STORE_LIST_ITEMS
+from .store import (
+    ArtifactStoreCorruptionError,
+    ArtifactStoreError,
+    LocalArtifactStoreV1,
+)
 
 _DEFAULT_MAX_ARTIFACTS = 100_000
 _DEFAULT_MAX_EDGES = 1_000_000
@@ -651,38 +655,18 @@ def lineage_from_store_v1(
     if not isinstance(limits, LineageResourceLimitsV1):
         raise TypeError("limits must be LineageResourceLimitsV1")
 
-    ids: list[bytes] = []
-    after: bytes | None = None
-    while True:
-        remaining = limits.max_artifacts + 1 - len(ids)
-        if remaining <= 0:
-            raise LineageResourceLimitError("store lineage exceeds max_artifacts")
-        page = store.list_artifact_ids(
-            limit=min(MAX_STORE_LIST_ITEMS, remaining),
-            after=after,
+    try:
+        payloads = store._lineage_snapshot_wires(
+            max_artifacts=limits.max_artifacts,
+            max_edges=limits.max_edges,
+            max_total_wire_bytes=limits.max_total_artifact_wire_bytes,
         )
-        if not page:
-            break
-        ids.extend(page)
-        if len(ids) > limits.max_artifacts:
-            raise LineageResourceLimitError("store lineage exceeds max_artifacts")
-        after = page[-1]
+    except ArtifactStoreCorruptionError:
+        raise
+    except ArtifactStoreError as exc:
+        raise LineageResourceLimitError(str(exc)) from exc
 
-    artifacts: list[SigmaArtifactV1] = []
-    total_wire_bytes = 0
-    edge_count = 0
-    for artifact_id in ids:
-        payload = store.get_artifact_bytes(artifact_id)
-        total_wire_bytes += len(payload)
-        if total_wire_bytes > limits.max_total_artifact_wire_bytes:
-            raise LineageResourceLimitError(
-                "store lineage exceeds max_total_artifact_wire_bytes"
-            )
-        artifact = SigmaArtifactV1.from_bytes(payload)
-        edge_count += len(artifact.parent_artifact_ids)
-        if edge_count > limits.max_edges:
-            raise LineageResourceLimitError("store lineage exceeds max_edges")
-        artifacts.append(artifact)
+    artifacts = tuple(SigmaArtifactV1.from_bytes(payload) for payload in payloads)
 
     return lineage_from_artifacts_v1(
         artifacts,

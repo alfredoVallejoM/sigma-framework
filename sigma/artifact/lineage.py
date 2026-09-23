@@ -656,7 +656,7 @@ def lineage_from_store_v1(
         raise TypeError("limits must be LineageResourceLimitsV1")
 
     try:
-        payloads = store._lineage_snapshot_wires(
+        artifacts = store._lineage_snapshot_artifacts(
             max_artifacts=limits.max_artifacts,
             max_edges=limits.max_edges,
             max_total_wire_bytes=limits.max_total_artifact_wire_bytes,
@@ -665,8 +665,6 @@ def lineage_from_store_v1(
         raise
     except ArtifactStoreError as exc:
         raise LineageResourceLimitError(str(exc)) from exc
-
-    artifacts = tuple(SigmaArtifactV1.from_bytes(payload) for payload in payloads)
 
     return lineage_from_artifacts_v1(
         artifacts,

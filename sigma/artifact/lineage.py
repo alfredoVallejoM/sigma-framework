@@ -197,54 +197,84 @@ def _topological_or_cycle(
     parent_map: Mapping[bytes, tuple[bytes, ...]],
 ) -> tuple[tuple[bytes, ...], tuple[bytes, ...]]:
     stored = frozenset(parent_map)
+
+    # Linear cycle admission pass. Ordering is intentionally irrelevant here:
+    # Kahn's final remainder is invariant under zero-indegree queue order.
+    children_linear: dict[bytes, list[bytes]] = {}
+    indegree = {}
+    for child, parents in parent_map.items():
+        local_degree = 0
+        for parent in parents:
+            if parent in stored:
+                local_degree += 1
+                children_linear.setdefault(parent, []).append(child)
+        indegree[child] = local_degree
+
+    queue: deque[bytes] = deque(
+        artifact_id for artifact_id, degree in indegree.items() if degree == 0
+    )
+    removed = 0
+    while queue:
+        parent = queue.popleft()
+        removed += 1
+        for child in children_linear.get(parent, ()):
+            indegree[child] -= 1
+            if indegree[child] == 0:
+                queue.append(child)
+
+    if removed != len(parent_map):
+        remaining = frozenset(
+            artifact_id for artifact_id, degree in indegree.items() if degree > 0
+        )
+
+        # Every node in Kahn's remainder has a remaining local parent. Following
+        # the first one in the already-canonical parent tuple is a bounded
+        # functional walk and must repeat. Reverse it to parent->child direction.
+        current = min(remaining)
+        walk: list[bytes] = []
+        position: dict[bytes, int] = {}
+        while current not in position:
+            position[current] = len(walk)
+            walk.append(current)
+            local_parents = tuple(
+                parent
+                for parent in parent_map[current]
+                if parent in remaining
+            )
+            if not local_parents:
+                raise AssertionError(
+                    "Kahn cycle remainder contains node without remaining parent"
+                )
+            current = local_parents[0]
+
+        cycle_start = position[current]
+        reverse_ring = tuple(walk[cycle_start:])
+        forward_ring = tuple(reversed(reverse_ring))
+        return (), _canonical_cycle(forward_ring + (forward_ring[0],))
+
+    # Acyclic: compute the public deterministic parent-before-child order.
     children = _children_index(parent_map)
-    indegree = {
+    deterministic_indegree = {
         artifact_id: sum(parent in stored for parent in parents)
         for artifact_id, parents in parent_map.items()
     }
-    heap = [artifact_id for artifact_id, degree in indegree.items() if degree == 0]
+    heap = [
+        artifact_id
+        for artifact_id, degree in deterministic_indegree.items()
+        if degree == 0
+    ]
     heapq.heapify(heap)
     order: list[bytes] = []
     while heap:
         parent = heapq.heappop(heap)
         order.append(parent)
         for child in children.get(parent, ()):
-            if child not in stored:
-                continue
-            indegree[child] -= 1
-            if indegree[child] == 0:
+            deterministic_indegree[child] -= 1
+            if deterministic_indegree[child] == 0:
                 heapq.heappush(heap, child)
-    if len(order) == len(parent_map):
-        return tuple(order), ()
-
-    remaining = frozenset(
-        artifact_id for artifact_id, degree in indegree.items() if degree > 0
-    )
-
-    # Kahn's remainder has at least one remaining local parent per node.
-    # Following the lexicographically first such parent is a bounded functional
-    # walk and must eventually repeat, yielding a cycle without Python recursion.
-    current = min(remaining)
-    walk: list[bytes] = []
-    position: dict[bytes, int] = {}
-    while current not in position:
-        position[current] = len(walk)
-        walk.append(current)
-        local_parents = tuple(
-            parent
-            for parent in parent_map[current]
-            if parent in remaining
-        )
-        if not local_parents:
-            raise AssertionError(
-                "Kahn cycle remainder contains node without remaining parent"
-            )
-        current = min(local_parents)
-
-    start = position[current]
-    reverse_ring = tuple(walk[start:])
-    forward_ring = tuple(reversed(reverse_ring))
-    return tuple(order), _canonical_cycle(forward_ring + (forward_ring[0],))
+    if len(order) != len(parent_map):
+        raise AssertionError("acyclic cycle pass diverged from deterministic topology")
+    return tuple(order), ()
 
 
 def _resolve_missing(

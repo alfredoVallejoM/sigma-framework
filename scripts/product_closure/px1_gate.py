@@ -13,7 +13,6 @@ from pathlib import Path
 import sigma.artifact.store as store_module
 from sigma.artifact import (
     ArtifactProfileV1,
-    ArtifactStoreConflictError,
     ArtifactStoreIdentityError,
     LocalArtifactStoreV1,
     create_artifact_v1,

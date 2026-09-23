@@ -29,7 +29,7 @@ record "amendment=$current/384"
 
 record "amendment-audit-start"
 "$python_bin" -m scripts.run_r15_local audit --workspace "$workspace" --campaign amendment
-"$jq_bin" -e '.passed == true' "$workspace/datasets/amendment/amendment-summary.json"
+"$jq_bin" -e '.passed == true' "$workspace/datasets/amendment/internal-amendment-summary.json"
 record "amendment-audit-pass"
 
 record "stat-start workers=1"

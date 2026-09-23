@@ -70,6 +70,9 @@ class S3RangeResultV1:
         ):
             raise ValueError("S3 total size is invalid")
 
+    def metadata_dict(self) -> dict[str, str]:
+        return dict(self.metadata)
+
 
 @dataclass(frozen=True)
 class S3UploadedPartV1:
@@ -229,12 +232,20 @@ class Boto3S3ClientAdapterV1(S3ClientV1):
         except Exception as exc:
             _raise_boto_error(exc, "GetObject")
             raise AssertionError("unreachable")
+        content_range = response.get("ContentRange")
+        if not isinstance(content_range, str) or "/" not in content_range:
+            raise RemoteIntegrityError(
+                "S3 ranged GetObject omitted ContentRange"
+            )
+        try:
+            total_size = int(content_range.rsplit("/", 1)[-1])
+        except ValueError as exc:
+            raise RemoteIntegrityError(
+                "S3 ranged GetObject ContentRange is invalid"
+            ) from exc
         return S3RangeResultV1(
             data=bytes(payload),
-            total_size=int(
-                response.get("ContentRange", f"bytes {start}-{end_exclusive - 1}/{response['ContentLength']}")
-                .rsplit("/", 1)[-1]
-            ),
+            total_size=total_size,
             etag=(None if response.get("ETag") is None else str(response["ETag"])),
             metadata=self._metadata(response.get("Metadata")),
         )

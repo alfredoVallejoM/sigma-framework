@@ -17,7 +17,13 @@ from sigma.artifact import (
     create_artifact_v1,
     manifest_identity_v1,
 )
+from sigma.outputs.digest_v3 import digest_from_evaluation_v3
+from sigma.sources import BytesSource
+from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.ids_v3 import SuiteIdV3
+from sigma.trajectory import TrajectoryAuditModeV3, audit_from_evaluation_v3
 from sigma.tree import ManifestV1, build_persistent_index, build_tree
+from sigma.v3 import evaluate_v3
 
 
 def _artifact(
@@ -32,6 +38,47 @@ def _artifact(
         manifest=manifest,
         parent_artifact_ids=parents,
     )
+
+
+def test_px1_auxiliary_audit_must_use_evidence_surface(tmp_path: Path):
+    message = b"px1-auxiliary-boundary"
+    context = SigmaContextV3.for_suite(
+        SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+        salt=b"px1",
+        challenge=b"unit",
+        application_context=b"tests/px1",
+    )
+    evaluation = evaluate_v3(context, BytesSource(message))
+    digest = digest_from_evaluation_v3(evaluation)
+    audit = audit_from_evaluation_v3(
+        evaluation,
+        mode=TrajectoryAuditModeV3.COMPACT,
+    )
+    base = create_artifact_v1(
+        ArtifactProfileV1.DUAL,
+        tree_root=build_tree(message),
+        trajectory_digest=digest,
+    )
+    with_audit = create_artifact_v1(
+        ArtifactProfileV1.DUAL,
+        tree_root=build_tree(message),
+        trajectory_digest=digest,
+        trajectory_audit=audit,
+    )
+    assert base.artifact_id == with_audit.artifact_id
+
+    store = LocalArtifactStoreV1(tmp_path / "store")
+    store.put_artifact(base)
+    with pytest.raises(ArtifactStoreIdentityError, match="does not bind TrajectoryAudit"):
+        store.put_artifact(with_audit)
+
+    evidence = store.attach_evidence(
+        base.artifact_id,
+        "trajectory-audit-v3",
+        audit.to_bytes(),
+    )
+    assert store.get_evidence(base.artifact_id, evidence.object_id) == audit.to_bytes()
+    assert store.get_artifact_bytes(base.artifact_id) == base.to_bytes()
 
 
 def test_px1_put_get_recomputes_id_and_preserves_exact_wire(tmp_path: Path):
@@ -187,9 +234,7 @@ def test_px1_manifest_tree_index_and_evidence_are_separate_from_artifact_id(tmp_
     assert cache_result.object_id != original_id
 
 
-def test_px1_same_artifact_id_different_envelope_is_conflict_not_overwrite(
-    tmp_path: Path,
-):
+def test_px1_existing_key_corruption_is_not_overwritten(tmp_path: Path):
     store = LocalArtifactStoreV1(tmp_path / "store")
     artifact = _artifact(b"no-overwrite")
     store.put_artifact(artifact)
@@ -286,6 +331,8 @@ def test_px1_gc_is_bounded_and_missing_roots_fail_closed(tmp_path: Path):
     artifact = _artifact(b"bounded-gc")
     store.put_artifact(artifact)
 
+    with pytest.raises(ValueError, match="at least one declared root"):
+        store.garbage_collect(())
     with pytest.raises(ArtifactStoreNotFound, match="declared GC root"):
         store.garbage_collect((b"\xaa" * 32,))
     with pytest.raises(ValueError, match="max_artifacts"):

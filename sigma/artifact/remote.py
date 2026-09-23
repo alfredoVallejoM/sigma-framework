@@ -20,7 +20,6 @@ from typing import Callable, Protocol, TypeVar, runtime_checkable
 
 from .record import SigmaArtifactV1
 from .store import (
-    ArtifactStoreIdentityError,
     LocalArtifactStoreV1,
     StorePutResultV1,
 )
@@ -430,22 +429,6 @@ def _checkpoint_json(data: dict[str, object]) -> bytes:
         )
         + "\n"
     ).encode("ascii")
-
-
-def _load_checkpoint(path: Path) -> dict[str, object]:
-    try:
-        payload = path.read_bytes()
-    except FileNotFoundError as exc:
-        raise RemoteCheckpointError(f"checkpoint does not exist: {path}") from exc
-    try:
-        value = json.loads(payload.decode("ascii"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RemoteCheckpointError("remote checkpoint is not canonical JSON") from exc
-    if not isinstance(value, dict):
-        raise RemoteCheckpointError("remote checkpoint must be a JSON object")
-    if _checkpoint_json(value) != payload:
-        raise RemoteCheckpointError("remote checkpoint JSON is non-canonical")
-    return value
 
 
 @dataclass(frozen=True)

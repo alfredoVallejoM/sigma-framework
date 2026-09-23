@@ -421,6 +421,73 @@ Requirements:
 - cache eviction never changes semantics;
 - credentials external to ArtifactId.
 
+## Current implementation status
+
+PX3 está ACTIVE e implementado; cierre ejecutado pendiente.
+
+Core:
+
+    RemoteArtifactRepositoryV1
+    RemoteBlobBackendV1
+    RemoteTransferPolicyV1
+    RemoteUploadCheckpointV1
+    RemoteDownloadCheckpointV1
+    VerifiedRemoteArtifactCacheV1
+
+Backends:
+
+    S3CompatibleBackendV1
+      multipart + resume/ListParts + part SHA-256;
+      Boto3S3ClientAdapterV1 opcional;
+
+    OciRegistryBackendV1
+      OCI Distribution POST/PATCH/PUT sessions;
+      digest-bound blob completion;
+      image-manifest locator, no IX0 semantics;
+
+    HttpReadOnlyMirrorBackendV1
+      HEAD preflight + Range GET;
+      read-only;
+      full-body fallback sólo desde offset cero.
+
+Artifact remote key:
+
+    artifacts/v1/<ArtifactId hex>.sigart
+
+Acceptance:
+
+    complete remote bytes
+      -> canonical SigmaArtifactV1 parse
+      -> no-audit base envelope
+      -> requested ArtifactId equality
+      -> only then PX1 publication
+
+Operational metadata never enters ArtifactId:
+- credentials;
+- URL/bucket/repository;
+- ETag/version;
+- OCI digest/tag;
+- cache state;
+- resume token/checkpoint;
+- retry count.
+
+Default resource policy:
+
+    chunk_size         = 8 MiB
+    max_object_bytes   = 64 MiB
+    max_retries        = 4
+    fsync_each_chunk   = true
+    verify_after_upload = true
+
+HTTP V1 requires HEAD so max_object_bytes is enforced before body download.
+
+Evidence:
+- PX3-BACKEND-CONTRACT.md
+- PX3-COMPLEXITY-AUDIT.md
+- PX3-IMPLEMENTATION-EVIDENCE.md
+
+PX3 sólo se promociona a COMPLETE tras ejecutar el gate y promover PX3-O01..O04.
+
 # 8. PX4 — Verification Gateway / Daemon
 
 Expose the existing verifier as a service.

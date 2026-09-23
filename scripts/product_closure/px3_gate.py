@@ -24,10 +24,12 @@ from scripts.product_closure.px3_fixtures import (
 from sigma.artifact import (
     ArtifactDescriptorV1,
     ArtifactProfileV1,
+    Boto3S3ClientAdapterV1,
     HttpReadOnlyMirrorBackendV1,
     OciRegistryBackendV1,
     RemoteArtifactRepositoryV1,
     RemoteIntegrityError,
+    RemoteObjectInfoV1,
     RemoteStoreError,
     RemoteTransferPolicyV1,
     RemoteTransferSourceV1,
@@ -489,6 +491,82 @@ def run_gate(
             oci_verified += 1
             backend_stream.update(b"O" + artifact.artifact_id)
 
+    # Resource/control-plane negative checks are one-shot because their property
+    # is structural rather than statistical.
+    oversize_backend = GateMemoryRemoteBackend("px3-oversize")
+    oversize_id = hashlib.sha256(b"PX3-OVERSIZE-ID").digest()
+    oversize_key = artifact_remote_key_v1(oversize_id)
+
+    def oversize_head(key: str):
+        if key != oversize_key:
+            raise AssertionError("PX3 oversize preflight key divergence")
+        return RemoteObjectInfoV1(
+            key=key,
+            size=4097,
+            revision="oversize",
+        )
+
+    def forbidden_body_read(*args, **kwargs):
+        raise AssertionError("PX3 read body after oversize HEAD")
+
+    oversize_backend.head = oversize_head
+    oversize_backend.read_range = forbidden_body_read
+    oversize_store = LocalArtifactStoreV1(root / "oversize-local")
+    try:
+        RemoteArtifactRepositoryV1(
+            oversize_store,
+            oversize_backend,
+            policy=RemoteTransferPolicyV1(max_object_bytes=4096),
+        ).pull_artifact(oversize_id)
+    except RemoteIntegrityError:
+        oversize_preflight_rejected = True
+    else:
+        raise AssertionError("PX3 oversize HEAD did not fail closed")
+
+    oci_limit_transport = GateOciTransport()
+    oci_limit_backend = OciRegistryBackendV1(
+        "https://registry.example/",
+        "demo",
+        transport=oci_limit_transport,
+    )
+    oci_limit_key = "artifacts/v1/" + ("22" * 32) + ".sigart"
+    oci_limit_tag = oci_limit_backend._tag_for_key(oci_limit_key)
+    oci_limit_transport.manifests[oci_limit_tag] = (
+        b"{" + (b" " * (1024 * 1024 + 1)) + b"}"
+    )
+    try:
+        oci_limit_backend.head(oci_limit_key)
+    except RemoteIntegrityError:
+        oci_metadata_bound_rejected = True
+    else:
+        raise AssertionError("PX3 oversized OCI locator manifest was accepted")
+
+    class TooManyPartsClient:
+        def list_parts(self, **kwargs):
+            return {
+                "IsTruncated": False,
+                "Parts": [
+                    {
+                        "PartNumber": index,
+                        "Size": 5 * 1024 * 1024,
+                        "ETag": f'"p{index}"',
+                        "ChecksumSHA256": "AA==",
+                    }
+                    for index in range(1, 10_002)
+                ],
+            }
+
+    try:
+        Boto3S3ClientAdapterV1(TooManyPartsClient()).list_parts(
+            "bucket",
+            "key",
+            "upload",
+        )
+    except RemoteIntegrityError:
+        s3_metadata_bound_rejected = True
+    else:
+        raise AssertionError("PX3 S3 ListParts exceeded protocol bound")
+
     return {
         "schema": "sigma-px3-remote-storage-gate-v1",
         "passed": True,
@@ -513,6 +591,9 @@ def run_gate(
         "oci_cases": oci_cases,
         "oci_verified": oci_verified,
         "credentials_identity_cases": credentials_identity_cases,
+        "oversize_preflight_rejected": oversize_preflight_rejected,
+        "oci_metadata_bound_rejected": oci_metadata_bound_rejected,
+        "s3_metadata_bound_rejected": s3_metadata_bound_rejected,
         "roundtrip_stream_sha256": roundtrip_stream.hexdigest(),
         "retry_stream_sha256": retry_stream.hexdigest(),
         "corruption_stream_sha256": corruption_stream.hexdigest(),

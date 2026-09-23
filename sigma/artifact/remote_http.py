@@ -313,7 +313,11 @@ class HttpReadOnlyMirrorBackendV1(RemoteBlobBackendV1):
             if parsed is None:
                 raise RemoteIntegrityError("HTTP mirror 206 lacks valid Content-Range")
             actual_start, actual_end, total = parsed
-            if actual_start != start or len(response.body) != actual_end - actual_start + 1:
+            if (
+                actual_start != start
+                or actual_end > end
+                or len(response.body) != actual_end - actual_start + 1
+            ):
                 raise RemoteIntegrityError("HTTP mirror ranged body geometry mismatch")
         elif response.status == 200:
             if start != 0:
@@ -548,7 +552,11 @@ class OciRegistryBackendV1(RemoteBlobBackendV1):
             if parsed is None:
                 raise RemoteIntegrityError("OCI 206 lacks valid Content-Range")
             actual_start, actual_end, total = parsed
-            if actual_start != start or len(response.body) != actual_end - actual_start + 1:
+            if (
+                actual_start != start
+                or actual_end > end
+                or len(response.body) != actual_end - actual_start + 1
+            ):
                 raise RemoteIntegrityError("OCI ranged blob geometry mismatch")
         elif response.status == 200:
             if start != 0:

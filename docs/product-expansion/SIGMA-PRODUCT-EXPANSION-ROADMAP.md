@@ -345,6 +345,66 @@ V1 starts with parent edges already identity-bound by SA0.
 - cycle detection O(A+E);
 - transitive traversal bounded by policy.
 
+## Current implementation status
+
+PX2 está ACTIVE e implementado; el cierre ejecutado queda pendiente.
+
+Autoridad:
+
+    SigmaArtifactV1.parent_artifact_ids
+
+SQLite artifact_parents es únicamente un índice. La construcción desde store
+relee los blobs canónicos bajo una sola transacción BEGIN IMMEDIATE y exige
+igualdad exacta entre el índice mutable y los padres ligados a identidad.
+
+Políticas:
+
+    STRICT
+      todo padre debe estar almacenado;
+
+    EXTERNAL
+      cada padre ausente debe declararse explícitamente como externo;
+
+    UNRESOLVED
+      los ausentes no declarados se preservan como frontera unresolved.
+
+Consultas implementadas:
+
+    parents
+    children
+    ancestors
+    descendants
+    roots
+    local_entrypoints
+    topological_order
+    explain_path
+    status
+
+Semántica de root:
+- roots() significa cero parent IDs en la identidad;
+- local_entrypoints() significa cero padres almacenados, aunque existan padres
+  externos/no resueltos.
+
+Ciclos:
+- admisión lineal O(A+E);
+- REJECT lanza witness cerrado determinista;
+- REPORT devuelve snapshot rechazado con graph=None;
+- nunca se materializa un ArtifactLineageGraphV1 cíclico aceptado.
+
+Resource defaults:
+
+    max_artifacts                 = 100,000
+    max_edges                     = 1,000,000
+    max_total_artifact_wire_bytes = 512 MiB
+    max_traversal_nodes           = 100,000
+
+Evidence:
+- PX2-IMPLEMENTATION-EVIDENCE.md
+- PX2-COMPLEXITY-AUDIT.md
+
+PX2 sólo podrá promocionarse a COMPLETE tras ejecutar el gate y promover
+PX2-O01..O04.
+
 # 7. PX3 — Remote Storage Backends
 
 Backends:

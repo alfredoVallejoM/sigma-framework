@@ -208,3 +208,7 @@ AX1-STMT-001	AX1	T1	Private-proof statement canonicality	selected standard proof
 AX1-CLAIM-001	AX1	T4	ZK threat/setup claim boundary	external proof-system assumptions	setup/soundness/privacy variants	documented scoped claims only	BLOCKING
 AX2-POISON-001	AX2	T4	Untrusted distributed cache poisoning	local verifier	wrong artifacts/proofs/indexes	never alters accepted local result	BLOCKING
 AX2-LOAD-001	AX2	T6	Distributed protocol backpressure/cancellation	resource model	concurrent slow/large peers	bounded resources and isolated cancellation	BLOCKING
+PX0-ID-001	PX0	T3	Artifact/Tree identity invariance	SA0/TreeRoot reference	>=500 indexed vs non-indexed artifacts	byte-identical ArtifactId/artifact wire	BLOCKING
+PX0-SOURCE-001	PX0	T4	FULL vs LENGTH_ONLY source trust	full Tree rebuild	>=200 same-length stale sources	FULL rejects; LENGTH_ONLY never trusted	BLOCKING
+PX0-MMAP-001	PX0	T3	Normal/mmap sidecar read parity	canonical sidecar reader	geometric sidecar sweep	byte/semantic identical index	BLOCKING
+PX0-SCALE-001	PX0	T6	Persistent index storage/load complexity	complexity model	1..512 leaves	O(N) sidecar/load; O(log N) detached inclusion	REQUIRED

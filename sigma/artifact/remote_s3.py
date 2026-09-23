@@ -315,6 +315,10 @@ class Boto3S3ClientAdapterV1(S3ClientV1):
             for raw in parts:
                 if not isinstance(raw, dict):
                     raise RemoteIntegrityError("S3 ListParts part is invalid")
+                if len(result) >= S3_MAX_PARTS:
+                    raise RemoteIntegrityError(
+                        "S3 ListParts exceeds the 10,000-part protocol bound"
+                    )
                 result.append(
                     S3UploadedPartV1(
                         part_number=int(raw["PartNumber"]),

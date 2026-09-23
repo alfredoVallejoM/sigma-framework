@@ -515,7 +515,7 @@ class RemoteUploadCheckpointV1:
                 chunk_size=int(session_data["chunk_size"]),
                 opaque=opaque,
             )
-            return cls(
+            record = cls(
                 backend_fingerprint=str(data["backend_fingerprint"]),
                 key=str(data["key"]),
                 artifact_id=bytes.fromhex(str(data["artifact_id"])),
@@ -523,6 +523,13 @@ class RemoteUploadCheckpointV1:
                 wire_sha256=bytes.fromhex(str(data["wire_sha256"])),
                 session=session,
             )
+            if record.to_bytes() != payload:
+                raise RemoteCheckpointError(
+                    "upload checkpoint has non-canonical semantic encoding"
+                )
+            return record
+        except RemoteCheckpointError:
+            raise
         except (KeyError, TypeError, ValueError) as exc:
             raise RemoteCheckpointError("invalid upload checkpoint fields") from exc
 
@@ -591,7 +598,7 @@ class RemoteDownloadCheckpointV1:
             raise RemoteCheckpointError("unsupported/non-canonical download checkpoint")
         try:
             remote_wire = data["remote_wire_sha256"]
-            return cls(
+            record = cls(
                 backend_fingerprint=str(data["backend_fingerprint"]),
                 key=str(data["key"]),
                 artifact_id=bytes.fromhex(str(data["artifact_id"])),
@@ -606,6 +613,13 @@ class RemoteDownloadCheckpointV1:
                     None if remote_wire is None else bytes.fromhex(str(remote_wire))
                 ),
             )
+            if record.to_bytes() != payload:
+                raise RemoteCheckpointError(
+                    "download checkpoint has non-canonical semantic encoding"
+                )
+            return record
+        except RemoteCheckpointError:
+            raise
         except (KeyError, TypeError, ValueError) as exc:
             raise RemoteCheckpointError("invalid download checkpoint fields") from exc
 

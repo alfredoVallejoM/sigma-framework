@@ -92,5 +92,26 @@ Evidence:
 - `PX0-PERFORMANCE-LEDGER.json`;
 - `PX0-IMPLEMENTATION-EVIDENCE.md`.
 
-PX1 — Artifact CAS / Local Store — permanece PLANNED y depende ahora
-explícitamente de SA0 + SA1 + PX0.
+PX1 — Artifact CAS / Local Store — está **ACTIVE / IMPLEMENTED, GATE PENDING**.
+
+Implementación PX1:
+- filesystem CAS + SQLite metadata/index;
+- canonical ArtifactId recomputation before publication;
+- idempotent duplicate put and concurrent same-ID serialization;
+- crash-safe metadata visibility with recoverable orphan blobs;
+- ManifestId CAS;
+- PX0 Tree index derived cache with source hints stripped;
+- parent/child index;
+- auxiliary evidence surface;
+- bounded reachability-preserving GC.
+
+Identity boundary:
+- ArtifactId-addressed CAS stores only the canonical no-audit SigmaArtifactV1 envelope;
+- TrajectoryAudit remains auxiliary evidence because SA0 deliberately excludes it from ArtifactId.
+
+Evidence:
+- PX1-IMPLEMENTATION-EVIDENCE.md;
+- PX1-COMPLEXITY-AUDIT.md.
+
+PX1 is not COMPLETE until the repository-native pytest/Ruff/Mypy checks and
+scripts/product_closure/px1_gate.py execute successfully.

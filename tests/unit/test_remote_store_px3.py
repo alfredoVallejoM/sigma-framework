@@ -13,6 +13,7 @@ from sigma.artifact import (
     HttpResponseV1,
     OciRegistryBackendV1,
     RemoteArtifactRepositoryV1,
+    RemoteCheckpointError,
     RemoteConflictError,
     RemoteDownloadCheckpointV1,
     RemoteIntegrityError,
@@ -675,6 +676,64 @@ def test_px3_verified_cache_is_disposable_and_corruption_is_a_miss(tmp_path: Pat
     after_evict = repository.pull_artifact(artifact.artifact_id)
     assert after_evict.source is RemoteTransferSourceV1.REMOTE
 
+
+
+def test_px3_rejects_oversize_remote_from_head_before_read(tmp_path: Path):
+    artifact = _artifact(b"oversize-preflight")
+    key = artifact_remote_key_v1(artifact.artifact_id)
+    backend = MemoryRemoteBackend()
+
+    def oversized_head(observed_key: str):
+        assert observed_key == key
+        return RemoteObjectInfoV1(
+            key=key,
+            size=4097,
+            revision="oversize",
+            wire_sha256=None,
+        )
+
+    def forbidden_read(*args, **kwargs):
+        raise AssertionError("PX3 attempted body read after oversize HEAD")
+
+    backend.head = oversized_head
+    backend.read_range = forbidden_read
+    local = LocalArtifactStoreV1(tmp_path / "local")
+    with pytest.raises(RemoteIntegrityError, match="max_object_bytes"):
+        RemoteArtifactRepositoryV1(
+            local,
+            backend,
+            policy=RemoteTransferPolicyV1(max_object_bytes=4096),
+        ).pull_artifact(artifact.artifact_id)
+    assert not local.has_artifact(artifact.artifact_id)
+
+
+def test_px3_checkpoint_codec_rejects_semantic_noncanonical_variants(tmp_path: Path):
+    local = LocalArtifactStoreV1(tmp_path / "local")
+    artifact = _artifact(b"checkpoint-canonicality" * 100)
+    local.put_artifact(artifact)
+    backend = MemoryRemoteBackend()
+    repo = RemoteArtifactRepositoryV1(
+        local,
+        backend,
+        policy=RemoteTransferPolicyV1(chunk_size=64),
+    )
+    checkpoint = tmp_path / "upload.json"
+    backend.fail_upload_fatal_after_accept_at = 64
+    with pytest.raises(RemoteStoreError):
+        repo.push_artifact(artifact.artifact_id, checkpoint_path=checkpoint)
+
+    payload = checkpoint.read_bytes()
+    record = RemoteUploadCheckpointV1.from_bytes(payload)
+    assert record.to_bytes() == payload
+    text = payload.decode("ascii")
+    mutated = text.replace(
+        artifact.artifact_id.hex(),
+        artifact.artifact_id.hex().upper(),
+        1,
+    ).encode("ascii")
+    assert mutated != payload
+    with pytest.raises(RemoteCheckpointError, match="non-canonical"):
+        RemoteUploadCheckpointV1.from_bytes(mutated)
 
 def test_px3_http_mirror_range_and_full_fallback(tmp_path: Path):
     artifact = _artifact(b"http-mirror" * 80)

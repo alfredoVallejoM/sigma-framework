@@ -13,7 +13,7 @@ import json
 import os
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Callable, Protocol, TypeVar, runtime_checkable
@@ -180,7 +180,7 @@ class RemoteUploadSessionV1:
     key: str
     total_size: int
     wire_sha256: bytes
-    token: str
+    token: str = field(repr=False)
     accepted_offset: int = 0
     chunk_size: int = DEFAULT_REMOTE_CHUNK_SIZE
     opaque: tuple[tuple[str, str], ...] = ()

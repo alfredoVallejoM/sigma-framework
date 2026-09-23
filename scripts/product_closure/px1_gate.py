@@ -64,8 +64,8 @@ def _reachable(
     return result
 
 
-def _dual_audit_conflict(store: LocalArtifactStoreV1) -> bool:
-    message = b"px1-audit-envelope-conflict"
+def _auxiliary_envelope_boundary(store: LocalArtifactStoreV1) -> bool:
+    message = b"px1-audit-envelope-boundary"
     context = SigmaContextV3.for_suite(
         SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
         salt=b"px1",
@@ -87,6 +87,7 @@ def _dual_audit_conflict(store: LocalArtifactStoreV1) -> bool:
         tree_root=build_tree(message),
         trajectory_digest=digest,
     )
+    base = create_artifact_v1(**common)
     compact_artifact = create_artifact_v1(
         **common,
         trajectory_audit=compact,
@@ -95,28 +96,45 @@ def _dual_audit_conflict(store: LocalArtifactStoreV1) -> bool:
         **common,
         trajectory_audit=full,
     )
-    if compact_artifact.artifact_id != full_artifact.artifact_id:
+    if not (
+        base.artifact_id
+        == compact_artifact.artifact_id
+        == full_artifact.artifact_id
+    ):
         raise AssertionError("SA0 auxiliary audit unexpectedly changed ArtifactId")
-    if compact_artifact.to_bytes() == full_artifact.to_bytes():
-        raise AssertionError("PX1 conflict fixture did not create distinct envelopes")
 
-    store.put_artifact(compact_artifact)
-    try:
-        store.put_artifact(full_artifact)
-    except ArtifactStoreConflictError:
-        pass
-    else:
-        raise AssertionError("PX1 silently overwrote same-ArtifactId alternate envelope")
+    store.put_artifact(base)
+    for artifact in (compact_artifact, full_artifact):
+        try:
+            store.put_artifact(artifact)
+        except ArtifactStoreIdentityError:
+            pass
+        else:
+            raise AssertionError(
+                "PX1 accepted an envelope whose auxiliary audit is not bound by ArtifactId"
+            )
 
-    attached = store.attach_evidence(
-        full_artifact.artifact_id,
+    compact_attachment = store.attach_evidence(
+        base.artifact_id,
+        "trajectory-audit-v3",
+        compact.to_bytes(),
+    )
+    full_attachment = store.attach_evidence(
+        base.artifact_id,
         "trajectory-audit-v3",
         full.to_bytes(),
     )
-    if store.get_evidence(full_artifact.artifact_id, attached.object_id) != full.to_bytes():
+    if compact_attachment.object_id == full_attachment.object_id:
+        raise AssertionError("PX1 evidence attachments failed to distinguish audit bytes")
+    if (
+        store.get_evidence(base.artifact_id, compact_attachment.object_id)
+        != compact.to_bytes()
+        or store.get_evidence(base.artifact_id, full_attachment.object_id)
+        != full.to_bytes()
+    ):
         raise AssertionError("PX1 auxiliary evidence round-trip diverged")
-    if store.get_artifact_bytes(compact_artifact.artifact_id) != compact_artifact.to_bytes():
-        raise AssertionError("PX1 alternate evidence changed authoritative envelope")
+    if store.get_artifact_bytes(base.artifact_id) != base.to_bytes():
+        raise AssertionError("PX1 auxiliary evidence changed canonical base artifact")
     return True
 
 
@@ -200,7 +218,7 @@ def run_gate(
             else:
                 raise AssertionError(f"PX1 wrong-key put accepted at case {case}")
 
-        alternate_envelope_conflict = _dual_audit_conflict(store)
+        auxiliary_envelope_boundary = _auxiliary_envelope_boundary(store)
 
         concurrent_artifact = _tree_artifact(rng.randbytes(3 * 65_536 + 17))
 
@@ -344,7 +362,7 @@ def run_gate(
         "wrong_key_cases": wrong_key_cases,
         "wrong_key_rejections": wrong_key_rejections,
         "concurrent_identical_puts": CONCURRENT_PUTS,
-        "alternate_envelope_conflict_rejected": alternate_envelope_conflict,
+        "auxiliary_envelope_rejected": auxiliary_envelope_boundary,
         "crash_cases": crash_cases,
         "crash_invisible_cases": crash_invisible,
         "crash_recovery_cases": crash_recoveries,

@@ -63,3 +63,34 @@ Ninguna etapa PX/IX/ML/NR/AX bloquea REL3 por defecto.
 
 Esta clasificación es de roadmap/producto, no un compromiso de versionado semántico
 hasta que cada etapa congele su propio wire/profile.
+
+
+## Estado PX
+
+PX0 — Persistent Tree Index — está **COMPLETE**.
+
+Cierre PX0:
+- run `35799646274`;
+- 110 focused/regression tests PASS;
+- 500 sidecar/reference cases;
+- 500 proof cases;
+- 300 delta + 300 append cases;
+- 5,000 checksum corruptions rejected;
+- 200 structural corruptions rejected;
+- 200 stale sources rejected;
+- ArtifactId/TreeRoot invariance confirmed;
+- mmap/normal parity;
+- atomic publication PASS.
+
+Formato:
+
+    SIGTIDX1
+    PERSISTENT_TREE_INDEX_FORMAT_VERSION = 1
+
+Evidence:
+- `PX0-GATE-REPORT.json`;
+- `PX0-PERFORMANCE-LEDGER.json`;
+- `PX0-IMPLEMENTATION-EVIDENCE.md`.
+
+PX1 — Artifact CAS / Local Store — permanece PLANNED y depende ahora
+explícitamente de SA0 + SA1 + PX0.

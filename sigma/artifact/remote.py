@@ -19,10 +19,7 @@ from pathlib import Path
 from typing import Callable, Protocol, TypeVar, runtime_checkable
 
 from .record import SigmaArtifactV1
-from .store import (
-    LocalArtifactStoreV1,
-    StorePutResultV1,
-)
+from .store import LocalArtifactStoreV1, StorePutResultV1
 
 REMOTE_CHECKPOINT_VERSION = 1
 DEFAULT_REMOTE_CHUNK_SIZE = 8 * 1024 * 1024

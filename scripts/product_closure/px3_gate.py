@@ -493,24 +493,23 @@ def run_gate(
 
     # Resource/control-plane negative checks are one-shot because their property
     # is structural rather than statistical.
-    oversize_backend = GateMemoryRemoteBackend("px3-oversize")
     oversize_id = hashlib.sha256(b"PX3-OVERSIZE-ID").digest()
     oversize_key = artifact_remote_key_v1(oversize_id)
 
-    def oversize_head(key: str):
-        if key != oversize_key:
-            raise AssertionError("PX3 oversize preflight key divergence")
-        return RemoteObjectInfoV1(
-            key=key,
-            size=4097,
-            revision="oversize",
-        )
+    class OversizeBackend(GateMemoryRemoteBackend):
+        def head(self, key: str):
+            if key != oversize_key:
+                raise AssertionError("PX3 oversize preflight key divergence")
+            return RemoteObjectInfoV1(
+                key=key,
+                size=4097,
+                revision="oversize",
+            )
 
-    def forbidden_body_read(*args, **kwargs):
-        raise AssertionError("PX3 read body after oversize HEAD")
+        def read_range(self, key: str, *, start: int, max_bytes: int):
+            raise AssertionError("PX3 read body after oversize HEAD")
 
-    oversize_backend.head = oversize_head
-    oversize_backend.read_range = forbidden_body_read
+    oversize_backend = OversizeBackend("px3-oversize")
     oversize_store = LocalArtifactStoreV1(root / "oversize-local")
     try:
         RemoteArtifactRepositoryV1(

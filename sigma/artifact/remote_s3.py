@@ -69,6 +69,15 @@ class S3RangeResultV1:
             or self.total_size < len(self.data)
         ):
             raise ValueError("S3 total size is invalid")
+        if (
+            not isinstance(self.metadata, tuple)
+            or tuple(sorted(set(self.metadata))) != self.metadata
+            or any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in self.metadata
+            )
+        ):
+            raise ValueError("S3 range metadata must be sorted unique str pairs")
 
     def metadata_dict(self) -> dict[str, str]:
         return dict(self.metadata)

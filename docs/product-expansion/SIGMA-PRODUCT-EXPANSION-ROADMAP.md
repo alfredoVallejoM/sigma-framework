@@ -275,6 +275,41 @@ Operations:
 - GC preserves reachable graph under declared roots;
 - store backend does not alter wire identity.
 
+## Current implementation status
+
+PX1 is ACTIVE and implemented; executed closure remains pending.
+
+Implemented:
+- LocalArtifactStoreV1;
+- filesystem canonical blobs + SQLite metadata/index;
+- ArtifactId and ManifestId recomputation before publication;
+- exact base-artifact put/get;
+- parent/child lookup;
+- evidence attachments;
+- PX0 persistent-index derived cache;
+- bounded GC with declared roots;
+- bounded deterministic PX1 closure gate.
+
+Critical SA0 boundary:
+ArtifactId does not include TrajectoryAudit. Therefore the ArtifactId CAS accepts
+only the canonical SigmaArtifactV1 base envelope with no audit. COMPACT/FULL audit
+bytes use the evidence surface and never select or overwrite the ArtifactId value.
+
+GC resource admission is checked before graph materialization:
+
+    A <= max_artifacts
+    E <= max_edges
+    M + X + I <= max_auxiliary_items
+
+An empty root set fails closed.
+
+Evidence:
+- PX1-IMPLEMENTATION-EVIDENCE.md
+- PX1-COMPLEXITY-AUDIT.md
+
+PX1 may move to COMPLETE only after the unit/quality suite and px1_gate.py are
+executed successfully and PX1-O01..O04 are promoted.
+
 # 6. PX2 — Artifact Lineage Graph
 
 ## Goal

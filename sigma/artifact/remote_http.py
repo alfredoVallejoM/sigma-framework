@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import re
@@ -317,7 +316,7 @@ class HttpReadOnlyMirrorBackendV1(RemoteBlobBackendV1):
             if actual_start != start or len(response.body) != actual_end - actual_start + 1:
                 raise RemoteIntegrityError("HTTP mirror ranged body geometry mismatch")
         elif response.status == 200:
-            if start != 0 or len(response.body) > max_bytes:
+            if start != 0:
                 raise RemoteRangeUnsupportedError(
                     "HTTP mirror ignored byte range"
                 )
@@ -336,7 +335,14 @@ class HttpReadOnlyMirrorBackendV1(RemoteBlobBackendV1):
             ),
         )
 
-    def begin_upload(self, key: str, **kwargs) -> RemoteUploadSessionV1:
+    def begin_upload(
+        self,
+        key: str,
+        *,
+        total_size: int,
+        wire_sha256: bytes,
+        preferred_chunk_size: int,
+    ) -> RemoteUploadSessionV1:
         raise RemoteReadOnlyError("HTTP mirror is read-only")
 
     def resume_upload(self, session: RemoteUploadSessionV1) -> RemoteUploadSessionV1:
@@ -545,7 +551,7 @@ class OciRegistryBackendV1(RemoteBlobBackendV1):
             if actual_start != start or len(response.body) != actual_end - actual_start + 1:
                 raise RemoteIntegrityError("OCI ranged blob geometry mismatch")
         elif response.status == 200:
-            if start != 0 or len(response.body) > max_bytes:
+            if start != 0:
                 raise RemoteRangeUnsupportedError("OCI registry ignored byte Range")
             total = len(response.body)
         else:

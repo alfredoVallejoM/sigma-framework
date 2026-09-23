@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import urllib.parse
+from typing import Any
 
 from sigma.artifact.remote import (
     RemoteConflictError,
@@ -219,7 +220,7 @@ class GateStaticMirrorTransport:
 class GateS3Client:
     def __init__(self) -> None:
         self.objects: dict[tuple[str, str], tuple[bytes, dict[str, str], str]] = {}
-        self.uploads: dict[str, dict[str, object]] = {}
+        self.uploads: dict[str, dict[str, Any]] = {}
         self.next_upload = 1
 
     def head_object(self, bucket: str, key: str):

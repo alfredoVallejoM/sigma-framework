@@ -250,13 +250,8 @@ class HttpReadOnlyMirrorBackendV1(RemoteBlobBackendV1):
         if response.status == 404:
             return None
         if response.status in (405, 501):
-            # Some static mirrors omit HEAD. A zero-range GET is an equivalent
-            # metadata probe without treating provider metadata as identity.
-            response = self.transport.request(
-                "GET",
-                self._url(key),
-                headers={**self.headers, "Range": "bytes=0-0"},
-                timeout=self.timeout,
+            raise RemoteStoreError(
+                "PX3 HTTP mirror requires HEAD for bounded size preflight"
             )
         if response.status not in (200, 206):
             _remote_failure(response, operation="HTTP mirror head")

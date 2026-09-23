@@ -434,6 +434,18 @@ ETag is revision only; full canonical remote wire is post-verified.
 Resolution:
 fingerprint includes only public endpoint/bucket/repository/prefix scope.
 
+### AR-PX3-10 — unbounded provider metadata before payload policy
+
+Finding:
+OCI locator manifests and S3 ListParts are control-plane inputs and therefore
+could consume resources independently of artifact body size.
+
+Resolution:
+- OCI locator manifests are capped at 1 MiB before JSON parsing;
+- boto3 ListParts accumulation is capped at 10,000 parts.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
 ## 23. Security / trust boundary
 
 PX3 assumes providers implement their documented HTTP/S3/OCI protocol semantics

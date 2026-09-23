@@ -450,6 +450,26 @@ Conflict:
 - invalid part geometry;
 - same ArtifactId key with different canonical bytes.
 
+## 18A. Provider metadata bounds
+
+PX3 also bounds provider-side metadata independently of artifact payload size.
+
+OCI locator manifest:
+
+    <= 1 MiB
+
+A larger manifest is rejected before JSON parsing.
+
+S3 multipart enumeration:
+
+    <= 10,000 parts
+
+The boto3 adapter aborts ListParts accumulation at the protocol maximum even if
+a non-conforming provider keeps paginating.
+
+These limits prevent metadata/control-plane responses from bypassing the body
+resource policy.
+
 ## 19. Identity non-interference
 
 Changing any of the following does not construct a new Sigma artifact and cannot

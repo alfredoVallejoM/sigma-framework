@@ -22,7 +22,13 @@ from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
 from sigma.spec.ids_v3 import SuiteIdV3
 from sigma.trajectory import TrajectoryAuditModeV3, audit_from_evaluation_v3
-from sigma.tree import ManifestV1, build_persistent_index, build_tree
+from sigma.tree import (
+    ManifestEntryKind,
+    ManifestEntryV1,
+    ManifestV1,
+    build_persistent_index,
+    build_tree,
+)
 from sigma.v3 import evaluate_v3
 
 
@@ -253,8 +259,6 @@ def test_px1_gc_preserves_transitive_parents_and_reachable_derived_objects(
     store = LocalArtifactStoreV1(tmp_path / "store")
 
     manifest_keep = ManifestV1()
-    from sigma.tree import ManifestEntryKind, ManifestEntryV1
-
     dropped_data = b"dropped-manifest-payload"
     dropped_root = build_tree(dropped_data)
     manifest_drop = ManifestV1(

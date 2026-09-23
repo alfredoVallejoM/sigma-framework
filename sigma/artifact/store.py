@@ -310,6 +310,11 @@ class LocalArtifactStoreV1:
         artifact = SigmaArtifactV1.from_bytes(payload)
         if artifact.to_bytes() != payload:
             raise ArtifactStoreIdentityError("artifact payload is not canonical")
+        if artifact.trajectory_audit is not None:
+            raise ArtifactStoreIdentityError(
+                "ArtifactId does not bind TrajectoryAudit bytes; store the canonical "
+                "base artifact and attach trajectory audit as auxiliary evidence"
+            )
         artifact_id = artifact.artifact_id
         if expected_artifact_id is not None:
             _validate_id("expected_artifact_id", expected_artifact_id)
@@ -851,8 +856,11 @@ class LocalArtifactStoreV1:
         *,
         max_artifacts: int = 100_000,
         max_edges: int = 1_000_000,
+        max_auxiliary_items: int = 1_000_000,
     ) -> StoreGCResultV1:
         roots_tuple = tuple(dict.fromkeys(roots))
+        if not roots_tuple:
+            raise ValueError("garbage collection requires at least one declared root")
         for root in roots_tuple:
             _validate_id("root ArtifactId", root)
         if (
@@ -863,6 +871,12 @@ class LocalArtifactStoreV1:
             raise ValueError("max_artifacts must be a positive integer")
         if isinstance(max_edges, bool) or not isinstance(max_edges, int) or max_edges < 0:
             raise ValueError("max_edges must be a non-negative integer")
+        if (
+            isinstance(max_auxiliary_items, bool)
+            or not isinstance(max_auxiliary_items, int)
+            or max_auxiliary_items < 0
+        ):
+            raise ValueError("max_auxiliary_items must be a non-negative integer")
 
         connection = self._connect()
         artifact_files: list[bytes] = []
@@ -873,16 +887,35 @@ class LocalArtifactStoreV1:
         reachable: set[bytes] = set()
         try:
             self._begin(connection)
+            artifact_count = int(
+                connection.execute("SELECT COUNT(*) FROM artifacts").fetchone()[0]
+            )
+            if artifact_count > max_artifacts:
+                raise ArtifactStoreError(
+                    "garbage collection exceeds max_artifacts resource bound"
+                )
+            edge_count = int(
+                connection.execute("SELECT COUNT(*) FROM artifact_parents").fetchone()[0]
+            )
+            if edge_count > max_edges:
+                raise ArtifactStoreError(
+                    "garbage collection exceeds max_edges resource bound"
+                )
+            auxiliary_count = sum(
+                int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                for table in ("evidence", "manifests", "tree_indexes")
+            )
+            if auxiliary_count > max_auxiliary_items:
+                raise ArtifactStoreError(
+                    "garbage collection exceeds max_auxiliary_items resource bound"
+                )
+
             artifact_rows = connection.execute(
                 """
                 SELECT artifact_id, manifest_id, tree_root_wire, payload_bytes
                 FROM artifacts
                 """
             ).fetchall()
-            if len(artifact_rows) > max_artifacts:
-                raise ArtifactStoreError(
-                    "garbage collection exceeds max_artifacts resource bound"
-                )
             stored = {row[0] for row in artifact_rows}
             missing_roots = tuple(root for root in roots_tuple if root not in stored)
             if missing_roots:
@@ -893,10 +926,6 @@ class LocalArtifactStoreV1:
             edge_rows = connection.execute(
                 "SELECT child_id, parent_id FROM artifact_parents"
             ).fetchall()
-            if len(edge_rows) > max_edges:
-                raise ArtifactStoreError(
-                    "garbage collection exceeds max_edges resource bound"
-                )
             parents_by_child: dict[bytes, list[bytes]] = {}
             for child, parent in edge_rows:
                 parents_by_child.setdefault(child, []).append(parent)

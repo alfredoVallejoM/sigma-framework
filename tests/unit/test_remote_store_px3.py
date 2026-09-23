@@ -9,6 +9,7 @@ import pytest
 
 from sigma.artifact import (
     ArtifactProfileV1,
+    Boto3S3ClientAdapterV1,
     HttpReadOnlyMirrorBackendV1,
     HttpResponseV1,
     OciRegistryBackendV1,
@@ -861,6 +862,41 @@ def test_px3_oci_distribution_storage_roundtrip(tmp_path: Path):
     assert pull.source is RemoteTransferSourceV1.REMOTE
     assert destination.get_artifact_bytes(artifact.artifact_id) == artifact.to_bytes()
 
+
+
+def test_px3_oci_locator_manifest_has_hard_metadata_bound():
+    transport = FakeOciTransport()
+    backend = OciRegistryBackendV1(
+        "https://registry.example/",
+        "demo",
+        transport=transport,
+    )
+    key = "artifacts/v1/" + "11" * 32 + ".sigart"
+    tag = backend._tag_for_key(key)
+    transport.manifests[tag] = b"{" + (b" " * (1024 * 1024 + 1)) + b"}"
+    with pytest.raises(RemoteIntegrityError, match="metadata size limit"):
+        backend.head(key)
+
+
+def test_px3_boto_adapter_bounds_listparts_to_protocol_maximum():
+    class TooManyPartsClient:
+        def list_parts(self, **kwargs):
+            return {
+                "IsTruncated": False,
+                "Parts": [
+                    {
+                        "PartNumber": index,
+                        "Size": 5 * 1024 * 1024,
+                        "ETag": f'"p{index}"',
+                        "ChecksumSHA256": "AA==",
+                    }
+                    for index in range(1, 10_002)
+                ],
+            }
+
+    adapter = Boto3S3ClientAdapterV1(TooManyPartsClient())
+    with pytest.raises(RemoteIntegrityError, match="10,000-part"):
+        adapter.list_parts("bucket", "key", "upload")
 
 def test_px3_remote_object_metadata_never_changes_artifact_identity(tmp_path: Path):
     artifact = _artifact(b"metadata-independence")

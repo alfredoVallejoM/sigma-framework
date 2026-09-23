@@ -520,6 +520,10 @@ class LocalArtifactStoreV1:
                 ORDER BY child_id, parent_id
                 """
             ).fetchall()
+            if len(rows) != artifact_count or len(parent_rows) != edge_count:
+                raise ArtifactStoreCorruptionError(
+                    "lineage snapshot cardinality changed inside store transaction"
+                )
 
             parents_by_child: dict[bytes, list[bytes]] = {}
             for child_id, parent_id in parent_rows:

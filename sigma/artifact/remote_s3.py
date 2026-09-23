@@ -46,8 +46,9 @@ class S3ObjectHeadV1:
                 not isinstance(key, str) or not isinstance(value, str)
                 for key, value in self.metadata
             )
+            or len({key for key, _ in self.metadata}) != len(self.metadata)
         ):
-            raise ValueError("S3 metadata must be sorted unique str pairs")
+            raise ValueError("S3 metadata must be sorted unique-key str pairs")
 
     def metadata_dict(self) -> dict[str, str]:
         return dict(self.metadata)
@@ -76,8 +77,9 @@ class S3RangeResultV1:
                 not isinstance(key, str) or not isinstance(value, str)
                 for key, value in self.metadata
             )
+            or len({key for key, _ in self.metadata}) != len(self.metadata)
         ):
-            raise ValueError("S3 range metadata must be sorted unique str pairs")
+            raise ValueError("S3 range metadata must be sorted unique-key str pairs")
 
     def metadata_dict(self) -> dict[str, str]:
         return dict(self.metadata)
@@ -583,16 +585,17 @@ class S3CompatibleBackendV1(RemoteBlobBackendV1):
         )
         expected_number = 1
         offset = 0
-        for index, part in enumerate(parts):
+        for part in parts:
             if part.part_number != expected_number:
                 raise RemoteIntegrityError("S3 multipart parts are not contiguous")
-            if index < len(parts) - 1 and part.size != session.chunk_size:
+            if part.size <= 0 or part.size > session.chunk_size:
+                raise RemoteIntegrityError("S3 resumed part size is invalid")
+            next_offset = offset + part.size
+            if next_offset < session.total_size and part.size != session.chunk_size:
                 raise RemoteIntegrityError(
                     "S3 resumed non-final part size differs from session chunk size"
                 )
-            if part.size > session.chunk_size:
-                raise RemoteIntegrityError("S3 resumed part exceeds session chunk size")
-            offset += part.size
+            offset = next_offset
             expected_number += 1
         if offset > session.total_size:
             raise RemoteIntegrityError("S3 resumed parts exceed object size")

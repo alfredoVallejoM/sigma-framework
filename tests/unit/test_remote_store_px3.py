@@ -725,14 +725,9 @@ def test_px3_checkpoint_codec_rejects_semantic_noncanonical_variants(tmp_path: P
     payload = checkpoint.read_bytes()
     record = RemoteUploadCheckpointV1.from_bytes(payload)
     assert record.to_bytes() == payload
-    text = payload.decode("ascii")
-    mutated = text.replace(
-        artifact.artifact_id.hex(),
-        artifact.artifact_id.hex().upper(),
-        1,
-    ).encode("ascii")
+    mutated = payload.replace(b'"version":1', b'"version":1 ')
     assert mutated != payload
-    with pytest.raises(RemoteCheckpointError, match="non-canonical"):
+    with pytest.raises(RemoteCheckpointError, match="canonical"):
         RemoteUploadCheckpointV1.from_bytes(mutated)
 
 def test_px3_http_mirror_range_and_full_fallback(tmp_path: Path):

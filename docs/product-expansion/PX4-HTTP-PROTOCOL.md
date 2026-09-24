@@ -361,6 +361,13 @@ Response includes:
 
 No git branch, filesystem path or credential-bearing build environment is exposed.
 
+## 16A. Outer HTTP parser errors
+
+Malformed HTTP syntax handled by BaseHTTPRequestHandler is projected through the
+same canonical sigma-gateway-error-v1 JSON schema by overriding send_error.
+
+Transport admission failures also emit the fixed safe audit schema.
+
 ## 17. Error JSON
 
 Schema:
@@ -441,6 +448,9 @@ An oversize request can therefore receive a final error without sending body.
 
 ## 22. Chunked HTTP
 
+Socket blocking reads use request_timeout_seconds. A body-read timeout maps to
+the deterministic gateway timeout error.
+
 Transfer-Encoding is intentionally unsupported in V1.
 
 Reason:
@@ -451,7 +461,11 @@ not unknown-length HTTP chunking.
 
 ## 23. Header policy
 
-Aggregate parsed header bytes are limited.
+Header bytes are limited during stdlib parsing through a budgeted readline
+wrapper. PX4 does not wait for an arbitrarily large parsed mapping before
+applying max_header_bytes.
+
+Aggregate parsed header bytes are also rechecked after parse.
 
 The gateway does not log arbitrary headers.
 

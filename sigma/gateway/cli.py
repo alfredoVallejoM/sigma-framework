@@ -48,6 +48,7 @@ def build_parser_v1() -> argparse.ArgumentParser:
     parser.add_argument("--max-batch-items", type=int, default=256)
     parser.add_argument("--max-batch-total-source-bytes", type=int, default=1 << 30)
     parser.add_argument("--max-concurrent-requests", type=int, default=16)
+    parser.add_argument("--max-http-connections", type=int, default=32)
     parser.add_argument("--max-response-bytes", type=int, default=32 << 20)
     parser.add_argument("--max-trajectory-rounds", type=int, default=1_000_064)
     parser.add_argument("--read-chunk-bytes", type=int, default=1 << 20)
@@ -74,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         max_batch_items=args.max_batch_items,
         max_batch_total_source_bytes=args.max_batch_total_source_bytes,
         max_concurrent_requests=args.max_concurrent_requests,
+        max_http_connections=args.max_http_connections,
         max_response_bytes=args.max_response_bytes,
         max_trajectory_rounds=args.max_trajectory_rounds,
         read_chunk_bytes=args.read_chunk_bytes,

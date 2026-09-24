@@ -114,6 +114,12 @@ def test_ix0_registry_metadata_mutation_does_not_change_artifact_id():
     assert one.artifact_id == two.artifact_id == artifact.artifact_id
     assert one.artifact_wire == two.artifact_wire == artifact.to_bytes()
     assert one.manifest_descriptor.digest != two.manifest_descriptor.digest
+    assert dict(one.manifest_descriptor.annotations)[
+        "org.opencontainers.image.title"
+    ] == "one"
+    assert dict(two.manifest_descriptor.annotations)[
+        "org.opencontainers.image.title"
+    ] == "two"
 
 
 def test_ix0_manifest_json_reencoding_changes_only_oci_identity():
@@ -431,3 +437,25 @@ def test_ix0_platform_rejects_unknown_extension_fields():
                 "vendor.private": "unexpected",
             }
         )
+
+
+def test_ix0_offline_verify_reconstructs_all_referrer_annotations():
+    artifact = _artifact(b"annotation-roundtrip")
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(b"annotation-subject"),
+        annotations={
+            "example.alpha": "a",
+            "example.beta": "b",
+        },
+    )
+    verified = verify_sigma_artifact_referrer_v1(
+        binding.manifest_wire,
+        binding.artifact_wire,
+    )
+
+    assert verified.manifest_descriptor.annotations == (
+        ("dev.sigma.artifact.id", artifact.artifact_id.hex()),
+        ("example.alpha", "a"),
+        ("example.beta", "b"),
+    )

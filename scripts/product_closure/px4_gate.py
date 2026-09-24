@@ -119,6 +119,19 @@ class _BombStream:
         raise AssertionError("PX4 gate body read crossed cheap-preflight boundary")
 
 
+class _PrefixThenBombStream:
+    def __init__(self, prefix: bytes) -> None:
+        self._prefix = io.BytesIO(prefix)
+
+    def read(self, size: int) -> bytes:
+        value = self._prefix.read(size)
+        if value:
+            return value
+        raise AssertionError(
+            "PX4 gate read disclosed proof value after metadata rejection"
+        )
+
+
 class _CancelOnRead(io.BytesIO):
     def __init__(self, payload: bytes, token: GatewayCancellationTokenV1):
         super().__init__(payload)
@@ -459,6 +472,28 @@ def run_gate(
                         "PX4 policy reject consumed source body"
                     )
             cheap_rejects += 1
+
+        malformed_disclosed = b"x" * (1 << 20)
+        malformed_proof_payload = encode_inclusion_verify_request_v1(
+            b"not-a-proof",
+            malformed_disclosed,
+        )
+        malformed_prefix = malformed_proof_payload[: -len(malformed_disclosed)]
+        malformed_response = service.handle(
+            method="POST",
+            path="/v1/proofs/inclusion/verify",
+            content_type=INCLUSION_VERIFY_MEDIA_TYPE,
+            body_stream=_PrefixThenBombStream(malformed_prefix),
+            content_length=len(malformed_proof_payload),
+        )
+        if (
+            malformed_response.status != 400
+            or _json_body(malformed_response)["code"] != "malformed-proof"
+        ):
+            raise AssertionError(
+                "PX4 malformed proof did not reject before disclosed value"
+            )
+        proof_metadata_cheap_reject = True
 
         concurrency_payload_data = b"px4-concurrency" * 80
         concurrency_artifact = _tree_artifact(
@@ -858,6 +893,7 @@ def run_gate(
         "proof_results_checked": proof_parity,
         "cheap_reject_cases": cheap_reject_cases,
         "cheap_rejects": cheap_rejects,
+        "proof_metadata_cheap_reject": proof_metadata_cheap_reject,
         "concurrency_cases": concurrency_cases,
         "cancelled_requests_isolated": cancelled_isolated,
         "timeout_requests_isolated": timeout_isolated,

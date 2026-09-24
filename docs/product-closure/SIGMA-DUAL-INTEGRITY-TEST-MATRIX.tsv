@@ -185,6 +185,10 @@ PX5-KAT-001	PX5	T1	DSL compile determinism	canonical VerificationPolicyV1	frozen
 PX5-ADV-001	PX5	T4	DSL ambiguity/conflict rejection	none	unknown keys, conflicting requirements, bad units	reject with deterministic diagnostics	BLOCKING
 IX0-RT-001	IX0	T3	OCI/ORAS attach-pull round-trip	canonical Sigma bytes	local registry fixtures	byte-identical extracted evidence	BLOCKING
 IX0-ID-001	IX0	T4	OCI metadata identity separation	ArtifactId reference	registry annotation/tag mutations	ArtifactId unchanged	BLOCKING
+IX0-FB-001	IX0	T3	OCI referrers-tag fallback	OCI Distribution 1.1 fallback semantics	registry without referrers API	attach/discover/pull byte-identical	BLOCKING
+IX0-ADV-001	IX0	T4	OCI adversarial transport and ambiguity	local canonical verifier	cross-origin upload, corrupted blob/manifest, duplicate ArtifactId claim	credentials stripped; corruption/ambiguity reject	BLOCKING
+IX0-LIMIT-001	IX0	T6	OCI resource bounds	IX0 complexity contract	oversize blob/manifest/referrers, too many pages/descriptors, retry exhaustion	fail closed within configured B/M/Q/P/R/T bounds	BLOCKING
+IX0-ORAS-001	IX0	T7	ORAS live registry differential	ORAS CLI 1.3	Sigma attach then ORAS discover/manifest fetch/blob fetch	referrer discovered and exact manifest/payload bytes preserved	BLOCKING
 IX1-SIG-001	IX1	T3	Sigstore bundle verification	Sigstore reference tooling	keyless/local test identities	valid bundle accepted; wrong identity rejected	BLOCKING
 IX1-CLAIM-001	IX1	T4	Rekor/integrity claim separation	Sigma verifier + log fact	with/without log inclusion	artifact validity independent of log presence	BLOCKING
 IX2-MAP-001	IX2	T3	Sigma to in-toto/SLSA mapping	official schema validation	artifact/lineage fixtures	canonical supported mapping	BLOCKING

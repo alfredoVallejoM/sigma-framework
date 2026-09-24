@@ -626,6 +626,19 @@ the global budget and --spool-temp-dir.
 
 Status: RESOLVED IN IMPLEMENTATION.
 
+### AR-PX4-21 — uppercase ArtifactId paths created URL aliases
+
+Finding:
+bytes.fromhex accepts uppercase hex, so two textual routes could identify one
+ArtifactId despite the V1 no-alias routing contract.
+
+Resolution:
+ArtifactId route parsing now requires exactly 64 lowercase [0-9a-f] characters.
+Uppercase or other textual aliases resolve to not-found. Unit and gate cover the
+negative route.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
 ## 33. Current disposition
 
 Implementation for planned PX4 V1: COMPLETE.

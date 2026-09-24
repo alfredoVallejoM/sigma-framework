@@ -298,6 +298,26 @@ real registry:
 The current reference target is ORAS CLI 1.3 semantics. This is a manual/local
 gate and does not enable GitHub Actions.
 
+### Local runner
+
+`scripts/product_closure/run_ix0_local.sh` is the canonical no-Actions runner.
+
+It executes, in order:
+
+1. focused IX0 pytest;
+2. Ruff over IX0 production/tests/gates;
+3. Mypy over the IX0 production/gate surface;
+4. deterministic `ix0_gate.py`;
+5. optional live `ix0_oras_diff.py` when `IX0_LIVE=1`.
+
+Outputs default to:
+
+    verification/ix0-local/ix0-current.log
+    verification/ix0-local/ix0-gate.json
+    verification/ix0-local/ix0-oras-live.json   # only in live mode
+
+The runner is executable and introduces no GitHub workflow.
+
 ## 10. Promotion rule
 
 IX0 remains ACTIVE until:

@@ -98,6 +98,7 @@ from .oci_registry import (
     OciRegistryProtocolError,
     OciRegistryResourceLimitError,
     OciRegistryTransportV1,
+    OciSidecarAttachResultV1,
     oci_referrers_tag_v1,
 )
 
@@ -192,4 +193,5 @@ __all__ = [
     "verify_sigma_receipt_referrer_v1",
     "verify_sigma_sidecar_referrer_v1",
     "parse_oci_referrers_index_v1",
+    "OciSidecarAttachResultV1",
 ]

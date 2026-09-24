@@ -44,6 +44,8 @@ def build_parser_v1() -> argparse.ArgumentParser:
     parser.add_argument("--max-metadata-bytes", type=int, default=4 << 20)
     parser.add_argument("--max-source-bytes", type=int, default=1 << 30)
     parser.add_argument("--max-memory-spool-bytes", type=int, default=1 << 20)
+    parser.add_argument("--max-total-spool-bytes", type=int, default=4 << 30)
+    parser.add_argument("--spool-temp-dir", type=Path)
     parser.add_argument("--max-proof-value-bytes", type=int, default=64 << 20)
     parser.add_argument("--max-batch-items", type=int, default=256)
     parser.add_argument("--max-batch-total-source-bytes", type=int, default=1 << 30)
@@ -71,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         max_metadata_bytes=args.max_metadata_bytes,
         max_source_bytes=args.max_source_bytes,
         max_memory_spool_bytes=args.max_memory_spool_bytes,
+        max_total_spool_bytes=args.max_total_spool_bytes,
         max_proof_value_bytes=args.max_proof_value_bytes,
         max_batch_items=args.max_batch_items,
         max_batch_total_source_bytes=args.max_batch_total_source_bytes,
@@ -90,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         LocalArtifactStoreV1(args.store),
         limits=limits,
         audit_sink=audit,
+        spool_temp_dir=args.spool_temp_dir,
     )
     serve_gateway_v1(args.host, args.port, service)
     return 0

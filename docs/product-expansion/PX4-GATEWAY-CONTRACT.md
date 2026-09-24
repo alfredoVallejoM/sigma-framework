@@ -233,6 +233,7 @@ Defaults:
     max_batch_items               = 256
     max_batch_total_source_bytes  = 1 GiB
     max_concurrent_requests       = 16
+    max_http_connections          = 32
     request_timeout_seconds       = 120
     read_chunk_bytes              = 1 MiB
     max_response_bytes            = 32 MiB
@@ -332,15 +333,33 @@ This avoids unsafe interruption of shared library state.
 
 ## 17. Concurrency isolation
 
-GatewayServiceV1 has a BoundedSemaphore.
+PX4 uses two distinct admission bounds.
+
+### HTTP connection/thread bound
+
+GatewayThreadingHTTPServerV1 has a pre-thread connection semaphore.
 
 Default:
 
-    16 concurrent requests
+    32 HTTP connections
+
+If exhausted, the server writes canonical HTTP 503 / code=busy directly from
+process_request and closes the socket without creating another handler thread.
+
+This bounds clients stalled before GatewayServiceV1.handle, including partial
+request-line/header senders.
+
+### Verification-request bound
+
+GatewayServiceV1 has its own BoundedSemaphore.
+
+Default:
+
+    16 concurrent verification requests
 
 No request waiting queue is created by the service.
 
-If all slots are occupied:
+If all verification slots are occupied:
 
     HTTP 503
     code = busy

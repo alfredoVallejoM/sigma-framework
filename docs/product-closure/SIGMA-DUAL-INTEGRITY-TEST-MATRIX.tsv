@@ -190,6 +190,10 @@ PX4-LOG-001	PX4	T4	Credential/log/receipt non-interference	fixed audit and SV3 r
 PX4-ERR-001	PX4	T3	Deterministic error projection	gateway error schema	repeated malformed request corpus	same status/code/body for same malformed input	BLOCKING
 PX4-STORE-001	PX4	T4	Canonical artifact and parent reads	PX1 canonical artifact authority	SQL/index divergence/corruption fixtures	GET bytes/parents derive from validated artifact wire	BLOCKING
 PX4-CLI-001	PX4	T2	Packaged daemon safe deployment defaults	sigma-gateway entrypoint	loopback/non-loopback argument fixtures	loopback default; non-loopback requires explicit acknowledgement	BLOCKING
+PX4-SPOOL-001	PX4	T4	Global spool capacity admission	declared source lengths	budget exhaustion + cleanup failure fixtures	503 before source read; reservations always released	BLOCKING
+PX4-THREAD-001	PX4	T4	Pre-thread HTTP connection bound	max_http_connections	connection-slot exhaustion	503 before handler thread creation	BLOCKING
+PX4-ROUTE-001	PX4	T2	Canonical ArtifactId HTTP routes	lowercase ArtifactId path	uppercase/alias fixtures	only lowercase canonical route resolves	BLOCKING
+PX4-PROOF-CHEAP-001	PX4	T4	Proof metadata-first rejection	local proof geometry	malformed proof + mismatched disclosed length	no disclosed value read before terminal result	BLOCKING
 PX5-KAT-001	PX5	T1	DSL compile determinism	canonical VerificationPolicyV1	frozen YAML/JSON corpus	exact PolicyId	BLOCKING
 PX5-ADV-001	PX5	T4	DSL ambiguity/conflict rejection	none	unknown keys, conflicting requirements, bad units	reject with deterministic diagnostics	BLOCKING
 IX0-RT-001	IX0	T3	OCI/ORAS attach-pull round-trip	canonical Sigma bytes	local registry fixtures	byte-identical extracted evidence	BLOCKING

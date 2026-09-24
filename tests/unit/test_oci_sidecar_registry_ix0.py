@@ -16,6 +16,7 @@ from sigma.interop import (
     SIGMA_RECEIPT_REFERRER_TYPE,
     OciRegistryClientV1,
     OciRegistryConflictError,
+    OciRegistryProtocolError,
     OciSigmaSidecarKindV1,
     build_sigma_inclusion_proof_referrer_v1,
     build_sigma_manifest_referrer_v1,
@@ -273,8 +274,8 @@ def test_ix0_registry_sidecar_payload_corruption_rejects():
     transport.blobs[payload_digest] = bytes(payload)
 
     with pytest.raises(
-        Exception,
-        match="digest|descriptor",
+        OciRegistryProtocolError,
+        match="descriptor digest",
     ):
         client.pull_sidecar_by_digest(
             binding.manifest_descriptor.digest,

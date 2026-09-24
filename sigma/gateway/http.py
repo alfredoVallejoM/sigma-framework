@@ -96,14 +96,21 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
         return total
 
     def _content_length(self, *, required: bool) -> int:
-        transfer_encoding = self.headers.get("Transfer-Encoding")
-        if transfer_encoding:
+        transfer_values = self.headers.get_all("Transfer-Encoding") or []
+        if transfer_values:
             raise GatewayError(
                 status=400,
                 code=GatewayErrorCodeV1.BAD_REQUEST,
                 safe_message="Transfer-Encoding is not supported by gateway v1",
             )
-        raw = self.headers.get("Content-Length")
+        length_values = self.headers.get_all("Content-Length") or []
+        if len(length_values) > 1:
+            raise GatewayError(
+                status=400,
+                code=GatewayErrorCodeV1.BAD_REQUEST,
+                safe_message="multiple Content-Length headers are not accepted",
+            )
+        raw = None if not length_values else length_values[0]
         if raw is None:
             if required:
                 raise GatewayError(

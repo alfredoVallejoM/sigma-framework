@@ -18,7 +18,8 @@ Date: 2026-09-24
     Q_h  concurrent HTTP connection/handler slots
     R_o  response bytes
     C    streaming read chunk bytes
-    S_m  memory spool threshold
+    S_m  memory spool threshold per request
+    S_T  global concurrent spool byte budget
     T    configured timeout
     H    parsed HTTP header bytes
 
@@ -169,6 +170,29 @@ Verification complexity remains existing Tree proof complexity.
 PX4 does not claim streaming range verification where the underlying API does not
 currently expose it.
 
+## 9A. Proof metadata-first rejection
+
+Inclusion/range framing reads:
+
+    proof header + proof wire
+
+before the disclosed value.
+
+Malformed proof:
+
+    O(P_w)
+    disclosed-value read = 0
+
+Valid proof with declared value length inconsistent with proof geometry:
+
+    O(P_w)
+    disclosed-value read = 0
+
+Only geometry-consistent requests read V bytes.
+
+This prevents a malformed tiny proof from forcing buffering of the full
+max_proof_value_bytes allowance.
+
 ## 10. Batch streaming
 
 PX4 does not materialize all source bodies before verification.
@@ -257,7 +281,16 @@ Default upper envelope:
 
 excluding existing verifier state and Python/runtime overhead.
 
-Temporary disk upper envelope is bounded by admitted request source policies.
+Temporary spool reservation is additionally bounded globally:
+
+    sum active declared spool lengths <= S_T
+
+Default:
+
+    S_T = 4 GiB
+
+Thus the temporary-disk reservation envelope is independent of
+Q * max_source_bytes.
 
 ## 14. Cancellation
 

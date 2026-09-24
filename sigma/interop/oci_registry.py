@@ -37,7 +37,9 @@ from .oci import (
 )
 
 _RETRYABLE_STATUS = frozenset({408, 425, 429})
-_DIGEST_RE = re.compile(r"^([A-Za-z0-9+._-]+):([A-Za-z0-9=_-]+)$")
+_DIGEST_RE = re.compile(
+    r"^([a-z0-9]+(?:[+._-][a-z0-9]+)*):([A-Za-z0-9=_-]+)$"
+)
 _TAG_CHAR_RE = re.compile(r"[^A-Za-z0-9_.-]")
 _LINK_NEXT_RE = re.compile(r'<([^>]+)>\s*;\s*rel="?next"?', re.IGNORECASE)
 

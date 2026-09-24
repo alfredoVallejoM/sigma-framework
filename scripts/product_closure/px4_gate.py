@@ -224,8 +224,9 @@ def run_gate(
             policy = _tree_policy(max_input_bytes=max_input)
             caps = VerificationCapabilitiesV1()
 
+            source_value = None if case % 7 == 0 else data
             local = verify_artifact_v1(
-                data,
+                source_value,
                 artifact,
                 policy=policy,
                 capabilities=caps,
@@ -234,7 +235,7 @@ def run_gate(
                 artifact_id=artifact.artifact_id,
                 policy=policy,
                 capabilities=caps,
-                source=data,
+                source=source_value,
             )
             response = service.handle(
                 method="POST",
@@ -258,8 +259,10 @@ def run_gate(
             size = rng.randrange(1, 65_537)
             original = rng.randbytes(size)
             digest = _v3_digest(original, case)
-            supplied = original
-            if case % 5 == 0:
+            supplied: bytes | None = original
+            if case % 7 == 0:
+                supplied = None
+            elif case % 5 == 0:
                 mutated = bytearray(original)
                 mutated[case % len(mutated)] ^= 1
                 supplied = bytes(mutated)
@@ -373,6 +376,10 @@ def run_gate(
             leaf = data[
                 leaf_start : leaf_start + inclusion.leaf_byte_length
             ]
+            if case % 4 == 0:
+                mutated_leaf = bytearray(leaf)
+                mutated_leaf[case % len(mutated_leaf)] ^= 1
+                leaf = bytes(mutated_leaf)
             inclusion_payload = encode_inclusion_verify_request_v1(
                 inclusion.to_bytes(),
                 leaf,
@@ -399,6 +406,10 @@ def run_gate(
             length = rng.randrange(1, size - start + 1)
             range_proof = prove_range(data, start, length)
             range_bytes = data[start : start + length]
+            if case % 5 == 0:
+                mutated_range = bytearray(range_bytes)
+                mutated_range[case % len(mutated_range)] ^= 1
+                range_bytes = bytes(mutated_range)
             range_payload = encode_range_verify_request_v1(
                 range_proof.to_bytes(),
                 range_bytes,

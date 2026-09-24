@@ -29,6 +29,7 @@ from sigma.interop import (
     OciRegistryConflictError,
     OciRegistryLimitsV1,
     OciRegistryProtocolError,
+    OciRegistryResourceLimitError,
 )
 from sigma.tree import build_tree
 
@@ -302,9 +303,8 @@ def run_gate(
         _client(paged_transport, max_pages=2).list_referrers(
             paged_subject.digest
         )
-    except Exception as exc:
-        if exc.__class__.__name__ != "OciRegistryResourceLimitError":
-            raise
+    except OciRegistryResourceLimitError:
+        pass
     else:
         raise AssertionError("IX0 page limit did not fail closed")
 

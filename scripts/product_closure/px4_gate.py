@@ -473,6 +473,40 @@ def run_gate(
                     )
             cheap_rejects += 1
 
+        spool_data = b"px4-spool-budget" * 100
+        spool_artifact = _tree_artifact(spool_data, 150_000)
+        store.put_artifact(spool_artifact)
+        spool_policy = _tree_policy(max_input_bytes=len(spool_data))
+        spool_payload = encode_artifact_verify_request_v1(
+            artifact_id=spool_artifact.artifact_id,
+            policy=spool_policy,
+            source=spool_data,
+        )
+        spool_prefix = spool_payload[: -len(spool_data)]
+        spool_service = GatewayServiceV1(
+            store,
+            limits=GatewayLimitsV1(
+                max_source_bytes=len(spool_data) + 1,
+                max_total_spool_bytes=len(spool_data) - 1,
+            ),
+            spool_temp_dir=root / "spool-budget",
+        )
+        spool_response = spool_service.handle(
+            method="POST",
+            path="/v1/artifacts/verify",
+            content_type=ARTIFACT_VERIFY_MEDIA_TYPE,
+            body_stream=_PrefixThenBombStream(spool_prefix),
+            content_length=len(spool_payload),
+        )
+        if (
+            spool_response.status != 503
+            or _json_body(spool_response)["code"] != "busy"
+        ):
+            raise AssertionError("PX4 global spool budget did not fail closed")
+        if spool_service._spool_budget.used != 0:
+            raise AssertionError("PX4 spool reservation leaked after rejection")
+        spool_budget_cheap_reject = True
+
         malformed_disclosed = b"x" * (1 << 20)
         malformed_proof_payload = encode_inclusion_verify_request_v1(
             b"not-a-proof",
@@ -894,6 +928,7 @@ def run_gate(
         "cheap_reject_cases": cheap_reject_cases,
         "cheap_rejects": cheap_rejects,
         "proof_metadata_cheap_reject": proof_metadata_cheap_reject,
+        "spool_budget_cheap_reject": spool_budget_cheap_reject,
         "concurrency_cases": concurrency_cases,
         "cancelled_requests_isolated": cancelled_isolated,
         "timeout_requests_isolated": timeout_isolated,

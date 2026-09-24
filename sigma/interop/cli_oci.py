@@ -48,21 +48,19 @@ def _subject_from_args(
     digest = getattr(args, "subject_digest", None)
     size = getattr(args, "subject_size", None)
     media_type = getattr(args, "subject_media_type", None)
-    supplied = (digest is not None, size is not None, media_type is not None)
-    if not any(supplied):
+    if digest is None and size is None and media_type is None:
         if required:
             raise ValueError(
-                "subject requires --subject-digest, --subject-size and "
-                "--subject-media-type"
+                "subject requires --subject-reference or "
+                "--subject-digest/--subject-size"
             )
         return None
-    if not all(supplied):
+    if digest is None or size is None:
         raise ValueError(
-            "subject requires --subject-digest, --subject-size and "
-            "--subject-media-type together"
+            "explicit subject requires --subject-digest and --subject-size"
         )
     return OciDescriptorV1(
-        media_type=media_type,
+        media_type=media_type or OCI_IMAGE_MANIFEST_MEDIA_TYPE,
         digest=digest,
         size=size,
     )
@@ -78,16 +76,71 @@ def _registry_client(args: argparse.Namespace) -> OciRegistryClientV1:
     )
 
 
+def _registry_subject(
+    args: argparse.Namespace,
+    client: OciRegistryClientV1,
+    *,
+    required: bool,
+) -> OciDescriptorV1 | None:
+    reference = getattr(args, "subject_reference", None)
+    explicit = _subject_from_args(args, required=False)
+    if reference is not None and explicit is not None:
+        raise ValueError(
+            "use --subject-reference or explicit subject fields, not both"
+        )
+    if reference is not None:
+        return client.resolve_manifest_descriptor(reference)
+    if explicit is not None:
+        if getattr(args, "verify_subject", False):
+            client.verify_subject_descriptor(explicit)
+        return explicit
+    if required:
+        raise ValueError(
+            "subject requires --subject-reference or --subject-digest"
+        )
+    return None
+
+
+def _registry_subject_digest(
+    args: argparse.Namespace,
+    client: OciRegistryClientV1,
+    *,
+    required: bool,
+) -> str | None:
+    reference = getattr(args, "subject_reference", None)
+    digest = getattr(args, "subject_digest", None)
+    if reference is not None and digest is not None:
+        raise ValueError(
+            "use --subject-reference or --subject-digest, not both"
+        )
+    if reference is not None:
+        return client.resolve_manifest_descriptor(reference).digest
+    if digest is not None:
+        return digest
+    if required:
+        raise ValueError(
+            "subject requires --subject-reference or --subject-digest"
+        )
+    return None
+
+
 def _attach(args: argparse.Namespace) -> int:
     artifact = SigmaArtifactV1.from_bytes(args.artifact.read_bytes())
-    subject = _subject_from_args(args, required=True)
+    client = _registry_client(args)
+    subject = _registry_subject(
+        args,
+        client,
+        required=True,
+    )
     if subject is None:
         raise ValueError("OCI subject is required")
     annotations = _key_values(args.annotation, what="annotation")
-    result = _registry_client(args).attach_artifact(
+    result = client.attach_artifact(
         artifact,
         subject=subject,
         annotations=annotations,
+        verify_subject=args.verify_subject
+        and args.subject_reference is None,
     )
     print(
         json.dumps(
@@ -109,7 +162,15 @@ def _attach(args: argparse.Namespace) -> int:
 
 
 def _refs(args: argparse.Namespace) -> int:
-    result = _registry_client(args).list_referrers(args.subject_digest)
+    client = _registry_client(args)
+    subject_digest = _registry_subject_digest(
+        args,
+        client,
+        required=True,
+    )
+    if subject_digest is None:
+        raise ValueError("OCI subject digest is required")
+    result = client.list_referrers(subject_digest)
     print(
         json.dumps(
             {
@@ -128,10 +189,22 @@ def _pull(args: argparse.Namespace) -> int:
     client = _registry_client(args)
     expected_id = _artifact_id(args.artifact_id)
     if args.referrer_digest is not None:
-        expected_subject = _subject_from_args(args, required=False)
+        expected_subject = _registry_subject(
+            args,
+            client,
+            required=False,
+        )
+        expected_subject_digest = None
+        if expected_subject is None:
+            expected_subject_digest = _registry_subject_digest(
+                args,
+                client,
+                required=False,
+            )
         binding = client.pull_referrer_by_digest(
             args.referrer_digest,
             expected_subject=expected_subject,
+            expected_subject_digest=expected_subject_digest,
             expected_artifact_id=expected_id,
         )
     else:
@@ -139,17 +212,30 @@ def _pull(args: argparse.Namespace) -> int:
             raise ValueError(
                 "pull requires --referrer-digest or --artifact-id"
             )
-        if args.subject_digest is None:
+        subject_digest = _registry_subject_digest(
+            args,
+            client,
+            required=True,
+        )
+        if subject_digest is None:
             raise ValueError(
-                "ArtifactId discovery requires --subject-digest"
+                "ArtifactId discovery requires an OCI subject"
             )
         binding = client.pull_artifact(
-            args.subject_digest,
+            subject_digest,
             expected_id,
         )
 
+    args.output_artifact.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
     args.output_artifact.write_bytes(binding.artifact_wire)
     if args.output_manifest is not None:
+        args.output_manifest.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
         args.output_manifest.write_bytes(binding.manifest_wire)
 
     print(
@@ -210,29 +296,30 @@ def _registry_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--timeout", type=float, default=30.0)
 
 
-def _subject_args(
+def _registry_subject_args(
     parser: argparse.ArgumentParser,
     *,
-    required: bool,
+    allow_digest_only: bool,
 ) -> None:
     parser.add_argument(
-        "--subject-digest",
-        required=required,
+        "--subject-reference",
+        help="registry tag or digest resolved to a verified subject descriptor",
     )
-    parser.add_argument(
-        "--subject-size",
-        type=int,
-        required=required,
-    )
-    parser.add_argument(
-        "--subject-media-type",
-        default=(
-            OCI_IMAGE_MANIFEST_MEDIA_TYPE
-            if required
-            else None
-        ),
-        required=False,
-    )
+    parser.add_argument("--subject-digest")
+    if not allow_digest_only:
+        parser.add_argument("--subject-size", type=int)
+        parser.add_argument("--subject-media-type")
+        parser.add_argument(
+            "--verify-subject",
+            action="store_true",
+            help="preflight an explicit subject descriptor against registry bytes",
+        )
+
+
+def _offline_subject_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--subject-digest")
+    parser.add_argument("--subject-size", type=int)
+    parser.add_argument("--subject-media-type")
 
 
 def add_oci_commands(commands) -> None:
@@ -250,7 +337,10 @@ def add_oci_commands(commands) -> None:
         help="attach canonical Sigma artifact bytes as an OCI referrer",
     )
     _registry_args(attach)
-    _subject_args(attach, required=True)
+    _registry_subject_args(
+        attach,
+        allow_digest_only=False,
+    )
     attach.add_argument("artifact", type=Path)
     attach.add_argument(
         "--annotation",
@@ -262,10 +352,13 @@ def add_oci_commands(commands) -> None:
 
     refs = actions.add_parser(
         "refs",
-        help="list Sigma referrers for an OCI subject digest",
+        help="list Sigma referrers for an OCI subject",
     )
     _registry_args(refs)
-    refs.add_argument("--subject-digest", required=True)
+    _registry_subject_args(
+        refs,
+        allow_digest_only=True,
+    )
     refs.set_defaults(handler=_refs)
 
     pull = actions.add_parser(
@@ -276,9 +369,14 @@ def add_oci_commands(commands) -> None:
     selector = pull.add_mutually_exclusive_group(required=True)
     selector.add_argument("--referrer-digest")
     selector.add_argument("--artifact-id")
+    pull.add_argument("--subject-reference")
     pull.add_argument("--subject-digest")
     pull.add_argument("--subject-size", type=int)
     pull.add_argument("--subject-media-type")
+    pull.add_argument(
+        "--verify-subject",
+        action="store_true",
+    )
     pull.add_argument("--output-artifact", type=Path, required=True)
     pull.add_argument("--output-manifest", type=Path)
     pull.set_defaults(handler=_pull)
@@ -290,7 +388,7 @@ def add_oci_commands(commands) -> None:
     verify.add_argument("manifest", type=Path)
     verify.add_argument("artifact", type=Path)
     verify.add_argument("--artifact-id")
-    _subject_args(verify, required=False)
+    _offline_subject_args(verify)
     verify.set_defaults(handler=_verify)
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import http.client
+import io
 import json
 import statistics
 import tempfile
@@ -95,7 +96,7 @@ def run_benchmark(
                         method="POST",
                         path="/v1/artifacts/verify",
                         content_type=ARTIFACT_VERIFY_MEDIA_TYPE,
-                        body_stream=__import__("io").BytesIO(payload),
+                        body_stream=io.BytesIO(payload),
                         content_length=len(payload),
                     ),
                     iterations,

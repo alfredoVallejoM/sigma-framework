@@ -19,6 +19,7 @@ from sigma.interop import (
     OciArtifactBindingError,
     OciDescriptorV1,
     OciManifestError,
+    OciPlatformV1,
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
     parse_sigma_referrers_index_v1,
@@ -338,4 +339,95 @@ def test_ix0_rejects_trajectory_audit_inside_artifact_payload():
         verify_sigma_artifact_referrer_v1(
             tampered,
             audited_wire,
+        )
+
+
+def test_ix0_descriptor_preserves_standard_optional_oci_fields():
+    descriptor = OciDescriptorV1.from_dict(
+        {
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "digest": "sha256:" + "ab" * 32,
+            "size": 321,
+            "artifactType": SIGMA_ARTIFACT_REFERRER_TYPE,
+            "annotations": {"example.keep": "yes"},
+            "urls": [
+                "https://mirror-a.example/object",
+                "https://mirror-b.example/object",
+            ],
+            "data": "e30=",
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux",
+                "os.version": "6.8",
+                "os.features": ["feature-a"],
+                "variant": "v3",
+                "features": ["reserved-future"],
+            },
+        }
+    )
+
+    assert descriptor.urls == (
+        "https://mirror-a.example/object",
+        "https://mirror-b.example/object",
+    )
+    assert descriptor.data == "e30="
+    assert descriptor.platform == OciPlatformV1(
+        architecture="amd64",
+        os="linux",
+        os_version="6.8",
+        os_features=("feature-a",),
+        variant="v3",
+        features=("reserved-future",),
+    )
+    assert OciDescriptorV1.from_dict(descriptor.to_dict()) == descriptor
+
+
+def test_ix0_referrers_parser_accepts_configured_page_above_manifest_default():
+    descriptors = [
+        {
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "digest": "sha256:" + f"{index:064x}",
+            "size": 100 + index,
+            "artifactType": SIGMA_ARTIFACT_REFERRER_TYPE,
+            "annotations": {
+                "example.padding": "x" * 256,
+            },
+        }
+        for index in range(3500)
+    ]
+    wire = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+            "manifests": descriptors,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    assert len(wire) > 1024 * 1024
+    assert len(wire) < 4 * 1024 * 1024
+
+    with pytest.raises(
+        OciManifestError,
+        match="size limit",
+    ):
+        parse_sigma_referrers_index_v1(wire)
+
+    parsed = parse_sigma_referrers_index_v1(
+        wire,
+        max_bytes=4 * 1024 * 1024,
+    )
+    assert len(parsed) == len(descriptors)
+
+
+def test_ix0_platform_rejects_unknown_extension_fields():
+    with pytest.raises(
+        OciManifestError,
+        match="unsupported OCI platform field",
+    ):
+        OciPlatformV1.from_dict(
+            {
+                "architecture": "amd64",
+                "os": "linux",
+                "vendor.private": "unexpected",
+            }
         )

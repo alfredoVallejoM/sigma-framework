@@ -548,11 +548,14 @@ Implemented routes:
 Source-bearing bodies use versioned binary metadata-first framing.
 
 Admission layers:
+- max_http_connections before handler-thread creation;
 - header budget during stdlib parsing;
 - exact Content-Length required for POST;
 - no Transfer-Encoding V1;
 - max_request/max_metadata/max_source/max_proof/max_batch bounds;
+- global temporary spool-byte budget before source read;
 - policy preflight before source spool/hash;
+- proof geometry parsed before disclosed value buffering;
 - socket deadline + cooperative cancellation;
 - bounded concurrent requests;
 - conservative batch response budget.

@@ -147,6 +147,7 @@ def test_ix0_fallback_preserves_unrelated_referrers():
             "schemaVersion": 2,
             "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
             "manifests": [other.to_dict()],
+            "annotations": {"example.index-owner": "external-client"},
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -166,6 +167,9 @@ def test_ix0_fallback_preserves_unrelated_referrers():
     stored_digest = transport.tags[tag]
     stored = json.loads(transport.manifests[stored_digest].decode("utf-8"))
     descriptors = stored["manifests"]
+    assert stored["annotations"] == {
+        "example.index-owner": "external-client"
+    }
     assert any(item.get("digest") == other.digest for item in descriptors)
     assert any(
         item.get("digest") == result.binding.manifest_descriptor.digest

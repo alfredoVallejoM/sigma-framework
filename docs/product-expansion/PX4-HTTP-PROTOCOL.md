@@ -212,6 +212,16 @@ Payload:
     InclusionProofV1 wire
     exact leaf bytes
 
+Inclusion proof wire is parsed before leaf bytes are consumed.
+
+If proof parsing fails:
+- leaf bytes are not read.
+
+If header leaf_length differs from canonical proof.leaf_byte_length:
+- response is verified=false;
+- leaf bytes are not read;
+- connection closes after the response.
+
 Response:
 
     {
@@ -242,6 +252,12 @@ Payload:
 
     RangeProofV1 wire
     exact disclosed range bytes
+
+RangeProofV1 is parsed before disclosed range bytes are consumed.
+
+If value_length differs from proof.length:
+- response is verified=false;
+- range bytes are not read.
 
 value_length is bounded by max_proof_value_bytes before value allocation.
 

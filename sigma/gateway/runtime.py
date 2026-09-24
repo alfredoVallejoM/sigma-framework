@@ -36,6 +36,9 @@ DEFAULT_GATEWAY_MAX_TRAJECTORY_ROUNDS = 1_000_064
 
 class GatewayErrorCodeV1(str, Enum):
     BAD_REQUEST = "bad-request"
+    METHOD_NOT_ALLOWED = "method-not-allowed"
+    LENGTH_REQUIRED = "length-required"
+    HEADER_TOO_LARGE = "header-too-large"
     UNSUPPORTED_MEDIA_TYPE = "unsupported-media-type"
     NOT_FOUND = "not-found"
     REQUEST_TOO_LARGE = "request-too-large"

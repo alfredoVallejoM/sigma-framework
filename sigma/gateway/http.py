@@ -71,12 +71,8 @@ class GatewayThreadingHTTPServerV1(ThreadingHTTPServer):
             safe_message="gateway HTTP connection limit reached"
         )
         response = error_response_v1(error)
-        self.gateway_service.audit_transport_rejection(
-            method="",
-            path="",
-            response=response,
-            error_code=error.code,
-        )
+        # This path runs in the server accept loop before a handler thread
+        # exists. Do not perform potentially blocking audit-sink I/O here.
         raw = (
             f"HTTP/1.1 {response.status} Service Unavailable\r\n"
             f"Content-Type: {response.content_type}\r\n"

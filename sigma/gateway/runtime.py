@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, Mapping, Protocol, runtime_checkable
+from typing import Callable, Iterator, Protocol, runtime_checkable
 
 from sigma.sources import CanonicalSource
 from sigma.version import PACKAGE_VERSION

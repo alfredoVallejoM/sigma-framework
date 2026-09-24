@@ -90,6 +90,18 @@ def _json(response):
     return json.loads(response.body.decode("ascii"))
 
 
+
+def _raw_http_request(host: str, port: int, payload: bytes) -> bytes:
+    with socket.create_connection((host, port), timeout=5) as connection:
+        connection.sendall(payload)
+        chunks = []
+        while True:
+            part = connection.recv(4096)
+            if not part:
+                break
+            chunks.append(part)
+    return b"".join(chunks)
+
 def test_px4_artifact_gateway_exactly_matches_local_api(tmp_path: Path):
     data = b"px4-artifact-parity" * 100
     artifact = _tree_artifact(data)
@@ -876,47 +888,41 @@ def test_px4_http_rejects_duplicate_content_length(tmp_path: Path):
     thread.start()
     try:
         host, port = server.server_address
-        with socket.create_connection((host, port), timeout=5) as connection:
-            request = (
-                "POST /v1/artifacts/verify HTTP/1.1\r\n"
-                f"Host: {host}:{port}\r\n"
-                f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
-                "Content-Length: 0\r\n"
-                "Content-Length: 1\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-            ).encode("ascii")
-            connection.sendall(request)
-            response = connection.recv(4096)
+        request = (
+            "POST /v1/artifacts/verify HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+            "Content-Length: 0\r\n"
+            "Content-Length: 1\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode("ascii")
+        response = _raw_http_request(host, port, request)
         assert response.startswith(b"HTTP/1.1 400")
         assert b"multiple Content-Length" in response
 
-        with socket.create_connection((host, port), timeout=5) as connection:
-            request = (
-                "POST /v1/artifacts/verify HTTP/1.1\r\n"
-                f"Host: {host}:{port}\r\n"
-                f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
-                "Content-Length: +1\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-            ).encode("ascii")
-            connection.sendall(request)
-            response = connection.recv(4096)
+        request = (
+            "POST /v1/artifacts/verify HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+            "Content-Length: +1\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode("ascii")
+        response = _raw_http_request(host, port, request)
         assert response.startswith(b"HTTP/1.1 400")
         assert b"Content-Length is invalid" in response
 
-        with socket.create_connection((host, port), timeout=5) as connection:
-            request = (
-                "POST /v1/artifacts/verify HTTP/1.1\r\n"
-                f"Host: {host}:{port}\r\n"
-                f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
-                "Content-Length: 0\r\n"
-                "Expect: nonsense\r\n"
-                "Connection: close\r\n"
-                "\r\n"
-            ).encode("ascii")
-            connection.sendall(request)
-            response = connection.recv(4096)
+        request = (
+            "POST /v1/artifacts/verify HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+            "Content-Length: 0\r\n"
+            "Expect: nonsense\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode("ascii")
+        response = _raw_http_request(host, port, request)
         assert response.startswith(b"HTTP/1.1 417")
         assert b"expectation-failed" in response
     finally:

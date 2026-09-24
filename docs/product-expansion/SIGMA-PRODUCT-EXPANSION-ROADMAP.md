@@ -524,6 +524,10 @@ Requirements:
 
 PX4 está ACTIVE e implementado; cierre ejecutado pendiente.
 
+Formal dependencies:
+
+    PX1 + SA1 + SV2 + SV3
+
 Semantic authority remains local:
 
     artifacts -> SA1 verify_artifact_v1

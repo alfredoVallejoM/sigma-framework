@@ -8,6 +8,7 @@ import http.client
 import io
 import json
 import random
+import socket
 import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -732,6 +733,69 @@ def run_gate(
                 )
             credential_receipt_independent = True
 
+            # Raw HTTP framing hardening: these cases are outside the ordinary
+            # high-level client path and must still use canonical PX4 JSON.
+            def raw_request(payload: bytes) -> bytes:
+                with socket.create_connection((host, port), timeout=10) as sock:
+                    sock.sendall(payload)
+                    chunks = []
+                    while True:
+                        part = sock.recv(4096)
+                        if not part:
+                            break
+                        chunks.append(part)
+                return b"".join(chunks)
+
+            duplicate_length = raw_request(
+                (
+                    "POST /v1/artifacts/verify HTTP/1.1\r\n"
+                    f"Host: {host}:{port}\r\n"
+                    f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+                    "Content-Length: 0\r\n"
+                    "Content-Length: 1\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                ).encode("ascii")
+            )
+            if not duplicate_length.startswith(b"HTTP/1.1 400"):
+                raise AssertionError("PX4 duplicate Content-Length was not rejected")
+            if b"sigma-gateway-error-v1" not in duplicate_length:
+                raise AssertionError("PX4 transport error escaped canonical JSON schema")
+
+            header_lines = "".join(
+                f"X-PX4-{index}: " + ("x" * 9000) + "\r\n"
+                for index in range(8)
+            )
+            oversized_headers = raw_request(
+                (
+                    "GET /health HTTP/1.1\r\n"
+                    f"Host: {host}:{port}\r\n"
+                    + header_lines
+                    + "Connection: close\r\n\r\n"
+                ).encode("ascii")
+            )
+            if not oversized_headers.startswith(b"HTTP/1.1 431"):
+                raise AssertionError("PX4 preparse header budget did not reject")
+            if b"sigma-gateway-error-v1" not in oversized_headers:
+                raise AssertionError("PX4 header reject escaped canonical JSON schema")
+
+            expect_oversize = raw_request(
+                (
+                    "POST /v1/artifacts/verify HTTP/1.1\r\n"
+                    f"Host: {host}:{port}\r\n"
+                    f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+                    f"Content-Length: {http_service.limits.max_request_bytes + 1}\r\n"
+                    "Expect: 100-continue\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                ).encode("ascii")
+            )
+            if not expect_oversize.startswith(b"HTTP/1.1 413"):
+                raise AssertionError("PX4 Expect preflight did not reject oversized body")
+            if expect_oversize.startswith(b"HTTP/1.1 100"):
+                raise AssertionError("PX4 sent 100 Continue before size admission")
+            http_framing_hardening = True
+
         finally:
             server.shutdown()
             server.server_close()
@@ -761,6 +825,7 @@ def run_gate(
         "http_local_parity": http_parity,
         "audit_secret_cases": audit_secret_cases,
         "credential_receipt_independent": credential_receipt_independent,
+        "http_framing_hardening": http_framing_hardening,
         "artifact_stream_sha256": artifact_stream.hexdigest(),
         "receipt_stream_sha256": receipt_stream.hexdigest(),
         "batch_stream_sha256": batch_stream.hexdigest(),

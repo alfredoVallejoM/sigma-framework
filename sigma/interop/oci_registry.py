@@ -6,7 +6,6 @@ ArtifactId is always recomputed from canonical Sigma bytes after pull.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import time

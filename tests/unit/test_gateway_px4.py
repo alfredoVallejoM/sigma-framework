@@ -37,6 +37,7 @@ from sigma.gateway import (
     encode_policy_evaluate_request_v1,
     encode_range_verify_request_v1,
 )
+from sigma.gateway.cli import build_parser_v1, main as gateway_cli_main
 from sigma.outputs.digest_v3 import digest_from_evaluation_v3
 from sigma.sources import BytesSource
 from sigma.spec.context_v3 import SigmaContextV3
@@ -737,6 +738,36 @@ def test_px4_declared_source_length_must_match_request_remainder(tmp_path: Path)
     )
     assert response.status == 400
     assert _json(response)["code"] == "bad-request"
+
+
+def test_px4_cli_requires_explicit_nonlocal_bind_acknowledgement(tmp_path: Path):
+    with pytest.raises(SystemExit) as exc:
+        gateway_cli_main(
+            [
+                "--store",
+                str(tmp_path / "store"),
+                "--host",
+                "0.0.0.0",
+            ]
+        )
+    assert exc.value.code == 2
+
+    parsed = build_parser_v1().parse_args(
+        [
+            "--store",
+            str(tmp_path / "store"),
+            "--max-header-bytes",
+            "4096",
+            "--max-response-bytes",
+            "8192",
+            "--max-concurrent-requests",
+            "3",
+        ]
+    )
+    assert parsed.host == "127.0.0.1"
+    assert parsed.max_header_bytes == 4096
+    assert parsed.max_response_bytes == 8192
+    assert parsed.max_concurrent_requests == 3
 
 def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
 

@@ -139,8 +139,6 @@ def _attach(args: argparse.Namespace) -> int:
         artifact,
         subject=subject,
         annotations=annotations,
-        verify_subject=args.verify_subject
-        and args.subject_reference is None,
     )
     print(
         json.dumps(
@@ -189,18 +187,29 @@ def _pull(args: argparse.Namespace) -> int:
     client = _registry_client(args)
     expected_id = _artifact_id(args.artifact_id)
     if args.referrer_digest is not None:
-        expected_subject = _registry_subject(
-            args,
-            client,
-            required=False,
+        has_full_subject = (
+            args.subject_reference is not None
+            or args.subject_size is not None
+            or args.subject_media_type is not None
         )
-        expected_subject_digest = None
-        if expected_subject is None:
-            expected_subject_digest = _registry_subject_digest(
+        expected_subject = (
+            _registry_subject(
                 args,
                 client,
                 required=False,
             )
+            if has_full_subject
+            else None
+        )
+        expected_subject_digest = (
+            None
+            if expected_subject is not None
+            else _registry_subject_digest(
+                args,
+                client,
+                required=False,
+            )
+        )
         binding = client.pull_referrer_by_digest(
             args.referrer_digest,
             expected_subject=expected_subject,

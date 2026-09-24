@@ -322,6 +322,70 @@ def test_px4_proof_endpoints_match_local_verifiers(tmp_path: Path):
     )
 
 
+
+def test_px4_malformed_proof_rejects_before_disclosed_value_read(tmp_path: Path):
+    service = GatewayServiceV1(LocalArtifactStoreV1(tmp_path / "store"))
+    disclosed = b"x" * (1 << 20)
+    payload = encode_inclusion_verify_request_v1(b"not-a-proof", disclosed)
+    prefix = payload[: -len(disclosed)]
+
+    response = service.handle(
+        method="POST",
+        path="/v1/proofs/inclusion/verify",
+        content_type=INCLUSION_VERIFY_MEDIA_TYPE,
+        body_stream=PrefixThenBombStream(prefix),
+        content_length=len(payload),
+    )
+    assert response.status == 400
+    assert _json(response)["code"] == "malformed-proof"
+
+
+def test_px4_proof_length_mismatch_matches_local_false_without_value_read(
+    tmp_path: Path,
+):
+    data = b"proof-cheap-length" * 5000
+    proof = prove_leaf(data, 0)
+    disclosed_length = proof.leaf_byte_length + 1
+    disclosed = b"x" * disclosed_length
+    payload = encode_inclusion_verify_request_v1(proof.to_bytes(), disclosed)
+    prefix = payload[: -disclosed_length]
+
+    response = GatewayServiceV1(
+        LocalArtifactStoreV1(tmp_path / "store")
+    ).handle(
+        method="POST",
+        path="/v1/proofs/inclusion/verify",
+        content_type=INCLUSION_VERIFY_MEDIA_TYPE,
+        body_stream=PrefixThenBombStream(prefix),
+        content_length=len(payload),
+    )
+    assert response.status == 200
+    assert _json(response) == {
+        "schema": "sigma-gateway-proof-verification-v1",
+        "verified": False,
+    }
+
+
+def test_px4_range_length_mismatch_returns_false_without_value_read(tmp_path: Path):
+    data = b"range-cheap-length" * 6000
+    proof = prove_range(data, 17, min(5000, len(data) - 17))
+    disclosed_length = proof.length + 1
+    disclosed = b"x" * disclosed_length
+    payload = encode_range_verify_request_v1(proof.to_bytes(), disclosed)
+    prefix = payload[: -disclosed_length]
+
+    response = GatewayServiceV1(
+        LocalArtifactStoreV1(tmp_path / "store")
+    ).handle(
+        method="POST",
+        path="/v1/proofs/range/verify",
+        content_type=RANGE_VERIFY_MEDIA_TYPE,
+        body_stream=PrefixThenBombStream(prefix),
+        content_length=len(payload),
+    )
+    assert response.status == 200
+    assert _json(response)["verified"] is False
+
 def test_px4_get_artifact_and_parents_use_canonical_artifact_bytes(tmp_path: Path):
 
     store = LocalArtifactStoreV1(tmp_path / "store")
@@ -399,6 +463,17 @@ def test_px4_policy_preflight_rejects_without_hashing_or_reading_source(
 class BombStream:
     def read(self, size: int) -> bytes:
         raise AssertionError("body was read despite Content-Length preflight")
+
+
+class PrefixThenBombStream:
+    def __init__(self, prefix: bytes) -> None:
+        self._prefix = io.BytesIO(prefix)
+
+    def read(self, size: int) -> bytes:
+        value = self._prefix.read(size)
+        if value:
+            return value
+        raise AssertionError("gateway read disclosed proof value after cheap rejection")
 
 
 def test_px4_request_length_limit_rejects_before_any_body_read(tmp_path: Path):

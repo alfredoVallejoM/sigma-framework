@@ -22,7 +22,6 @@ from .oci import (
     OciSigmaArtifactBindingV1,
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
-    parse_sigma_referrers_index_v1,
     verify_sigma_artifact_referrer_v1,
 )
 

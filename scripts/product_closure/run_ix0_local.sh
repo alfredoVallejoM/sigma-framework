@@ -25,6 +25,7 @@ python -m pytest -q \
   tests/unit/test_oci_auth_ix0.py \
   tests/unit/test_oci_layout_ix0.py \
   tests/unit/test_oci_sidecars_ix0.py \
+  tests/unit/test_oci_sidecar_registry_ix0.py \
   tests/unit/test_oci_registry_ix0.py \
   tests/integration/test_cli_oci_ix0.py
 

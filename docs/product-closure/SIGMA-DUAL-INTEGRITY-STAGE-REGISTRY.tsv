@@ -24,7 +24,7 @@ PX2	PX	Artifact Lineage Graph	ACTIVE	PX1;SA0	NO	PX2 obligations + DAG/cycle/quer
 PX3	PX	Remote Storage Backends	ACTIVE	PX1	NO	PX3 obligations + local/remote byte parity
 PX4	PX	Verification Gateway and Daemon	PLANNED	SA1;SV2;SV3	NO	PX4 obligations + API/local decision parity
 PX5	PX	Policy DSL and Compiler	PLANNED	SV2;SA1	NO	PX5 obligations + deterministic compile/decompile corpus
-IX0	IX	OCI and ORAS Adapter	ACTIVE	SA0	NO	IX0-A source implemented; IX0-B registry/ORAS round-trip pending
+IX0	IX	OCI and ORAS Adapter	ACTIVE	SA0	NO	IX0-A/B source implemented; local + live ORAS gates pending
 IX1	IX	Sigstore and Rekor Adapter	PLANNED	SA2;SV3	NO	IX1 obligations + bundle/offline verification gate
 IX2	IX	in-toto and SLSA Adapter	PLANNED	SA2;SA0	NO	IX2 obligations + schema/semantic adapter corpus
 IX3	IX	TUF Adapter	PLANNED	SA2;SA3	NO	IX3 obligations + TUF-target/Sigma dual verification

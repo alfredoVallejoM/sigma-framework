@@ -519,6 +519,68 @@ Requirements:
 - structured audit logging;
 - cancellation/timeouts.
 
+
+## Current implementation status
+
+PX4 está ACTIVE e implementado; cierre ejecutado pendiente.
+
+Semantic authority remains local:
+
+    artifacts -> SA1 verify_artifact_v1
+    policy    -> SV2 verify_with_policy_v1
+    receipts  -> SV3 receipt_from_decision_v1
+    batch     -> SV3 verify_batch_item_v1 / BatchVerificationResultV1
+    proofs    -> Tree V1 parsers/verifiers
+    storage   -> PX1 canonical artifacts
+
+Implemented routes:
+
+    POST /v1/artifacts/verify
+    POST /v1/proofs/inclusion/verify
+    POST /v1/proofs/range/verify
+    POST /v1/policies/evaluate
+    POST /v1/batch/verify
+    GET  /v1/artifacts/{id}
+    GET  /v1/artifacts/{id}/parents
+    GET  /health
+    GET  /version
+
+Source-bearing bodies use versioned binary metadata-first framing.
+
+Admission layers:
+- header budget during stdlib parsing;
+- exact Content-Length required for POST;
+- no Transfer-Encoding V1;
+- max_request/max_metadata/max_source/max_proof/max_batch bounds;
+- policy preflight before source spool/hash;
+- socket deadline + cooperative cancellation;
+- bounded concurrent requests;
+- conservative batch response budget.
+
+Structured audit contains only:
+- normalized endpoint labels;
+- canonical ArtifactId/PolicyId where known;
+- decision/error codes;
+- byte counters;
+- elapsed time and timeout/cancel flags.
+
+It never stores arbitrary headers/query strings/body or raw exception messages.
+
+Daemon:
+
+    sigma-gateway --store <PX1-store>
+
+Default bind is loopback. Non-loopback requires --allow-nonlocal-bind and still
+expects TLS/authentication to be provided by trusted outer infrastructure.
+
+Evidence:
+- PX4-GATEWAY-CONTRACT.md
+- PX4-HTTP-PROTOCOL.md
+- PX4-COMPLEXITY-AUDIT.md
+- PX4-IMPLEMENTATION-EVIDENCE.md
+
+PX4 sólo se promociona a COMPLETE tras ejecutar el gate y promover PX4-O01..O04.
+
 # 9. PX5 — Policy DSL / Compiler
 
 Human-facing YAML/JSON policy -> canonical VerificationPolicyV1.

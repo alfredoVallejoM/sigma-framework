@@ -19,6 +19,7 @@ from .oci import (
     OciSigmaArtifactBindingV1,
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
+    parse_oci_referrers_index_v1,
     parse_sigma_referrers_index_v1,
     sigma_artifact_payload_descriptor_v1,
     verify_sigma_artifact_referrer_v1,
@@ -190,4 +191,5 @@ __all__ = [
     "verify_sigma_range_proof_referrer_v1",
     "verify_sigma_receipt_referrer_v1",
     "verify_sigma_sidecar_referrer_v1",
+    "parse_oci_referrers_index_v1",
 ]

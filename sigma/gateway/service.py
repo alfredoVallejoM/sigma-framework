@@ -84,6 +84,7 @@ _ARTIFACT_RESULT_SCHEMA = "sigma-gateway-artifact-verification-v1"
 _POLICY_RESULT_SCHEMA = "sigma-gateway-policy-evaluation-v1"
 _PROOF_RESULT_SCHEMA = "sigma-gateway-proof-verification-v1"
 _PARENTS_RESULT_SCHEMA = "sigma-gateway-artifact-parents-v1"
+_BATCH_RESULT_BUDGET_PER_ITEM = 16 << 10
 
 
 class _DeclaredLengthSourceV1(CanonicalSource):
@@ -547,6 +548,12 @@ class GatewayServiceV1:
         token: GatewayCancellationTokenV1,
     ) -> _GatewayOutcomeV1:
         count = read_batch_header_v1(reader)
+        if count * _BATCH_RESULT_BUDGET_PER_ITEM > self.limits.max_response_bytes:
+            raise GatewayError(
+                status=413,
+                code=GatewayErrorCodeV1.REQUEST_TOO_LARGE,
+                safe_message="batch result budget exceeds gateway response limit",
+            )
         results: list[BatchItemResultV1] = []
         total_source_bytes = 0
 
@@ -714,6 +721,25 @@ class GatewayServiceV1:
             artifact.artifact_id.hex(),
         )
 
+    @classmethod
+    def _audit_endpoint(cls, path: str) -> str:
+        clean = path.split("?", 1)[0].split("#", 1)[0]
+        if clean in (
+            "/health",
+            "/version",
+            "/v1/artifacts/verify",
+            "/v1/policies/evaluate",
+            "/v1/batch/verify",
+            "/v1/proofs/inclusion/verify",
+            "/v1/proofs/range/verify",
+        ):
+            return clean
+        if cls._path_artifact_id(clean, suffix="/parents") is not None:
+            return "/v1/artifacts/{id}/parents"
+        if cls._path_artifact_id(clean) is not None:
+            return "/v1/artifacts/{id}"
+        return "<unmatched>"
+
     @staticmethod
     def _path_artifact_id(path: str, *, suffix: str = "") -> bytes | None:
         prefix = "/v1/artifacts/"
@@ -799,7 +825,7 @@ class GatewayServiceV1:
             raise TypeError("method and path must be str")
         if not isinstance(content_type, str):
             raise TypeError("content_type must be str")
-        audit_endpoint = path.split("?", 1)[0].split("#", 1)[0]
+        audit_endpoint = self._audit_endpoint(path)
 
         if not self._semaphore.acquire(blocking=False):
             response = error_response_v1(GatewayBusyError())

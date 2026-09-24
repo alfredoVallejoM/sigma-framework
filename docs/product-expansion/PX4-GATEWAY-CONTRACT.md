@@ -323,6 +323,9 @@ local verifier call.
 If a proof kernel itself consumes the remaining deadline, its result is discarded
 and the response becomes timeout.
 
+Blocking socket reads inherit request_timeout_seconds, so a stalled client
+cannot bypass the deadline merely by blocking inside rfile.read().
+
 PX4 V1 does not kill Python threads asynchronously.
 
 This avoids unsafe interruption of shared library state.
@@ -483,6 +486,33 @@ the standard handler logs the raw request line, which may contain query-string
 secrets.
 
 PX4 emits only its own fixed audit schema.
+
+## 24A. Packaged daemon entrypoint
+
+Installed console entrypoint:
+
+    sigma-gateway
+
+Authority:
+
+    sigma.gateway.cli:main
+
+Default bind:
+
+    127.0.0.1:8080
+
+A non-loopback bind requires:
+
+    --allow-nonlocal-bind
+
+This flag acknowledges exposure; it is not authentication.
+
+The CLI exposes resource limits but deliberately accepts no bearer tokens,
+passwords, private keys or TLS secrets.
+
+The compatibility development runner delegates to the same implementation:
+
+    scripts/product_closure/px4_daemon.py
 
 ## 25. Authentication / TLS boundary
 

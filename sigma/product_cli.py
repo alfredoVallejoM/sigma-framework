@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from sigma.interop import OciRegistryError
 from sigma.interop.cli_oci import add_oci_commands
 from sigma.tree import (
     SymlinkPolicy,
@@ -186,7 +187,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         return args.handler(args)
-    except (OSError, TypeError, ValueError) as exc:
+    except (OSError, TypeError, ValueError, OciRegistryError) as exc:
         parser.error(str(exc))
     return 2
 

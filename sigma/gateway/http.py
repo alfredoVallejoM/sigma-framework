@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 
 from .runtime import (
     GatewayBusyError,
@@ -107,8 +107,9 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
     sys_version: ClassVar[str] = ""
 
     def parse_request(self) -> bool:
-        original = self.rfile
-        self.rfile = _HeaderBudgetReaderV1(
+        handler = cast(Any, self)
+        original = handler.rfile
+        handler.rfile = _HeaderBudgetReaderV1(
             original,
             self._gateway_server.gateway_service.limits.max_header_bytes,
         )
@@ -131,7 +132,7 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
             self._write_response(response)
             return False
         finally:
-            self.rfile = original
+            handler.rfile = original
 
     def send_error(
         self,

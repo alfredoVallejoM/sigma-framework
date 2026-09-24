@@ -122,14 +122,113 @@ def _validate_media_type(value: str) -> str:
 
 
 @dataclass(frozen=True)
+class OciPlatformV1:
+    """OCI image-index platform extension preserved by IX0."""
+
+    architecture: str
+    os: str
+    os_version: str | None = None
+    os_features: tuple[str, ...] = ()
+    variant: str | None = None
+    features: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("architecture", self.architecture),
+            ("os", self.os),
+        ):
+            if not isinstance(value, str) or not value:
+                raise OciManifestError(f"OCI platform {name} must be non-empty str")
+        for name, value in (
+            ("os_version", self.os_version),
+            ("variant", self.variant),
+        ):
+            if value is not None and not isinstance(value, str):
+                raise OciManifestError(f"OCI platform {name} must be str or None")
+        for name, values in (
+            ("os_features", self.os_features),
+            ("features", self.features),
+        ):
+            if not isinstance(values, tuple) or any(
+                not isinstance(item, str) for item in values
+            ):
+                raise OciManifestError(
+                    f"OCI platform {name} must be tuple[str, ...]"
+                )
+
+    def to_dict(self) -> dict[str, object]:
+        out: dict[str, object] = {
+            "architecture": self.architecture,
+            "os": self.os,
+        }
+        if self.os_version is not None:
+            out["os.version"] = self.os_version
+        if self.os_features:
+            out["os.features"] = list(self.os_features)
+        if self.variant is not None:
+            out["variant"] = self.variant
+        if self.features:
+            out["features"] = list(self.features)
+        return out
+
+    @classmethod
+    def from_dict(cls, value: object) -> "OciPlatformV1":
+        if not isinstance(value, dict):
+            raise OciManifestError("OCI platform must be an object")
+        allowed = {
+            "architecture",
+            "os",
+            "os.version",
+            "os.features",
+            "variant",
+            "features",
+        }
+        if set(value) - allowed:
+            raise OciManifestError("unsupported OCI platform field")
+        architecture = value.get("architecture")
+        os_name = value.get("os")
+        if not isinstance(architecture, str) or not isinstance(os_name, str):
+            raise OciManifestError(
+                "OCI platform architecture and os must be strings"
+            )
+        os_version = value.get("os.version")
+        variant = value.get("variant")
+        os_features = value.get("os.features", [])
+        features = value.get("features", [])
+        if os_version is not None and not isinstance(os_version, str):
+            raise OciManifestError("OCI platform os.version must be str")
+        if variant is not None and not isinstance(variant, str):
+            raise OciManifestError("OCI platform variant must be str")
+        if not isinstance(os_features, list) or any(
+            not isinstance(item, str) for item in os_features
+        ):
+            raise OciManifestError("OCI platform os.features must be string list")
+        if not isinstance(features, list) or any(
+            not isinstance(item, str) for item in features
+        ):
+            raise OciManifestError("OCI platform features must be string list")
+        return cls(
+            architecture=architecture,
+            os=os_name,
+            os_version=os_version,
+            os_features=tuple(os_features),
+            variant=variant,
+            features=tuple(features),
+        )
+
+
+@dataclass(frozen=True)
 class OciDescriptorV1:
-    """Closed IX0 subset of the OCI descriptor used by subject/referrer flows."""
+    """OCI descriptor fields needed/preserved by IX0."""
 
     media_type: str
     digest: str
     size: int
     artifact_type: str | None = None
     annotations: tuple[tuple[str, str], ...] = ()
+    urls: tuple[str, ...] = ()
+    data: str | None = None
+    platform: OciPlatformV1 | None = None
 
     def __post_init__(self) -> None:
         _validate_media_type(self.media_type)
@@ -149,6 +248,19 @@ class OciDescriptorV1:
             "annotations",
             _canonical_annotations(self.annotations),
         )
+        if not isinstance(self.urls, tuple) or any(
+            not isinstance(item, str) or not item for item in self.urls
+        ):
+            raise OciManifestError("OCI descriptor urls must be non-empty strings")
+        if self.data is not None and not isinstance(self.data, str):
+            raise OciManifestError("OCI descriptor data must be str or None")
+        if self.platform is not None and not isinstance(
+            self.platform,
+            OciPlatformV1,
+        ):
+            raise OciManifestError(
+                "OCI descriptor platform must be OciPlatformV1 or None"
+            )
 
     def to_dict(self) -> dict[str, object]:
         out: dict[str, object] = {
@@ -160,6 +272,12 @@ class OciDescriptorV1:
             out["artifactType"] = self.artifact_type
         if self.annotations:
             out["annotations"] = dict(self.annotations)
+        if self.urls:
+            out["urls"] = list(self.urls)
+        if self.data is not None:
+            out["data"] = self.data
+        if self.platform is not None:
+            out["platform"] = self.platform.to_dict()
         return out
 
     @classmethod
@@ -172,6 +290,9 @@ class OciDescriptorV1:
             "size",
             "artifactType",
             "annotations",
+            "urls",
+            "data",
+            "platform",
         }
         if set(value) - allowed:
             raise OciManifestError("unsupported OCI descriptor field")
@@ -181,6 +302,9 @@ class OciDescriptorV1:
         size = value.get("size")
         artifact_type = value.get("artifactType")
         annotations = value.get("annotations")
+        urls = value.get("urls", [])
+        data = value.get("data")
+        platform = value.get("platform")
 
         if not isinstance(media_type, str):
             raise OciManifestError("OCI descriptor mediaType must be str")
@@ -200,6 +324,17 @@ class OciDescriptorV1:
                 raise OciManifestError(
                     "OCI descriptor annotations must be a string map"
                 )
+        if not isinstance(urls, list) or any(
+            not isinstance(item, str) or not item for item in urls
+        ):
+            raise OciManifestError("OCI descriptor urls must be a string list")
+        if data is not None and not isinstance(data, str):
+            raise OciManifestError("OCI descriptor data must be str")
+        platform_value = (
+            None
+            if platform is None
+            else OciPlatformV1.from_dict(platform)
+        )
 
         return cls(
             media_type=media_type,
@@ -207,6 +342,9 @@ class OciDescriptorV1:
             size=size,
             artifact_type=artifact_type,
             annotations=annotations,
+            urls=tuple(urls),
+            data=data,
+            platform=platform_value,
         )
 
 
@@ -490,12 +628,20 @@ def verify_sigma_artifact_referrer_v1(
 
 def parse_sigma_referrers_index_v1(
     index_wire: bytes,
+    *,
+    max_bytes: int = MAX_OCI_MANIFEST_BYTES,
 ) -> tuple[OciDescriptorV1, ...]:
     """Extract Sigma IX0 descriptors from an OCI 1.1 referrers response."""
 
     if not isinstance(index_wire, bytes):
         raise TypeError("index_wire must be bytes")
-    if len(index_wire) > MAX_OCI_MANIFEST_BYTES:
+    if (
+        isinstance(max_bytes, bool)
+        or not isinstance(max_bytes, int)
+        or max_bytes < 1
+    ):
+        raise ValueError("max_bytes must be a positive int")
+    if len(index_wire) > max_bytes:
         raise OciManifestError(
             "OCI referrers index exceeds IX0 size limit"
         )
@@ -553,6 +699,7 @@ __all__ = [
     "OciDescriptorV1",
     "OciInteropError",
     "OciManifestError",
+    "OciPlatformV1",
     "OciSigmaArtifactBindingV1",
     "build_sigma_artifact_referrer_v1",
     "oci_sha256_digest_v1",

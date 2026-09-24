@@ -111,6 +111,38 @@ def _load_json_object(
     return value
 
 
+def _validate_subject_manifest(
+    wire: bytes,
+    *,
+    media_type: str,
+) -> None:
+    value = _load_json_object(
+        wire,
+        what="OCI subject manifest",
+    )
+    if value.get("schemaVersion") != 2:
+        raise OciLayoutIntegrityError(
+            "OCI subject manifest schemaVersion must be 2"
+        )
+    declared = value.get("mediaType")
+    if declared is not None:
+        if not isinstance(declared, str):
+            raise OciLayoutIntegrityError(
+                "OCI subject manifest mediaType must be str"
+            )
+        if declared != media_type:
+            raise OciLayoutIntegrityError(
+                "OCI subject manifest mediaType differs from descriptor"
+            )
+    if not (
+        ("config" in value and "layers" in value)
+        or "manifests" in value
+    ):
+        raise OciLayoutIntegrityError(
+            "OCI subject is not manifest/index shaped"
+        )
+
+
 def _atomic_file(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(
@@ -305,6 +337,10 @@ def write_sigma_artifact_layout_v1(
             "OCI subject blob exceeds configured limit"
         )
 
+    _validate_subject_manifest(
+        subject_wire,
+        media_type=subject_media_type,
+    )
     subject = OciDescriptorV1(
         media_type=subject_media_type,
         digest=oci_sha256_digest_v1(subject_wire),
@@ -465,6 +501,7 @@ def _select_referrer(
     *,
     expected_artifact_id: bytes | None,
     referrer_digest: str | None,
+    referrer_ref_name: str | None,
 ) -> OciDescriptorV1:
     sigma = tuple(
         item
@@ -476,6 +513,19 @@ def _select_referrer(
             item
             for item in sigma
             if item.digest == referrer_digest
+        )
+    if referrer_ref_name is not None:
+        if not isinstance(referrer_ref_name, str) or not referrer_ref_name:
+            raise ValueError(
+                "referrer_ref_name must be non-empty str or None"
+            )
+        sigma = tuple(
+            item
+            for item in sigma
+            if dict(item.annotations).get(
+                OCI_REF_NAME_ANNOTATION
+            )
+            == referrer_ref_name
         )
     if expected_artifact_id is not None:
         if (
@@ -510,6 +560,7 @@ def verify_sigma_artifact_layout_v1(
     *,
     expected_artifact_id: bytes | None = None,
     referrer_digest: str | None = None,
+    referrer_ref_name: str | None = None,
     limits: OciLayoutLimitsV1 | None = None,
 ) -> OciSigmaArtifactBindingV1:
     """Verify a self-contained Sigma referrer from an OCI Image Layout."""
@@ -533,6 +584,7 @@ def verify_sigma_artifact_layout_v1(
         descriptors,
         expected_artifact_id=expected_artifact_id,
         referrer_digest=referrer_digest,
+        referrer_ref_name=referrer_ref_name,
     )
     manifest_wire = _read_blob(
         root,
@@ -567,11 +619,15 @@ def verify_sigma_artifact_layout_v1(
         limits=selected_limits,
         what="Sigma artifact payload",
     )
-    _read_blob(
+    subject_wire = _read_blob(
         root,
         subject,
         limits=selected_limits,
         what="OCI subject",
+    )
+    _validate_subject_manifest(
+        subject_wire,
+        media_type=subject.media_type,
     )
     empty_descriptor = OciDescriptorV1(
         media_type="application/vnd.oci.empty.v1+json",

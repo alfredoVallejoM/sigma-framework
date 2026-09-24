@@ -306,9 +306,21 @@ class BatchVerifyItemMetadataV1:
 
 
 @dataclass(frozen=True)
+class InclusionVerifyHeadV1:
+    proof_wire: bytes
+    leaf_length: int
+
+
+@dataclass(frozen=True)
 class InclusionVerifyMetadataV1:
     proof_wire: bytes
     leaf: bytes
+
+
+@dataclass(frozen=True)
+class RangeVerifyHeadV1:
+    proof_wire: bytes
+    value_length: int
 
 
 @dataclass(frozen=True)
@@ -477,9 +489,9 @@ def read_batch_item_metadata_v1(
     )
 
 
-def read_inclusion_verify_v1(
+def read_inclusion_verify_head_v1(
     reader: GatewayBodyReaderV1,
-) -> InclusionVerifyMetadataV1:
+) -> InclusionVerifyHeadV1:
     raw = reader.read_exact(_INCLUSION_HEADER.size)
     magic, version, proof_length, leaf_length = _INCLUSION_HEADER.unpack(raw)
     _require_magic_version(magic, _INCLUSION_VERIFY_MAGIC, version)
@@ -488,14 +500,23 @@ def read_inclusion_verify_v1(
     if leaf_length > reader.limits.max_proof_value_bytes:
         raise GatewaySourceTooLargeError()
     proof = reader.read_metadata(proof_length)
-    leaf = reader.read_exact(leaf_length)
-    reader.require_consumed()
-    return InclusionVerifyMetadataV1(proof, leaf)
+    if leaf_length != reader.remaining:
+        raise GatewayFramingError()
+    return InclusionVerifyHeadV1(proof, leaf_length)
 
 
-def read_range_verify_v1(
+def read_inclusion_verify_v1(
     reader: GatewayBodyReaderV1,
-) -> RangeVerifyMetadataV1:
+) -> InclusionVerifyMetadataV1:
+    head = read_inclusion_verify_head_v1(reader)
+    leaf = reader.read_exact(head.leaf_length)
+    reader.require_consumed()
+    return InclusionVerifyMetadataV1(head.proof_wire, leaf)
+
+
+def read_range_verify_head_v1(
+    reader: GatewayBodyReaderV1,
+) -> RangeVerifyHeadV1:
     raw = reader.read_exact(_RANGE_HEADER.size)
     magic, version, proof_length, value_length = _RANGE_HEADER.unpack(raw)
     _require_magic_version(magic, _RANGE_VERIFY_MAGIC, version)
@@ -504,9 +525,18 @@ def read_range_verify_v1(
     if value_length > reader.limits.max_proof_value_bytes:
         raise GatewaySourceTooLargeError()
     proof = reader.read_metadata(proof_length)
-    value = reader.read_exact(value_length)
+    if value_length != reader.remaining:
+        raise GatewayFramingError()
+    return RangeVerifyHeadV1(proof, value_length)
+
+
+def read_range_verify_v1(
+    reader: GatewayBodyReaderV1,
+) -> RangeVerifyMetadataV1:
+    head = read_range_verify_head_v1(reader)
+    value = reader.read_exact(head.value_length)
     reader.require_consumed()
-    return RangeVerifyMetadataV1(proof, value)
+    return RangeVerifyMetadataV1(head.proof_wire, value)
 
 
 def encode_artifact_verify_request_v1(
@@ -700,8 +730,10 @@ __all__ = [
     "BatchVerifyItemMetadataV1",
     "GatewayBodyReaderV1",
     "GatewayFramingError",
+    "InclusionVerifyHeadV1",
     "InclusionVerifyMetadataV1",
     "PolicyEvaluateMetadataV1",
+    "RangeVerifyHeadV1",
     "RangeVerifyMetadataV1",
     "body_reader_from_bytes_v1",
     "decode_capabilities_v1",
@@ -714,7 +746,9 @@ __all__ = [
     "read_artifact_verify_metadata_v1",
     "read_batch_header_v1",
     "read_batch_item_metadata_v1",
+    "read_inclusion_verify_head_v1",
     "read_inclusion_verify_v1",
     "read_policy_evaluate_metadata_v1",
+    "read_range_verify_head_v1",
     "read_range_verify_v1",
 ]

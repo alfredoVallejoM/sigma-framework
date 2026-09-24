@@ -167,3 +167,36 @@ Evidence:
 
 PX3 permanece ACTIVE hasta ejecutar tests/quality y
 scripts/product_closure/px3_gate.py, y promover PX3-O01..O04.
+
+
+## Estado IX
+
+IX0 — OCI / ORAS Adapter — está **ACTIVE / IX0-A SOURCE IMPLEMENTED**.
+
+Implementación IX0-A:
+- nuevo namespace `sigma.interop`;
+- mapeo de `SigmaArtifactV1` a OCI 1.1 referrer manifest;
+- `subject` OCI explícito y separado de la identidad Sigma;
+- OCI payload digest, OCI manifest digest y ArtifactId modelados como identidades distintas;
+- parser acotado de respuestas de referrers;
+- verificación completamente offline de manifest + payload extraídos;
+- rechazo de digest/ArtifactId/subject inconsistentes;
+- corpus unitario adversarial preparado;
+- auditoría de complejidad y límites registrada.
+
+Frontera:
+- el `OciRegistryBackendV1` de PX3 sigue siendo transporte/almacenamiento;
+- IX0 no reinterpreta el locator PX3 como referrer semántico;
+- tags, annotations, registry URL, OCI digest y serialización JSON no entran en ArtifactId.
+
+Pendiente IX0-B:
+- attach/push/pull/refs contra registry real;
+- differential con ORAS;
+- gate IX0-RT-001;
+- ejecución de IX0-ID-001 y del corpus adversarial.
+
+Evidence:
+- `IX0-IMPLEMENTATION-EVIDENCE.md`.
+
+IX0 no se promociona a COMPLETE hasta ejecutar IX0-O01..O04 y capturar evidencia
+de round-trip real.

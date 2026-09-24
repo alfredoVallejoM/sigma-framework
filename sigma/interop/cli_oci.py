@@ -16,6 +16,10 @@ from .oci import (
     verify_sigma_artifact_referrer_v1,
 )
 from .oci_auth import OciBearerAuthV1
+from .oci_layout import (
+    verify_sigma_artifact_layout_v1,
+    write_sigma_artifact_layout_v1,
+)
 from .oci_registry import OciRegistryClientV1
 
 
@@ -332,6 +336,57 @@ def _pull(args: argparse.Namespace) -> int:
     return 0
 
 
+def _layout_export(args: argparse.Namespace) -> int:
+    artifact = SigmaArtifactV1.from_bytes(args.artifact.read_bytes())
+    annotations = _key_values(args.annotation, what="annotation")
+    result = write_sigma_artifact_layout_v1(
+        args.output,
+        artifact,
+        subject_wire=args.subject.read_bytes(),
+        subject_media_type=args.subject_media_type,
+        subject_ref_name=args.subject_ref_name,
+        referrer_ref_name=args.referrer_ref_name,
+        annotations=annotations,
+    )
+    print(
+        json.dumps(
+            {
+                "artifact_id": result.binding.artifact_id.hex(),
+                "layout": str(result.root),
+                "payload_digest": result.binding.payload_descriptor.digest,
+                "referrer_digest": result.binding.manifest_descriptor.digest,
+                "subject_digest": result.subject_descriptor.digest,
+                "index_descriptor_count": result.index_descriptor_count,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _layout_verify(args: argparse.Namespace) -> int:
+    expected_id = _artifact_id(args.artifact_id)
+    binding = verify_sigma_artifact_layout_v1(
+        args.layout,
+        expected_artifact_id=expected_id,
+        referrer_digest=args.referrer_digest,
+    )
+    print(
+        json.dumps(
+            {
+                "artifact_id": binding.artifact_id.hex(),
+                "layout": str(args.layout),
+                "payload_digest": binding.payload_descriptor.digest,
+                "referrer_digest": binding.manifest_descriptor.digest,
+                "subject_digest": binding.subject.digest,
+                "offline_verified": True,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def _verify(args: argparse.Namespace) -> int:
     expected_subject = _subject_from_args(args, required=False)
     expected_id = _artifact_id(args.artifact_id)
@@ -472,6 +527,36 @@ def add_oci_commands(commands) -> None:
     pull.add_argument("--output-artifact", type=Path, required=True)
     pull.add_argument("--output-manifest", type=Path)
     pull.set_defaults(handler=_pull)
+
+    layout_export = actions.add_parser(
+        "layout-export",
+        help="write a self-contained OCI Image Layout with a Sigma referrer",
+    )
+    layout_export.add_argument("artifact", type=Path)
+    layout_export.add_argument("--subject", type=Path, required=True)
+    layout_export.add_argument(
+        "--subject-media-type",
+        default=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+    )
+    layout_export.add_argument("--subject-ref-name")
+    layout_export.add_argument("--referrer-ref-name")
+    layout_export.add_argument(
+        "--annotation",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+    )
+    layout_export.add_argument("--output", type=Path, required=True)
+    layout_export.set_defaults(handler=_layout_export)
+
+    layout_verify = actions.add_parser(
+        "layout-verify",
+        help="verify a Sigma referrer from an OCI Image Layout",
+    )
+    layout_verify.add_argument("layout", type=Path)
+    layout_verify.add_argument("--artifact-id")
+    layout_verify.add_argument("--referrer-digest")
+    layout_verify.set_defaults(handler=_layout_verify)
 
     verify = actions.add_parser(
         "verify",

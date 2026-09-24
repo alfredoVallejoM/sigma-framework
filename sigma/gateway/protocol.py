@@ -6,6 +6,7 @@ import io
 import json
 import struct
 from dataclasses import dataclass
+from pathlib import Path
 from typing import BinaryIO
 
 from sigma.sources import IncrementalSpoolSource, SourceLimitError
@@ -223,6 +224,7 @@ class GatewayBodyReaderV1:
         length: int,
         *,
         effective_max_source_bytes: int | None = None,
+        temp_dir: str | Path | None = None,
     ) -> CancellableSourceV1:
         limit = self.limits.max_source_bytes
         if effective_max_source_bytes is not None:
@@ -245,6 +247,7 @@ class GatewayBodyReaderV1:
         source = IncrementalSpoolSource(
             max_memory_bytes=memory_limit,
             max_spool_bytes=limit,
+            temp_dir=temp_dir,
         )
         try:
             remaining = length

@@ -44,6 +44,8 @@ class GateOciRegistryTransport:
     native_referrers: bool = True
     page_size: int | None = None
     cross_origin_upload: bool = False
+    lose_blob_completion_once: bool = False
+    lose_conditional_manifest_once: bool = False
     retry_once: dict[tuple[str, str], int] = field(default_factory=dict)
     blobs: dict[str, bytes] = field(default_factory=dict)
     manifests: dict[str, bytes] = field(default_factory=dict)
@@ -53,6 +55,9 @@ class GateOciRegistryTransport:
         default_factory=list
     )
     _upload_counter: int = 0
+    _completed_uploads: set[str] = field(default_factory=set)
+    _lost_blob_completion_emitted: bool = False
+    _lost_conditional_manifest_emitted: bool = False
 
     def _response(
         self,
@@ -150,6 +155,13 @@ class GateOciRegistryTransport:
         ]
         if subject_digest is not None and self.native_referrers:
             response_headers.append(("OCI-Subject", subject_digest))
+        if (
+            self.lose_conditional_manifest_once
+            and if_match is not None
+            and not self._lost_conditional_manifest_emitted
+        ):
+            self._lost_conditional_manifest_emitted = True
+            return self._response(503, url)
         return self._response(
             201,
             url,
@@ -314,6 +326,8 @@ class GateOciRegistryTransport:
             )
 
         if path.startswith("/uploads/") and method == "PUT":
+            if path in self._completed_uploads:
+                return self._response(404, url)
             digest_values = query.get("digest")
             if not digest_values:
                 return self._response(400, url)
@@ -322,6 +336,13 @@ class GateOciRegistryTransport:
             if oci_sha256_digest_v1(payload) != digest:
                 return self._response(400, url)
             self.blobs[digest] = payload
+            self._completed_uploads.add(path)
+            if (
+                self.lose_blob_completion_once
+                and not self._lost_blob_completion_emitted
+            ):
+                self._lost_blob_completion_emitted = True
+                return self._response(503, url)
             return self._response(
                 201,
                 url,

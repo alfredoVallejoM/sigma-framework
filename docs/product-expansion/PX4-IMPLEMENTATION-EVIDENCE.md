@@ -526,6 +526,50 @@ GET parents uses canonical artifact bytes.
 Resolution:
 headers never passed to service semantics; byte-exact two-credential receipt test.
 
+### AR-PX4-13 — header limit applied only after stdlib parse
+
+Finding:
+a post-parse aggregate limit did not itself bound header materialization.
+
+Resolution:
+GatewayHTTPRequestHandlerV1 wraps rfile during parse_request with a bounded
+readline reader and rejects at max_header_bytes while parsing.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-14 — blocking body read could outlive cooperative deadline
+
+Finding:
+a stalled socket read can block between cancellation-token checks.
+
+Resolution:
+the HTTP socket timeout is set from request_timeout_seconds and read TimeoutError
+maps to GatewayTimeoutError.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-15 — outer transport rejection was outside structured audit
+
+Finding:
+header/length/method/parser errors can occur before GatewayServiceV1.handle.
+
+Resolution:
+audit_transport_rejection emits the same safe GatewayAuditRecordV1 schema for
+those failures; stdlib send_error is overridden to canonical JSON.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-16 — daemon existed only as an internal script
+
+Finding:
+PX4 was usable as library/runner but not as an installed product entrypoint.
+
+Resolution:
+sigma.gateway.cli provides the packaged sigma-gateway command. Default bind is
+loopback; non-loopback requires --allow-nonlocal-bind.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
 ## 33. Current disposition
 
 Implementation for planned PX4 V1: COMPLETE.

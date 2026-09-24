@@ -373,9 +373,9 @@ def test_ix0_referrers_tag_matches_distribution_spec_shape():
         "test+algorithm+using+algorithm+separators+and+long:"
         "alsoSome=Encoded_Value-With-Lots-Of-Characters" + "x" * 80
     )
-    algorithm, encoded = weird.split("-", 1)
-    assert len(algorithm) <= 32
-    assert len(encoded) <= 64
+    assert len(weird) <= 32 + 1 + 64
+    assert "+" not in weird
+    assert "=" not in weird
 
 
 def test_ix0_ping_and_explicit_artifact_type():

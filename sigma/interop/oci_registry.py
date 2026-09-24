@@ -36,6 +36,12 @@ from .oci import (
     parse_sigma_referrers_index_v1,
     verify_sigma_artifact_referrer_v1,
 )
+from .oci_auth import (
+    OciAuthTransportV1,
+    OciBearerAuthV1,
+    exchange_bearer_challenge_v1,
+    parse_bearer_challenge_v1,
+)
 
 _RETRYABLE_STATUS = frozenset({408, 425, 429})
 _DIGEST_RE = re.compile(
@@ -369,6 +375,8 @@ class OciRegistryClientV1:
         headers: Mapping[str, str] | None = None,
         timeout: float = 30.0,
         limits: OciRegistryLimitsV1 | None = None,
+        bearer_auth: OciBearerAuthV1 | None = None,
+        auth_transport: OciAuthTransportV1 | None = None,
     ) -> None:
         self.base_url = _validate_base_url(base_url)
         self.repository = _validate_repository(repository)
@@ -383,6 +391,12 @@ class OciRegistryClientV1:
         self.limits = OciRegistryLimitsV1() if limits is None else limits
         if not isinstance(self.limits, OciRegistryLimitsV1):
             raise TypeError("limits must be OciRegistryLimitsV1")
+        if bearer_auth is not None and not isinstance(
+            bearer_auth,
+            OciBearerAuthV1,
+        ):
+            raise TypeError("bearer_auth must be OciBearerAuthV1 or None")
+        self.bearer_auth = bearer_auth
         hard_limit = max(
             self.limits.max_blob_bytes,
             self.limits.max_manifest_bytes,
@@ -397,6 +411,20 @@ class OciRegistryClientV1:
         )
         if not isinstance(self.transport, OciRegistryTransportV1):
             raise TypeError("transport must implement OciRegistryTransportV1")
+        self.auth_transport = (
+            self.transport
+            if auth_transport is None
+            else auth_transport
+        )
+        if not isinstance(self.auth_transport, OciAuthTransportV1):
+            raise TypeError(
+                "auth_transport must implement OciAuthTransportV1"
+            )
+        self._bearer_authorization: str | None = None
+        self._explicit_authorization = any(
+            key.lower() == "authorization"
+            for key in self.headers
+        )
 
     def _repo_path(self) -> str:
         return "/".join(
@@ -416,13 +444,22 @@ class OciRegistryClientV1:
         extra: Mapping[str, str] | None = None,
     ) -> dict[str, str]:
         result = dict(self.headers)
-        if _origin(url) != _origin(self.base_url):
+        same_origin = _origin(url) == _origin(self.base_url)
+        if not same_origin:
             result = {
                 key: value
                 for key, value in result.items()
                 if key.lower()
                 not in {"authorization", "proxy-authorization"}
             }
+        elif (
+            self._bearer_authorization is not None
+            and not any(
+                key.lower() == "authorization"
+                for key in result
+            )
+        ):
+            result["Authorization"] = self._bearer_authorization
         result.update(dict(extra or {}))
         return result
 
@@ -435,6 +472,7 @@ class OciRegistryClientV1:
         body: bytes | None = None,
     ) -> HttpResponseV1:
         attempt = 0
+        auth_refreshed = False
         while True:
             try:
                 response = self.transport.request(
@@ -453,6 +491,24 @@ class OciRegistryClientV1:
                 if self.limits.retry_backoff_seconds:
                     time.sleep(self.limits.retry_backoff_seconds * attempt)
                 continue
+            if (
+                response.status == 401
+                and self.bearer_auth is not None
+                and not self._explicit_authorization
+                and not auth_refreshed
+            ):
+                challenge = parse_bearer_challenge_v1(
+                    response.header("WWW-Authenticate")
+                )
+                if challenge is not None:
+                    self._bearer_authorization = exchange_bearer_challenge_v1(
+                        challenge,
+                        auth=self.bearer_auth,
+                        transport=self.auth_transport,
+                        timeout=self.timeout,
+                    )
+                    auth_refreshed = True
+                    continue
             if response.status in _RETRYABLE_STATUS or 500 <= response.status <= 599:
                 if attempt >= self.limits.max_retries:
                     raise OciRegistryError(

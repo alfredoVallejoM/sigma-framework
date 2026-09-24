@@ -36,7 +36,7 @@ def _write_bytes_atomic(path: Path, data: bytes) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, path)
-    except BaseException:
+    except Exception:
         try:
             temporary_path.unlink()
         except FileNotFoundError:

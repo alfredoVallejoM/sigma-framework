@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from sigma.interop.cli_oci import add_oci_commands
 from sigma.tree import (
     SymlinkPolicy,
     TreeBuilder,
@@ -175,6 +176,8 @@ def build_parser() -> argparse.ArgumentParser:
     resume.add_argument("--output", type=Path)
     resume.add_argument("--require-hint-match", action="store_true")
     resume.set_defaults(handler=_resume_tree_command)
+
+    add_oci_commands(commands)
     return parser
 
 

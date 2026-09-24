@@ -178,9 +178,18 @@ PX3-HTTP-001	PX3	T3	HTTP mirror pull parity	PX1 canonical artifact	Range and Ran
 PX3-CACHE-001	PX3	T3	Verified cache non-interference	remote canonical artifact	cache hit corruption eviction refetch	accepted bytes independent of cache state	BLOCKING
 PX3-ID-001	PX3	T2	Remote metadata identity boundary	fixed ArtifactId	credentials endpoint metadata ETag OCI tag cache variants	ArtifactId unchanged	BLOCKING
 PX3-LIMIT-001	PX3	T4	Remote resource preflight	max_object_bytes and retry limits	oversize HEAD retry exhaustion checkpoint variants	fail closed before unbounded body work	BLOCKING
-PX4-DIFF-001	PX4	T3	Gateway vs local verification	Python product API	random artifacts/policies	exact decision/receipt parity	BLOCKING
-PX4-CHEAP-001	PX4	T4	Gateway preflight resource rejection	bomb body/source	oversize/timeout policies	no expensive hashing/buffering	BLOCKING
-PX4-CONC-001	PX4	T4	Gateway cancellation isolation	pointwise local verifier	concurrent cancel/timeout	other requests unaffected	BLOCKING
+PX4-DIFF-001	PX4	T3	Artifact gateway vs SA1 local verification	verify_artifact_v1	random TREE artifacts/policies	exact ArtifactVerificationResult JSON projection parity	BLOCKING
+PX4-RCPT-001	PX4	T3	Policy decision and receipt parity	verify_with_policy_v1 + receipt_from_decision_v1	random valid/mutated sources	exact decision and receipt wire parity	BLOCKING
+PX4-BATCH-001	PX4	T3	Gateway batch vs SV3 pointwise batch	verify_batch_v1	random bounded batches	exact BatchVerificationResultV1 wire parity	BLOCKING
+PX4-PROOF-001	PX4	T3	Proof endpoint parity	Tree V1 local verifiers	random inclusion/range proofs	exact Boolean local decision parity	BLOCKING
+PX4-HTTP-001	PX4	T3	HTTP adapter vs in-process/local semantics	GatewayServiceV1 + local API	localhost randomized verification	exact response body parity	BLOCKING
+PX4-CHEAP-001	PX4	T4	Gateway preflight resource rejection	bomb body/source	Content-Length policy/source limits	no expensive hashing/spooling before terminal admission	BLOCKING
+PX4-FRAME-001	PX4	T4	HTTP/framing ambiguity hardening	canonical gateway error schema	oversize aggregate headers duplicate Content-Length chunked Expect 100	fail closed before body; canonical JSON error	BLOCKING
+PX4-CONC-001	PX4	T4	Gateway cancellation and timeout isolation	pointwise local verifier	concurrent cancel/timeout + stalled read	other requests unaffected; timed request discarded	BLOCKING
+PX4-LOG-001	PX4	T4	Credential/log/receipt non-interference	fixed audit and SV3 receipt schemas	Authorization Cookie query-secret variants	no secret in audit/receipt; receipt bytes invariant	BLOCKING
+PX4-ERR-001	PX4	T3	Deterministic error projection	gateway error schema	repeated malformed request corpus	same status/code/body for same malformed input	BLOCKING
+PX4-STORE-001	PX4	T4	Canonical artifact and parent reads	PX1 canonical artifact authority	SQL/index divergence/corruption fixtures	GET bytes/parents derive from validated artifact wire	BLOCKING
+PX4-CLI-001	PX4	T2	Packaged daemon safe deployment defaults	sigma-gateway entrypoint	loopback/non-loopback argument fixtures	loopback default; non-loopback requires explicit acknowledgement	BLOCKING
 PX5-KAT-001	PX5	T1	DSL compile determinism	canonical VerificationPolicyV1	frozen YAML/JSON corpus	exact PolicyId	BLOCKING
 PX5-ADV-001	PX5	T4	DSL ambiguity/conflict rejection	none	unknown keys, conflicting requirements, bad units	reject with deterministic diagnostics	BLOCKING
 IX0-RT-001	IX0	T3	OCI/ORAS attach-pull round-trip	canonical Sigma bytes	local registry fixtures	byte-identical extracted evidence	BLOCKING

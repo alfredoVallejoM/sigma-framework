@@ -671,62 +671,66 @@ def run_gate(
                         "PX4 audit endpoint was not normalized"
                     )
                 audit_secret_cases += 1
-        # Header credentials are transport-only: the exact receipt must equal
-        # the local library result under different Authorization/Cookie values.
-        receipt_data = b"px4-http-receipt-independence"
-        receipt_digest = _v3_digest(receipt_data, 999_999)
-        receipt_policy = VerificationPolicyV1()
-        receipt_identity = b"px4-http-receipt"
-        receipt_payload = encode_policy_evaluate_request_v1(
-            artifact_identity=receipt_identity,
-            evidence_wire=receipt_digest.to_bytes(),
-            policy=receipt_policy,
-            source=receipt_data,
-        )
-        receipt_decision = verify_with_policy_v1(
-            receipt_digest.to_bytes(),
-            policy=receipt_policy,
-            source=receipt_data,
-        )
-        receipt_local = receipt_from_decision_v1(
-            receipt_identity,
-            receipt_policy,
-            receipt_decision,
-            verifier_package="sigma-framework",
-            verifier_version=PACKAGE_VERSION,
-            verifier_build=build,
-            claimed_unix_time=None,
-        )
-        receipt_expected = decision_result_json_v1(
-            receipt_decision,
-            receipt_wire=receipt_local.to_bytes(),
-            receipt_id=receipt_local.receipt_id,
-        )
-        receipt_bodies = []
-        for secret in ("secret-a", "secret-b"):
-            connection = http.client.HTTPConnection(
-                host,
-                port,
-                timeout=10,
+            # Header credentials are transport-only: the exact receipt must equal
+            # the local library result under different Authorization/Cookie values.
+            receipt_data = b"px4-http-receipt-independence"
+            receipt_digest = _v3_digest(receipt_data, 999_999)
+            receipt_policy = VerificationPolicyV1()
+            receipt_identity = b"px4-http-receipt"
+            receipt_payload = encode_policy_evaluate_request_v1(
+                artifact_identity=receipt_identity,
+                evidence_wire=receipt_digest.to_bytes(),
+                policy=receipt_policy,
+                source=receipt_data,
             )
-            connection.request(
-                "POST",
-                "/v1/policies/evaluate",
-                body=receipt_payload,
-                headers={
-                    "Authorization": f"Bearer {secret}",
-                    "Cookie": f"session={secret}",
-                    "Content-Type": POLICY_EVALUATE_MEDIA_TYPE,
-                },
+            receipt_decision = verify_with_policy_v1(
+                receipt_digest.to_bytes(),
+                policy=receipt_policy,
+                source=receipt_data,
             )
-            response = connection.getresponse()
-            receipt_bodies.append(response.read())
-            if response.status != 200:
-                raise AssertionError("PX4 credential receipt HTTP status diverged")
-            connection.close()
-        if receipt_bodies != [receipt_expected, receipt_expected]:
-            raise AssertionError("PX4 credentials changed policy receipt bytes")
-        credential_receipt_independent = True
+            receipt_local = receipt_from_decision_v1(
+                receipt_identity,
+                receipt_policy,
+                receipt_decision,
+                verifier_package="sigma-framework",
+                verifier_version=PACKAGE_VERSION,
+                verifier_build=build,
+                claimed_unix_time=None,
+            )
+            receipt_expected = decision_result_json_v1(
+                receipt_decision,
+                receipt_wire=receipt_local.to_bytes(),
+                receipt_id=receipt_local.receipt_id,
+            )
+            receipt_bodies = []
+            for secret in ("secret-a", "secret-b"):
+                connection = http.client.HTTPConnection(
+                    host,
+                    port,
+                    timeout=10,
+                )
+                connection.request(
+                    "POST",
+                    "/v1/policies/evaluate",
+                    body=receipt_payload,
+                    headers={
+                        "Authorization": f"Bearer {secret}",
+                        "Cookie": f"session={secret}",
+                        "Content-Type": POLICY_EVALUATE_MEDIA_TYPE,
+                    },
+                )
+                response = connection.getresponse()
+                receipt_bodies.append(response.read())
+                if response.status != 200:
+                    raise AssertionError(
+                        "PX4 credential receipt HTTP status diverged"
+                    )
+                connection.close()
+            if receipt_bodies != [receipt_expected, receipt_expected]:
+                raise AssertionError(
+                    "PX4 credentials changed policy receipt bytes"
+                )
+            credential_receipt_independent = True
 
         finally:
             server.shutdown()

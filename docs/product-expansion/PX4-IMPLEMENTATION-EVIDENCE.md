@@ -602,6 +602,9 @@ max_http_connections. Exhaustion returns canonical 503 before thread creation.
 The gate/unit suite reserves the only slot and requires a new connection to be
 rejected without a handler thread.
 
+The pre-thread overflow path deliberately performs no audit-sink I/O from the
+accept loop, preventing a slow sink from defeating the admission defense.
+
 Status: RESOLVED IN IMPLEMENTATION.
 
 ### AR-PX4-18 — proof value buffered before proof validation
@@ -655,6 +658,31 @@ Resolution:
 ArtifactId route parsing now requires exactly 64 lowercase [0-9a-f] characters.
 Uppercase or other textual aliases resolve to not-found. Unit and gate cover the
 negative route.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-22 — response type allowed CR/LF header values
+
+Finding:
+GatewayResponseV1 originally validated uniqueness/type but not newline injection
+in future custom response headers.
+
+Resolution:
+Content-Type, header names and header values now reject CR/LF at construction.
+Unit tests enforce this boundary.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-23 — permissive HTTP length/expect parsing
+
+Finding:
+int(Content-Length) accepted forms such as +1/whitespace and unknown Expect
+values had no explicit V1 policy.
+
+Resolution:
+Content-Length is ASCII digits only; duplicates remain forbidden. Expect is
+absent or 100-continue; unsupported/multiple values return deterministic 417
+expectation-failed. Raw-socket unit/gate cases cover these forms.
 
 Status: RESOLVED IN IMPLEMENTATION.
 

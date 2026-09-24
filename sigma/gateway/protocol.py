@@ -189,6 +189,22 @@ class GatewayBodyReaderV1:
             raise GatewayMetadataTooLargeError()
         return self.read_exact(length)
 
+    def discard_exact(self, length: int) -> None:
+        if isinstance(length, bool) or not isinstance(length, int) or length < 0:
+            raise ValueError("length must be non-negative int")
+        if length > self.remaining:
+            raise GatewayFramingError()
+        remaining = length
+        while remaining:
+            self.token.check()
+            request = min(remaining, self.limits.read_chunk_bytes)
+            chunk = self.stream.read(request)
+            if not isinstance(chunk, bytes) or not chunk or len(chunk) > request:
+                raise GatewayFramingError()
+            self.bytes_read += len(chunk)
+            remaining -= len(chunk)
+        self.token.check()
+
     def spool_source(
         self,
         length: int,

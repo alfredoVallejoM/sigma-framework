@@ -620,12 +620,12 @@ def verify_sigma_artifact_referrer_v1(
     )
 
 
-def parse_sigma_referrers_index_v1(
+def parse_oci_referrers_index_v1(
     index_wire: bytes,
     *,
     max_bytes: int = MAX_OCI_MANIFEST_BYTES,
 ) -> tuple[OciDescriptorV1, ...]:
-    """Extract Sigma IX0 descriptors from an OCI 1.1 referrers response."""
+    """Parse every descriptor in an OCI 1.1 referrers response."""
 
     if not isinstance(index_wire, bytes):
         raise TypeError("index_wire must be bytes")
@@ -667,13 +667,25 @@ def parse_sigma_referrers_index_v1(
         raise OciManifestError(
             "OCI referrers index manifests must be a list"
         )
-    descriptors = tuple(
+    return tuple(
         OciDescriptorV1.from_dict(item)
         for item in manifests
     )
+
+
+def parse_sigma_referrers_index_v1(
+    index_wire: bytes,
+    *,
+    max_bytes: int = MAX_OCI_MANIFEST_BYTES,
+) -> tuple[OciDescriptorV1, ...]:
+    """Extract Sigma Artifact referrers from an OCI 1.1 response."""
+
     return tuple(
         descriptor
-        for descriptor in descriptors
+        for descriptor in parse_oci_referrers_index_v1(
+            index_wire,
+            max_bytes=max_bytes,
+        )
         if descriptor.artifact_type == SIGMA_ARTIFACT_REFERRER_TYPE
     )
 
@@ -697,6 +709,7 @@ __all__ = [
     "OciSigmaArtifactBindingV1",
     "build_sigma_artifact_referrer_v1",
     "oci_sha256_digest_v1",
+    "parse_oci_referrers_index_v1",
     "parse_sigma_referrers_index_v1",
     "sigma_artifact_payload_descriptor_v1",
     "verify_sigma_artifact_referrer_v1",

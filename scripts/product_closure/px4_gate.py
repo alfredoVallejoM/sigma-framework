@@ -9,6 +9,7 @@ import io
 import json
 import random
 import socket
+import sqlite3
 import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -638,6 +639,45 @@ def run_gate(
             error_stream.update(hashlib.sha256(first.body).digest())
             deterministic_errors += 1
 
+        # PX1 mutable parent index must never become gateway authority.
+        store_check = LocalArtifactStoreV1(root / "store-index-check")
+        store_parent = _tree_artifact(b"px4-store-parent", 240_000)
+        store_child = create_artifact_v1(
+            ArtifactProfileV1.TREE,
+            tree_root=build_tree(b"px4-store-child"),
+            parent_artifact_ids=(store_parent.artifact_id,),
+        )
+        store_check.put_artifact(store_parent)
+        store_check.put_artifact(store_child)
+        connection = sqlite3.connect(store_check.database_path)
+        try:
+            connection.execute(
+                "DELETE FROM artifact_parents WHERE child_id=?",
+                (store_child.artifact_id,),
+            )
+            connection.execute(
+                "INSERT INTO artifact_parents(child_id, parent_id) VALUES(?, ?)",
+                (store_child.artifact_id, bytes.fromhex("55" * 32)),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        store_response = GatewayServiceV1(store_check).handle(
+            method="GET",
+            path=f"/v1/artifacts/{store_child.artifact_id.hex()}/parents",
+            content_type="",
+            body_stream=io.BytesIO(b""),
+            content_length=0,
+        )
+        if (
+            store_response.status != 500
+            or _json_body(store_response)["code"] != "internal"
+        ):
+            raise AssertionError(
+                "PX4 exposed mutable parent index instead of canonical artifact"
+            )
+        canonical_store_authority_enforced = True
+
         # Canonical routing and audit-field normalization.
         route_artifact = _tree_artifact(b"px4-route-canonicality", 250_000)
         store.put_artifact(route_artifact)
@@ -967,6 +1007,7 @@ def run_gate(
         "timeout_requests_isolated": timeout_isolated,
         "error_schema_cases": error_schema_cases,
         "deterministic_error_cases": deterministic_errors,
+        "canonical_store_authority_enforced": canonical_store_authority_enforced,
         "canonical_artifact_route_enforced": canonical_artifact_route_enforced,
         "audit_method_normalized": audit_method_normalized,
         "http_cases": http_cases,

@@ -6,6 +6,11 @@ import json
 import pytest
 
 from sigma.artifact import ArtifactProfileV1, create_artifact_v1
+from sigma.outputs.digest_v3 import digest_from_evaluation_v3
+from sigma.sources import BytesSource
+from sigma.spec.context_v3 import SigmaContextV3
+from sigma.spec.ids_v3 import SuiteIdV3
+from sigma.trajectory import audit_from_evaluation_v3
 from sigma.interop import (
     OCI_IMAGE_INDEX_MEDIA_TYPE,
     OCI_IMAGE_MANIFEST_MEDIA_TYPE,
@@ -17,9 +22,11 @@ from sigma.interop import (
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
     parse_sigma_referrers_index_v1,
+    sigma_artifact_payload_descriptor_v1,
     verify_sigma_artifact_referrer_v1,
 )
 from sigma.tree import build_tree
+from sigma.v3 import evaluate_v3
 
 
 def _artifact(payload: bytes = b"ix0-oci-artifact"):
@@ -271,3 +278,64 @@ def test_ix0_sigma_referrer_artifact_type_is_explicit():
     assert binding.manifest_descriptor.artifact_type == (
         SIGMA_ARTIFACT_REFERRER_TYPE
     )
+
+
+def test_ix0_rejects_trajectory_audit_inside_artifact_payload():
+    message = b"ix0-no-audit-boundary"
+    context = SigmaContextV3.for_suite(
+        SuiteIdV3.REFERENCE_IAP_HISTORY_V3,
+        salt=b"ix0",
+        challenge=b"no-audit",
+        application_context=b"tests/ix0",
+    )
+    evaluation = evaluate_v3(context, BytesSource(message))
+    digest = digest_from_evaluation_v3(evaluation)
+    audit = audit_from_evaluation_v3(evaluation)
+    audited = create_artifact_v1(
+        ArtifactProfileV1.DUAL,
+        tree_root=build_tree(message),
+        trajectory_digest=digest,
+        trajectory_audit=audit,
+    )
+
+    with pytest.raises(
+        OciArtifactBindingError,
+        match="no-audit",
+    ):
+        sigma_artifact_payload_descriptor_v1(audited)
+
+    base = create_artifact_v1(
+        ArtifactProfileV1.DUAL,
+        tree_root=build_tree(message),
+        trajectory_digest=digest,
+    )
+    binding = build_sigma_artifact_referrer_v1(
+        base,
+        subject=_subject(),
+    )
+    audited_wire = audited.to_bytes()
+    tampered = _json_mutation(
+        binding.manifest_wire,
+        lambda value: (
+            value["layers"][0].__setitem__(
+                "digest",
+                oci_sha256_digest_v1(audited_wire),
+            ),
+            value["layers"][0].__setitem__(
+                "size",
+                len(audited_wire),
+            ),
+            value["layers"][0]["annotations"].__setitem__(
+                "dev.sigma.wire.sha256",
+                hashlib.sha256(audited_wire).hexdigest(),
+            ),
+        ),
+    )
+    with pytest.raises(
+        OciArtifactBindingError,
+        match="no-audit",
+    ):
+        verify_sigma_artifact_referrer_v1(
+            tampered,
+            audited_wire,
+        )

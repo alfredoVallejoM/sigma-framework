@@ -14,6 +14,7 @@ from sigma.trajectory import VerificationCapabilitiesV1, VerificationPolicyV1
 from .runtime import (
     CancellableSourceV1,
     GatewayCancellationTokenV1,
+    GatewayCancelledError,
     GatewayError,
     GatewayErrorCodeV1,
     GatewayLimitsV1,
@@ -156,6 +157,15 @@ class GatewayBodyReaderV1:
         self.token = token
         self.bytes_read = 0
 
+    def _stream_read(self, length: int) -> bytes:
+        try:
+            chunk = self.stream.read(length)
+        except (OSError, ConnectionError) as exc:
+            raise GatewayCancelledError() from exc
+        if not isinstance(chunk, bytes):
+            raise GatewayFramingError()
+        return chunk
+
     @property
     def remaining(self) -> int:
         return self.content_length - self.bytes_read
@@ -172,7 +182,7 @@ class GatewayBodyReaderV1:
                 length - len(output),
                 self.limits.read_chunk_bytes,
             )
-            chunk = self.stream.read(request)
+            chunk = self._stream_read(request)
             if not isinstance(chunk, bytes):
                 raise GatewayFramingError()
             if not chunk:

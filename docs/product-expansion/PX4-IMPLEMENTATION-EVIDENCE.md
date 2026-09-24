@@ -413,7 +413,18 @@ Prepared minimums:
     deterministic error cases   100
     localhost HTTP cases         40
 
-Additional HTTP credential receipt test is structural and exact.
+Additional structural checks:
+- two Authorization/Cookie variants -> byte-identical receipt;
+- malformed proof rejects before disclosed value read;
+- proof-length mismatch returns false before value read;
+- global spool exhaustion -> 503 before source read;
+- mutable parent-index divergence fails closed;
+- canonical lowercase ArtifactId route only;
+- arbitrary HTTP method normalizes to <other> in audit;
+- raw duplicate Content-Length / oversized headers / Expect preflight;
+- pre-thread max_http_connections rejection.
+
+No gate values are frozen until local execution.
 
 ## 31. Obligation mapping
 
@@ -432,9 +443,14 @@ Status: IMPLEMENTED / GATE PENDING.
 
 Implemented:
 - outer Content-Length gate;
+- header budget enforced during parse;
 - metadata/source/proof/batch limits;
+- max_http_connections before handler-thread creation;
+- max_concurrent_requests before body parsing;
+- global max_total_spool_bytes reservation before source read;
 - local source=None preflight;
-- BombStream tests;
+- proof parse/geometry before disclosed value buffering;
+- BombStream / PrefixThenBomb tests;
 - audit bytes_in evidence.
 
 Status: IMPLEMENTED / GATE PENDING.
@@ -444,7 +460,9 @@ Status: IMPLEMENTED / GATE PENDING.
 Implemented:
 - request-local token;
 - source decorator;
-- bounded semaphore;
+- verification semaphore;
+- pre-thread HTTP connection semaphore;
+- socket read timeout;
 - concurrent cancelled + healthy differential;
 - fake-clock timeout;
 - no mutable verification state.
@@ -454,12 +472,13 @@ Status: IMPLEMENTED / GATE PENDING.
 ### PX4-O04 — no secrets/raw credentials in receipts/logs
 
 Implemented:
-- no raw headers in service API;
-- normalized audit route;
+- no raw headers in service semantics;
+- normalized audit route and method;
 - disabled stdlib access log;
 - fixed error strings;
+- canonical JSON for outer parser errors;
 - different HTTP credentials -> identical receipt bytes;
-- query/header secret negative tests.
+- query/header/custom-method secret negative tests.
 
 Status: IMPLEMENTED / GATE PENDING.
 

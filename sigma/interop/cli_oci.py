@@ -81,7 +81,8 @@ def _registry_client(args: argparse.Namespace) -> OciRegistryClientV1:
 def _attach(args: argparse.Namespace) -> int:
     artifact = SigmaArtifactV1.from_bytes(args.artifact.read_bytes())
     subject = _subject_from_args(args, required=True)
-    assert subject is not None
+    if subject is None:
+        raise ValueError("OCI subject is required")
     annotations = _key_values(args.annotation, what="annotation")
     result = _registry_client(args).attach_artifact(
         artifact,

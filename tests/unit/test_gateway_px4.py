@@ -740,7 +740,7 @@ def test_px4_declared_source_length_must_match_request_remainder(tmp_path: Path)
 
 def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
 
-    limits = GatewayLimitsV1(max_header_bytes=128)
+    limits = GatewayLimitsV1(max_header_bytes=512)
     service = GatewayServiceV1(
         LocalArtifactStoreV1(tmp_path / "store"),
         limits=limits,
@@ -757,7 +757,7 @@ def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
             body=b"",
             headers={
                 "Content-Type": ARTIFACT_VERIFY_MEDIA_TYPE,
-                "X-Large": "x" * 256,
+                "X-Large": "x" * 2048,
             },
         )
         response = connection.getresponse()

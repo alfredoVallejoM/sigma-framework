@@ -126,55 +126,88 @@ record.
 Parameters:
 
     B = canonical SigmaArtifactV1 wire bytes
-    M = OCI manifest/referrers-index bytes
-    R = number of descriptors in a referrers response
-    A = number of annotations
+    M = OCI manifest bytes
+    Q = referrers response bytes
+    R = number of referrer descriptors
+    P = referrers pages
+    A = annotations
+    T = retry attempts
 
-Current hard bounds:
+Hard defaults after IX0-B:
 
+    B <= 64 MiB
     M <= 1 MiB
-    A <= 128 annotations per descriptor/manifest normalization
+    Q <= 4 MiB per page
+    R <= 10,000 unique referrers
+    P <= 32 pages
+    T <= 4 retries after the initial attempt
+    A <= 128 annotations per normalized descriptor
     annotation key <= 256 UTF-8 bytes
     annotation value <= 4096 UTF-8 bytes
 
-Expected costs:
+The default production transport is bounded: it never reads more than the
+largest configured response-body ceiling plus one byte. Custom transports are an
+explicit trust/configuration boundary and must preserve the same contract.
 
 ### Build referrer
 
     time   O(B + A log A)
     memory O(B + M + A)
 
-The artifact wire must be materialized by the current Python API. IX0-A does not
-claim streaming construction.
+### Attach
+
+Ignoring bounded retry multiplicity:
+
+    time   O(B + M + discovery)
+    memory O(B + M + Q)
+
+The payload/config blobs are content-addressed and HEAD-checked before upload, so
+duplicate attach reuses already-published bytes.
 
 ### Offline verify
 
     time   O(B + M + A)
     memory O(B + M + A)
 
-The dominant cryptographic work in IX0 itself is SHA-256 over the payload and
-manifest bytes; SigmaArtifact parsing/recomputation remains the SA0 authority.
+### Referrers discovery
 
-### Parse referrers index
+    time   O(sum(Q_p) + R * A)
+    memory O(R * descriptor_size + max(Q_p))
 
-    time   O(M + R * A)
-    memory O(M + R * A)
+Both pages and unique descriptor count are bounded. Contradictory descriptors for
+the same OCI digest fail closed.
 
-The 1 MiB metadata ceiling bounds JSON materialization in IX0-A. A later registry
-client MUST add an explicit maximum descriptor count and network-body limit before
-promotion of IX0-O01.
+### Pull
+
+    time   O(B + M + discovery)
+    memory O(B + M + Q)
+
+The payload descriptor size is checked before body acceptance. Digest and size are
+then recomputed before Sigma parsing; the final accepted object is still the SA0
+canonical artifact.
+
+See also `IX0-COMPLEXITY-AUDIT.md`.
 
 ## 8. Obligation status
 
 ### IX0-O01 — OCI/ORAS push-pull byte round-trip
 
-**PENDING IX0-B.**
+**SOURCE IMPLEMENTED / LIVE EXECUTION PENDING.**
 
-Needs:
-- registry client operations;
-- local registry fixture;
-- ORAS reference differential;
-- byte-exact push/pull corpus.
+Implemented:
+- bounded OCI Distribution client;
+- blob HEAD/upload/completion;
+- manifest push by digest;
+- OCI 1.1 referrers API discovery;
+- mandatory referrers-tag fallback when the API is unavailable;
+- byte-exact pull by referrer digest;
+- ArtifactId-based discovery;
+- deterministic in-memory native/fallback registry fixtures;
+- local campaign gate;
+- live ORAS 1.3 differential probe.
+
+The obligation is not COMPLETE until the local gate and a real registry/ORAS
+round-trip are executed and evidence is captured.
 
 ### IX0-O02 — OCI digest and ArtifactId remain distinct
 
@@ -200,27 +233,70 @@ OCI subject, tags, annotations, registry URLs and manifest digest never feed
 `verify_sigma_artifact_referrer_v1` needs only the extracted OCI manifest and
 Sigma payload bytes.
 
-No IX0 obligation is promoted to COMPLETE in this commit series.
+No IX0 obligation is promoted to COMPLETE solely from source implementation.
+Execution evidence remains mandatory.
 
-## 9. IX0-B remaining implementation
+## 9. IX0-B implementation
 
-Next block:
+IX0-B source is now implemented.
 
-1. registry transport on OCI Distribution endpoints;
-2. blob existence/upload with digest-checked completion;
-3. push IX0 referrer manifest by digest/reference;
-4. referrers discovery by subject digest;
-5. pull payload by descriptor digest;
-6. local offline verification before returning accepted Sigma object;
-7. ORAS CLI/reference fixtures when available locally;
-8. resumable/retry semantics by reusing provider-neutral PX3 transport principles
-   without treating PX3 locator manifests as IX0 semantics;
-9. bounded registry response sizes, descriptor counts, redirects and retries;
-10. CLI surface:
-    - `sigma oci attach`
-    - `sigma oci refs`
-    - `sigma oci pull`
-    - `sigma oci verify`.
+### Registry client
+
+`OciRegistryClientV1` provides:
+
+1. bounded registry liveness probe;
+2. content-addressed blob existence and upload;
+3. manifest publication by digest/reference;
+4. explicit `OCI-Subject` acknowledgement handling;
+5. mandatory OCI Distribution 1.1 referrers-tag fallback;
+6. deterministic referrers discovery with bounded pagination;
+7. referrer pull by digest;
+8. ArtifactId-driven discovery;
+9. final local/offline Sigma verification;
+10. bounded retry for retryable transport/status failures.
+
+### Credential boundary
+
+Authorization and proxy-authorization headers are stripped case-insensitively
+before a cross-origin upload Location is followed. The default urllib redirect
+handler applies the same rule to HTTP redirects.
+
+### CLI
+
+The installed `sigma` command now exposes:
+
+    sigma oci attach
+    sigma oci refs
+    sigma oci pull
+    sigma oci verify
+
+`verify` is fully offline. `pull` writes accepted bytes only after the registry
+descriptor and Sigma identity checks succeed.
+
+### Local source gate
+
+`scripts/product_closure/ix0_gate.py` covers:
+- native referrers API round-trips;
+- referrers-tag fallback round-trips;
+- OCI-metadata / ArtifactId invariance;
+- corruption rejection;
+- retry recovery;
+- ambiguous multiple-referrer rejection;
+- pagination/resource ceilings;
+- exact SA0 wire parity against the independent reference implementation.
+
+### Live ORAS differential
+
+`scripts/product_closure/ix0_oras_diff.py` performs, against a user-selected
+real registry:
+- Sigma attach;
+- `oras discover --artifact-type ... --format json --depth 1`;
+- exact `oras manifest fetch` byte comparison;
+- exact `oras blob fetch` byte comparison;
+- Sigma pull and offline re-verification.
+
+The current reference target is ORAS CLI 1.3 semantics. This is a manual/local
+gate and does not enable GitHub Actions.
 
 ## 10. Promotion rule
 
@@ -228,7 +304,8 @@ IX0 remains ACTIVE until:
 
 - IX0-O01..O04 execute successfully;
 - IX0-RT-001 and IX0-ID-001 pass;
-- registry/ORAS differential evidence is captured;
+- the deterministic local IX0 gate passes;
+- a live registry/ORAS differential passes;
 - resource limits are exercised adversarially;
 - SA0 ArtifactId vectors remain byte exact;
 - no GitHub Actions are required or introduced for the gate.

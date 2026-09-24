@@ -19,6 +19,7 @@ from typing import Mapping, Protocol, runtime_checkable
 
 from sigma.artifact.remote import RemoteRetryableError
 from sigma.artifact.remote_http import HttpResponseV1, HttpTransportV1
+from sigma.artifact.record import SigmaArtifactV1
 
 from .oci import (
     MAX_OCI_MANIFEST_BYTES,
@@ -35,7 +36,6 @@ from .oci import (
     parse_sigma_referrers_index_v1,
     verify_sigma_artifact_referrer_v1,
 )
-from sigma.artifact.record import SigmaArtifactV1
 
 _RETRYABLE_STATUS = frozenset({408, 425, 429})
 _DIGEST_RE = re.compile(r"^([A-Za-z0-9+._-]+):([A-Za-z0-9=_-]+)$")

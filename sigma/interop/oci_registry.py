@@ -1010,6 +1010,10 @@ class OciRegistryClientV1:
                 max_bytes=self.limits.max_referrers_bytes,
                 allowed_media_types=(OCI_IMAGE_INDEX_MEDIA_TYPE,),
             )
+            descriptors = self._parse_all_referrers_index(
+                wire,
+                max_referrers=self.limits.max_referrers,
+            )
         except OciRegistryNotFoundError:
             return OciReferrersResultV1(
                 subject_digest,
@@ -1017,11 +1021,6 @@ class OciRegistryClientV1:
                 OciReferrersSourceV1.TAG_FALLBACK,
                 1,
                 fallback_valid=True,
-            )
-        try:
-            descriptors = self._parse_all_referrers_index(
-                wire,
-                max_referrers=self.limits.max_referrers,
             )
         except (OciRegistryProtocolError, OciManifestError):
             return OciReferrersResultV1(

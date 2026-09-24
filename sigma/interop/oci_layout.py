@@ -25,6 +25,16 @@ from .oci import (
     verify_sigma_artifact_referrer_v1,
 )
 
+from .oci_sidecars import (
+    SIGMA_MANIFEST_ID_ANNOTATION,
+    SIGMA_RECEIPT_ID_ANNOTATION,
+    OciSigmaSidecarBindingV1,
+    OciSigmaSidecarKindV1,
+    OciVerifiedSigmaSidecarV1,
+    sidecar_artifact_type_v1,
+    verify_sigma_sidecar_referrer_v1,
+)
+
 OCI_LAYOUT_VERSION = "1.0.0"
 OCI_LAYOUT_FILE = "oci-layout"
 OCI_LAYOUT_INDEX_FILE = "index.json"
@@ -72,6 +82,13 @@ class OciLayoutWriteResultV1:
     root: Path
     subject_descriptor: OciDescriptorV1
     binding: OciSigmaArtifactBindingV1
+    index_descriptor_count: int
+
+
+@dataclass(frozen=True)
+class OciSidecarLayoutWriteResultV1:
+    root: Path
+    binding: OciSigmaSidecarBindingV1
     index_descriptor_count: int
 
 
@@ -441,6 +458,120 @@ def write_sigma_artifact_layout_v1(
     )
 
 
+def write_sigma_sidecar_layout_v1(
+    root: Path,
+    binding: OciSigmaSidecarBindingV1,
+    *,
+    subject_wire: bytes,
+    subject_ref_name: str | None = None,
+    referrer_ref_name: str | None = None,
+    limits: OciLayoutLimitsV1 | None = None,
+) -> OciSidecarLayoutWriteResultV1:
+    """Atomically publish a self-contained OCI layout for a typed sidecar."""
+
+    if not isinstance(root, Path):
+        raise TypeError("root must be Path")
+    if not isinstance(binding, OciSigmaSidecarBindingV1):
+        raise TypeError("binding must be OciSigmaSidecarBindingV1")
+    if root.exists() or root.is_symlink():
+        raise OciLayoutError(
+            "OCI layout output path must not already exist"
+        )
+    if not isinstance(subject_wire, bytes):
+        raise TypeError("subject_wire must be bytes")
+    selected_limits = OciLayoutLimitsV1() if limits is None else limits
+    if not isinstance(selected_limits, OciLayoutLimitsV1):
+        raise TypeError("limits must be OciLayoutLimitsV1")
+    if len(subject_wire) > selected_limits.max_blob_bytes:
+        raise OciLayoutResourceLimitError(
+            "OCI subject blob exceeds configured limit"
+        )
+    if (
+        oci_sha256_digest_v1(subject_wire) != binding.subject.digest
+        or len(subject_wire) != binding.subject.size
+    ):
+        raise OciLayoutIntegrityError(
+            "sidecar subject bytes differ from bound OCI descriptor"
+        )
+    _validate_subject_manifest(
+        subject_wire,
+        media_type=binding.subject.media_type,
+    )
+
+    root.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(
+        tempfile.mkdtemp(
+            prefix=f".{root.name}.",
+            suffix=".tmp",
+            dir=root.parent,
+        )
+    )
+    try:
+        _ensure_safe_root(temporary)
+        (temporary / "blobs" / "sha256").mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        layout_wire = json.dumps(
+            {"imageLayoutVersion": OCI_LAYOUT_VERSION},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        _atomic_file(
+            temporary / OCI_LAYOUT_FILE,
+            layout_wire,
+        )
+        for wire in (
+            OCI_EMPTY_CONFIG_BYTES,
+            subject_wire,
+            binding.payload_wire,
+            binding.manifest_wire,
+        ):
+            _write_blob(
+                temporary,
+                wire,
+                limits=selected_limits,
+            )
+
+        index = {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+            "manifests": [
+                _index_descriptor(
+                    binding.subject,
+                    ref_name=subject_ref_name,
+                ).to_dict(),
+                _index_descriptor(
+                    binding.manifest_descriptor,
+                    ref_name=referrer_ref_name,
+                ).to_dict(),
+            ],
+        }
+        index_wire = json.dumps(
+            index,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if len(index_wire) > selected_limits.max_index_bytes:
+            raise OciLayoutResourceLimitError(
+                "OCI layout index exceeds configured limit"
+            )
+        _atomic_file(
+            temporary / OCI_LAYOUT_INDEX_FILE,
+            index_wire,
+        )
+        os.replace(temporary, root)
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+
+    return OciSidecarLayoutWriteResultV1(
+        root=root,
+        binding=binding,
+        index_descriptor_count=2,
+    )
+
+
 def _layout_index(
     root: Path,
     *,
@@ -555,6 +686,207 @@ def _select_referrer(
     return sigma[0]
 
 
+def _select_sidecar_referrer(
+    descriptors: tuple[OciDescriptorV1, ...],
+    *,
+    kind: OciSigmaSidecarKindV1,
+    expected_semantic_id: bytes | None,
+    referrer_digest: str | None,
+    referrer_ref_name: str | None,
+) -> OciDescriptorV1:
+    artifact_type = sidecar_artifact_type_v1(kind)
+    candidates = tuple(
+        item
+        for item in descriptors
+        if item.artifact_type == artifact_type
+    )
+    if referrer_digest is not None:
+        candidates = tuple(
+            item
+            for item in candidates
+            if item.digest == referrer_digest
+        )
+    if referrer_ref_name is not None:
+        if not isinstance(referrer_ref_name, str) or not referrer_ref_name:
+            raise ValueError(
+                "referrer_ref_name must be non-empty str or None"
+            )
+        candidates = tuple(
+            item
+            for item in candidates
+            if dict(item.annotations).get(
+                OCI_REF_NAME_ANNOTATION
+            )
+            == referrer_ref_name
+        )
+    if expected_semantic_id is not None:
+        if (
+            not isinstance(expected_semantic_id, bytes)
+            or len(expected_semantic_id) != 32
+        ):
+            raise ValueError(
+                "expected_semantic_id must contain exactly 32 bytes"
+            )
+        annotation = {
+            OciSigmaSidecarKindV1.MANIFEST: SIGMA_MANIFEST_ID_ANNOTATION,
+            OciSigmaSidecarKindV1.VERIFICATION_RECEIPT: (
+                SIGMA_RECEIPT_ID_ANNOTATION
+            ),
+        }.get(kind)
+        if annotation is None:
+            raise ValueError(
+                "proof sidecars have no semantic ProofId"
+            )
+        expected_hex = expected_semantic_id.hex()
+        candidates = tuple(
+            item
+            for item in candidates
+            if dict(item.annotations).get(annotation) == expected_hex
+        )
+    if not candidates:
+        raise OciLayoutIntegrityError(
+            "no matching Sigma sidecar in OCI layout index"
+        )
+    if len(candidates) != 1:
+        raise OciLayoutIntegrityError(
+            "ambiguous Sigma sidecar selection in OCI layout index"
+        )
+    return candidates[0]
+
+
+def _verify_index_referrer_descriptor(
+    selected: OciDescriptorV1,
+    actual: OciDescriptorV1,
+) -> None:
+    if (
+        actual.media_type != selected.media_type
+        or actual.digest != selected.digest
+        or actual.size != selected.size
+        or actual.artifact_type != selected.artifact_type
+    ):
+        raise OciLayoutIntegrityError(
+            "OCI layout index referrer descriptor differs from manifest"
+        )
+    actual_annotations = dict(actual.annotations)
+    selected_annotations = dict(selected.annotations)
+    for key, value in actual_annotations.items():
+        if selected_annotations.get(key) != value:
+            raise OciLayoutIntegrityError(
+                "OCI layout index referrer annotations differ from manifest"
+            )
+    extras = set(selected_annotations) - set(actual_annotations)
+    if extras - {OCI_REF_NAME_ANNOTATION}:
+        raise OciLayoutIntegrityError(
+            "OCI layout index has unsupported extra referrer annotations"
+        )
+
+
+def verify_sigma_sidecar_layout_v1(
+    root: Path,
+    *,
+    kind: OciSigmaSidecarKindV1,
+    expected_semantic_id: bytes | None = None,
+    referrer_digest: str | None = None,
+    referrer_ref_name: str | None = None,
+    limits: OciLayoutLimitsV1 | None = None,
+) -> OciVerifiedSigmaSidecarV1:
+    """Verify a typed Sigma sidecar from a self-contained OCI Image Layout."""
+
+    if not isinstance(root, Path):
+        raise TypeError("root must be Path")
+    if not isinstance(kind, OciSigmaSidecarKindV1):
+        raise TypeError("kind must be OciSigmaSidecarKindV1")
+    selected_limits = OciLayoutLimitsV1() if limits is None else limits
+    if not isinstance(selected_limits, OciLayoutLimitsV1):
+        raise TypeError("limits must be OciLayoutLimitsV1")
+    if not root.is_dir() or root.is_symlink():
+        raise OciLayoutIntegrityError(
+            "OCI layout root must be a non-symlink directory"
+        )
+    _ensure_safe_root(root)
+
+    descriptors = _layout_index(
+        root,
+        limits=selected_limits,
+    )
+    selected = _select_sidecar_referrer(
+        descriptors,
+        kind=kind,
+        expected_semantic_id=expected_semantic_id,
+        referrer_digest=referrer_digest,
+        referrer_ref_name=referrer_ref_name,
+    )
+    manifest_wire = _read_blob(
+        root,
+        selected,
+        limits=selected_limits,
+        what="Sigma OCI sidecar referrer manifest",
+    )
+    manifest = _load_json_object(
+        manifest_wire,
+        what="Sigma OCI sidecar referrer manifest",
+    )
+    layers = manifest.get("layers")
+    if not isinstance(layers, list) or len(layers) != 1:
+        raise OciLayoutIntegrityError(
+            "Sigma OCI sidecar referrer must contain exactly one layer"
+        )
+    try:
+        payload_descriptor = OciDescriptorV1.from_dict(
+            layers[0]
+        )
+        subject = OciDescriptorV1.from_dict(
+            manifest.get("subject")
+        )
+    except ValueError as exc:
+        raise OciLayoutIntegrityError(
+            "Sigma OCI sidecar descriptor is invalid"
+        ) from exc
+
+    payload_wire = _read_blob(
+        root,
+        payload_descriptor,
+        limits=selected_limits,
+        what="Sigma sidecar payload",
+    )
+    subject_wire = _read_blob(
+        root,
+        subject,
+        limits=selected_limits,
+        what="OCI subject",
+    )
+    _validate_subject_manifest(
+        subject_wire,
+        media_type=subject.media_type,
+    )
+    empty_descriptor = OciDescriptorV1(
+        media_type="application/vnd.oci.empty.v1+json",
+        digest=OCI_EMPTY_CONFIG_DIGEST,
+        size=len(OCI_EMPTY_CONFIG_BYTES),
+    )
+    if _read_blob(
+        root,
+        empty_descriptor,
+        limits=selected_limits,
+        what="OCI empty config",
+    ) != OCI_EMPTY_CONFIG_BYTES:
+        raise OciLayoutIntegrityError(
+            "OCI empty config bytes are non-canonical"
+        )
+
+    verified = verify_sigma_sidecar_referrer_v1(
+        manifest_wire,
+        payload_wire,
+        expected_kind=kind,
+        expected_semantic_id=expected_semantic_id,
+    )
+    _verify_index_referrer_descriptor(
+        selected,
+        verified.binding.manifest_descriptor,
+    )
+    return verified
+
+
 def verify_sigma_artifact_layout_v1(
     root: Path,
     *,
@@ -650,28 +982,10 @@ def verify_sigma_artifact_layout_v1(
         artifact_wire,
         expected_artifact_id=expected_artifact_id,
     )
-    actual = binding.manifest_descriptor
-    if (
-        actual.media_type != selected.media_type
-        or actual.digest != selected.digest
-        or actual.size != selected.size
-        or actual.artifact_type != selected.artifact_type
-    ):
-        raise OciLayoutIntegrityError(
-            "OCI layout index referrer descriptor differs from manifest"
-        )
-    actual_annotations = dict(actual.annotations)
-    selected_annotations = dict(selected.annotations)
-    for key, value in actual_annotations.items():
-        if selected_annotations.get(key) != value:
-            raise OciLayoutIntegrityError(
-                "OCI layout index referrer annotations differ from manifest"
-            )
-    extras = set(selected_annotations) - set(actual_annotations)
-    if extras - {OCI_REF_NAME_ANNOTATION}:
-        raise OciLayoutIntegrityError(
-            "OCI layout index has unsupported extra referrer annotations"
-        )
+    _verify_index_referrer_descriptor(
+        selected,
+        binding.manifest_descriptor,
+    )
     return binding
 
 
@@ -688,6 +1002,9 @@ __all__ = [
     "OciLayoutLimitsV1",
     "OciLayoutResourceLimitError",
     "OciLayoutWriteResultV1",
+    "OciSidecarLayoutWriteResultV1",
     "verify_sigma_artifact_layout_v1",
+    "verify_sigma_sidecar_layout_v1",
     "write_sigma_artifact_layout_v1",
+    "write_sigma_sidecar_layout_v1",
 ]

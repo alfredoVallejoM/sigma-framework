@@ -936,6 +936,36 @@ def run_gate(
                 raise AssertionError("PX4 Expect preflight did not reject oversized body")
             if expect_oversize.startswith(b"HTTP/1.1 100"):
                 raise AssertionError("PX4 sent 100 Continue before size admission")
+
+            noncanonical_length = raw_request(
+                (
+                    "POST /v1/artifacts/verify HTTP/1.1\r\n"
+                    f"Host: {host}:{port}\r\n"
+                    f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+                    "Content-Length: +1\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                ).encode("ascii")
+            )
+            if not noncanonical_length.startswith(b"HTTP/1.1 400"):
+                raise AssertionError("PX4 accepted noncanonical Content-Length")
+
+            unsupported_expect = raw_request(
+                (
+                    "POST /v1/artifacts/verify HTTP/1.1\r\n"
+                    f"Host: {host}:{port}\r\n"
+                    f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+                    "Content-Length: 0\r\n"
+                    "Expect: nonsense\r\n"
+                    "Connection: close\r\n"
+                    "\r\n"
+                ).encode("ascii")
+            )
+            if not unsupported_expect.startswith(b"HTTP/1.1 417"):
+                raise AssertionError("PX4 accepted unsupported Expect header")
+            if b"expectation-failed" not in unsupported_expect:
+                raise AssertionError("PX4 unsupported Expect error code diverged")
+
             http_framing_hardening = True
 
         finally:

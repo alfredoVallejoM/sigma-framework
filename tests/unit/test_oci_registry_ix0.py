@@ -234,7 +234,7 @@ def test_ix0_cross_origin_upload_location_does_not_receive_authorization():
     )
     client = _client(
         transport,
-        headers={"Authorization": "Bearer top-secret"},
+        headers={"AUTHORIZATION": "Bearer top-secret"},
     )
     client.attach_artifact(
         _artifact(b"cross-origin"),
@@ -249,8 +249,7 @@ def test_ix0_cross_origin_upload_location_does_not_receive_authorization():
     ]
     assert upload_puts
     assert all(
-        "Authorization" not in request[2]
-        and "authorization" not in request[2]
+        all(key.lower() != "authorization" for key in request[2])
         for request in upload_puts
     )
 

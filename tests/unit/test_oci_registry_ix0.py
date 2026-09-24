@@ -393,3 +393,68 @@ def test_ix0_ping_and_explicit_artifact_type():
     assert result.binding.manifest_descriptor.artifact_type == (
         SIGMA_ARTIFACT_REFERRER_TYPE
     )
+
+
+def test_ix0_blob_completion_response_loss_reconciles_by_digest():
+    transport = GateOciRegistryTransport(
+        native_referrers=True,
+        lose_blob_completion_once=True,
+    )
+    client = _client(transport)
+    artifact = _artifact(b"accepted-response-loss")
+    subject = make_subject_descriptor(b"accepted-response-loss-subject")
+
+    result = client.attach_artifact(
+        artifact,
+        subject=subject,
+    )
+
+    assert result.discovered_after_push is True
+    pulled = client.pull_artifact(
+        subject.digest,
+        artifact.artifact_id,
+    )
+    assert pulled.artifact_wire == artifact.to_bytes()
+
+
+def test_ix0_fallback_conditional_response_loss_reconciles_exact_index():
+    transport = GateOciRegistryTransport(
+        native_referrers=False,
+        lose_conditional_manifest_once=True,
+    )
+    client = _client(transport)
+    subject = make_subject_descriptor(b"conditional-loss-subject")
+    tag = oci_referrers_tag_v1(subject.digest)
+    existing = OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest="sha256:" + "44" * 32,
+        size=44,
+        artifact_type="application/vnd.example.other.v1",
+    )
+    initial = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+            "manifests": [existing.to_dict()],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    client.put_manifest(
+        initial,
+        media_type=OCI_IMAGE_INDEX_MEDIA_TYPE,
+        reference=tag,
+    )
+
+    artifact = _artifact(b"conditional-loss-artifact")
+    result = client.attach_artifact(
+        artifact,
+        subject=subject,
+    )
+
+    assert result.discovered_after_push is True
+    refs = client.list_referrers(subject.digest)
+    assert any(
+        item.digest == result.binding.manifest_descriptor.digest
+        for item in refs.descriptors
+    )

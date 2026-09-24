@@ -810,3 +810,54 @@ def test_ix0_attach_refuses_to_overwrite_invalid_fallback_tag():
         )
 
     assert transport.tags[tag] == original
+
+
+def test_ix0_pull_rejects_referrers_descriptor_size_divergence():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"descriptor-size-subject")
+    artifact = _artifact(b"descriptor-size-artifact")
+    result = client.attach_artifact(
+        artifact,
+        subject=subject,
+    )
+    digest = result.binding.manifest_descriptor.digest
+    descriptor = dict(transport.referrers[subject.digest][digest])
+    descriptor["size"] = int(descriptor["size"]) + 1
+    transport.referrers[subject.digest][digest] = descriptor
+
+    with pytest.raises(
+        OciRegistryConflictError,
+        match="discovered OCI referrer descriptor differs",
+    ):
+        client.pull_artifact(
+            subject.digest,
+            artifact.artifact_id,
+        )
+
+
+def test_ix0_pull_rejects_referrers_annotation_divergence():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"descriptor-annotation-subject")
+    artifact = _artifact(b"descriptor-annotation-artifact")
+    result = client.attach_artifact(
+        artifact,
+        subject=subject,
+        annotations={"example.bound": "original"},
+    )
+    digest = result.binding.manifest_descriptor.digest
+    descriptor = dict(transport.referrers[subject.digest][digest])
+    annotations = dict(descriptor["annotations"])
+    annotations["example.bound"] = "mutated"
+    descriptor["annotations"] = annotations
+    transport.referrers[subject.digest][digest] = descriptor
+
+    with pytest.raises(
+        OciRegistryConflictError,
+        match="discovered OCI referrer descriptor differs",
+    ):
+        client.pull_artifact(
+            subject.digest,
+            artifact.artifact_id,
+        )

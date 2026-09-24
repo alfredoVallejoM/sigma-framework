@@ -304,12 +304,39 @@ No traceback formatting or raw exception serialization.
 
 ## 18. HTTP headers
 
-Aggregate inspected header data:
+PX4 wraps the header reader while stdlib parsing is in progress.
+
+Raw header bytes consumed by parse_headers are bounded by:
 
     H <= 64 KiB default
 
-The stdlib HTTP parser has its own line/header-count limits before PX4 receives
-the parsed mapping; PX4 applies the additional aggregate post-parse bound.
+plus at most one detection byte.
+
+Therefore max_header_bytes is enforced during parse rather than only after a
+complete parsed header mapping already exists.
+
+The stdlib request-line limit remains an outer transport bound.
+
+## 18A. Blocking socket read deadline
+
+The HTTP connection socket timeout is set to request_timeout_seconds before
+request parsing/body consumption.
+
+A stalled blocking body read therefore cannot hold a request thread indefinitely.
+
+GatewayBodyReaderV1 maps read TimeoutError to GatewayTimeoutError.
+
+This complements cooperative cancellation checks; PX4 still does not terminate
+Python threads asynchronously.
+
+## 18B. Transport-rejection audit
+
+Header/length/method errors can occur before GatewayServiceV1.handle.
+
+Those failures emit the same fixed safe GatewayAuditRecordV1 schema through
+audit_transport_rejection.
+
+Audit remains O(1) bounded metadata per rejected request.
 
 ## 19. Stored artifact GET
 

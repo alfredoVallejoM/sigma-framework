@@ -11,6 +11,7 @@ import pytest
 
 from sigma.artifact import (
     ArtifactProfileV1,
+    LocalArtifactStoreV1,
     create_artifact_v1,
     verify_artifact_v1,
 )
@@ -92,9 +93,7 @@ def test_px4_artifact_gateway_exactly_matches_local_api(tmp_path: Path):
     policy = _tree_policy()
     caps = VerificationCapabilitiesV1()
 
-    store = __import__(
-        "sigma.artifact", fromlist=["LocalArtifactStoreV1"]
-    ).LocalArtifactStoreV1(tmp_path / "store")
+    store = LocalArtifactStoreV1(tmp_path / "store")
     store.put_artifact(artifact)
     service = GatewayServiceV1(store)
 
@@ -126,7 +125,6 @@ def test_px4_embedded_artifact_parity_and_id_mismatch(tmp_path: Path):
     data = b"embedded-artifact"
     artifact = _tree_artifact(data)
     policy = _tree_policy()
-    from sigma.artifact import LocalArtifactStoreV1
 
     service = GatewayServiceV1(LocalArtifactStoreV1(tmp_path / "store"))
 
@@ -189,7 +187,6 @@ def test_px4_policy_decision_and_receipt_are_byte_exact_local_parity(tmp_path: P
         claimed_unix_time=None,
     )
 
-    from sigma.artifact import LocalArtifactStoreV1
 
     service = GatewayServiceV1(
         LocalArtifactStoreV1(tmp_path / "store"),
@@ -249,7 +246,6 @@ def test_px4_batch_result_wire_matches_sv3_local_batch_exactly(tmp_path: Path):
         max_workers=1,
     )
 
-    from sigma.artifact import LocalArtifactStoreV1
 
     service = GatewayServiceV1(
         LocalArtifactStoreV1(tmp_path / "store"),
@@ -284,7 +280,6 @@ def test_px4_proof_endpoints_match_local_verifiers(tmp_path: Path):
     range_proof = prove_range(data, range_start, range_length)
     range_bytes = data[range_start : range_start + range_length]
 
-    from sigma.artifact import LocalArtifactStoreV1
 
     service = GatewayServiceV1(LocalArtifactStoreV1(tmp_path / "store"))
 
@@ -326,7 +321,6 @@ def test_px4_proof_endpoints_match_local_verifiers(tmp_path: Path):
 
 
 def test_px4_get_artifact_and_parents_use_canonical_artifact_bytes(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     store = LocalArtifactStoreV1(tmp_path / "store")
     parent = _tree_artifact(b"parent")
@@ -369,7 +363,6 @@ def test_px4_policy_preflight_rejects_without_hashing_or_reading_source(
     data = b"x" * 4096
     artifact = _tree_artifact(data)
     policy = _tree_policy(max_input_bytes=1)
-    from sigma.artifact import LocalArtifactStoreV1
 
     store = LocalArtifactStoreV1(tmp_path / "store")
     store.put_artifact(artifact)
@@ -407,7 +400,6 @@ class BombStream:
 
 
 def test_px4_request_length_limit_rejects_before_any_body_read(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     limits = GatewayLimitsV1(max_request_bytes=64)
     service = GatewayServiceV1(
@@ -440,7 +432,6 @@ class CancelAfterFirstRead(io.BytesIO):
 
 
 def test_px4_cancelled_request_does_not_affect_concurrent_request(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     data = b"concurrency" * 100
     artifact = _tree_artifact(data)
@@ -502,7 +493,6 @@ class AdvancingClock:
 
 
 def test_px4_timeout_is_request_local_and_audited(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     data = b"timeout" * 100
     artifact = _tree_artifact(data)
@@ -535,7 +525,6 @@ def test_px4_timeout_is_request_local_and_audited(tmp_path: Path):
 
 
 def test_px4_concurrency_limit_fails_closed_without_touching_body(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     service = GatewayServiceV1(
         LocalArtifactStoreV1(tmp_path / "store"),
@@ -557,7 +546,6 @@ def test_px4_concurrency_limit_fails_closed_without_touching_body(tmp_path: Path
 
 
 def test_px4_http_daemon_redacts_query_and_headers_from_audit(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     audit = MemoryGatewayAuditSinkV1()
     service = GatewayServiceV1(
@@ -598,7 +586,6 @@ def test_px4_http_daemon_redacts_query_and_headers_from_audit(tmp_path: Path):
 
 
 def test_px4_http_health_version_and_stored_artifact(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     store = LocalArtifactStoreV1(tmp_path / "store")
     artifact = _tree_artifact(b"http-get")
@@ -632,7 +619,6 @@ def test_px4_http_health_version_and_stored_artifact(tmp_path: Path):
 
 
 def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
-    from sigma.artifact import LocalArtifactStoreV1
 
     limits = GatewayLimitsV1(max_header_bytes=128)
     service = GatewayServiceV1(

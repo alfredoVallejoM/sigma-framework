@@ -27,6 +27,7 @@ DEFAULT_GATEWAY_MAX_PROOF_VALUE_BYTES = 64 << 20
 DEFAULT_GATEWAY_MAX_BATCH_ITEMS = 256
 DEFAULT_GATEWAY_MAX_BATCH_TOTAL_SOURCE_BYTES = 1 << 30
 DEFAULT_GATEWAY_MAX_CONCURRENT_REQUESTS = 16
+DEFAULT_GATEWAY_MAX_HTTP_CONNECTIONS = 32
 DEFAULT_GATEWAY_TIMEOUT_SECONDS = 120.0
 DEFAULT_GATEWAY_READ_CHUNK_BYTES = 1 << 20
 DEFAULT_GATEWAY_MAX_RESPONSE_BYTES = 32 << 20
@@ -151,6 +152,7 @@ class GatewayLimitsV1:
     max_batch_items: int = DEFAULT_GATEWAY_MAX_BATCH_ITEMS
     max_batch_total_source_bytes: int = DEFAULT_GATEWAY_MAX_BATCH_TOTAL_SOURCE_BYTES
     max_concurrent_requests: int = DEFAULT_GATEWAY_MAX_CONCURRENT_REQUESTS
+    max_http_connections: int = DEFAULT_GATEWAY_MAX_HTTP_CONNECTIONS
     request_timeout_seconds: float = DEFAULT_GATEWAY_TIMEOUT_SECONDS
     read_chunk_bytes: int = DEFAULT_GATEWAY_READ_CHUNK_BYTES
     max_response_bytes: int = DEFAULT_GATEWAY_MAX_RESPONSE_BYTES
@@ -167,6 +169,7 @@ class GatewayLimitsV1:
             "max_batch_items",
             "max_batch_total_source_bytes",
             "max_concurrent_requests",
+            "max_http_connections",
             "read_chunk_bytes",
             "max_response_bytes",
             "max_header_bytes",

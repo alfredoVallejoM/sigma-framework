@@ -175,6 +175,8 @@ def _refs(args: argparse.Namespace) -> int:
                 "subject_digest": result.subject_digest,
                 "source": result.source.value,
                 "pages": result.pages,
+                "filter_applied": result.filter_applied,
+                "fallback_valid": result.fallback_valid,
                 "referrers": [item.to_dict() for item in result.descriptors],
             },
             sort_keys=True,

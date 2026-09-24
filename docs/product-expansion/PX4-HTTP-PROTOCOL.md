@@ -18,9 +18,18 @@ V1 rejects:
 
     Transfer-Encoding
     duplicate Content-Length
+    non-decimal Content-Length
+    duplicate Content-Type
+    unsupported/multiple Expect
     query strings
     URI fragments
     unknown media types
+
+Content-Length value must contain ASCII digits only.
+
+Expect is either absent or exactly 100-continue (case-insensitive after
+surrounding whitespace normalization). Other expectations return HTTP 417 with
+code expectation-failed.
 
 Responses include:
 
@@ -28,6 +37,9 @@ Responses include:
     Content-Type
     Cache-Control: no-store
     Connection: close
+
+Response header names/values and Content-Type are CR/LF-free by runtime
+invariant.
 
 ## 2. Why binary request framing
 

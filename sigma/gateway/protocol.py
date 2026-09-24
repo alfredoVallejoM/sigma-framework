@@ -14,6 +14,7 @@ from sigma.trajectory import VerificationCapabilitiesV1, VerificationPolicyV1
 
 from .runtime import (
     CancellableSourceV1,
+    GATEWAY_PROTOCOL_VERSION,
     GatewayCancellationTokenV1,
     GatewayCancelledError,
     GatewayError,
@@ -39,7 +40,7 @@ _POLICY_EVALUATE_MAGIC = b"SIGGWPE1"
 _BATCH_VERIFY_MAGIC = b"SIGGWBV1"
 _INCLUSION_VERIFY_MAGIC = b"SIGGWPI1"
 _RANGE_VERIFY_MAGIC = b"SIGGWPR1"
-_PROTOCOL_VERSION = 1
+_PROTOCOL_VERSION = GATEWAY_PROTOCOL_VERSION
 _FLAG_SOURCE_PRESENT = 0x0001
 _ALLOWED_FLAGS = _FLAG_SOURCE_PRESENT
 

@@ -1339,6 +1339,7 @@ class OciRegistryClientV1:
         expected_subject: OciDescriptorV1 | None = None,
         expected_subject_digest: str | None = None,
         expected_artifact_id: bytes | None = None,
+        expected_referrer: OciDescriptorV1 | None = None,
     ) -> OciSigmaArtifactBindingV1:
         _validate_digest(referrer_digest)
         manifest_wire, _ = self._get_manifest(
@@ -1366,6 +1367,23 @@ class OciRegistryClientV1:
             if binding.subject.digest != expected_subject_digest:
                 raise OciRegistryConflictError(
                     "pulled referrer subject digest differs from expected"
+                )
+        if expected_referrer is not None:
+            if not isinstance(expected_referrer, OciDescriptorV1):
+                raise TypeError(
+                    "expected_referrer must be OciDescriptorV1 or None"
+                )
+            actual = binding.manifest_descriptor
+            if (
+                actual.media_type != expected_referrer.media_type
+                or actual.digest != expected_referrer.digest
+                or actual.size != expected_referrer.size
+                or actual.artifact_type != expected_referrer.artifact_type
+                or actual.annotations != expected_referrer.annotations
+            ):
+                raise OciRegistryConflictError(
+                    "discovered OCI referrer descriptor differs from "
+                    "downloaded manifest"
                 )
         return binding
 
@@ -1396,6 +1414,7 @@ class OciRegistryClientV1:
         return self.pull_referrer_by_digest(
             matches[0].digest,
             expected_artifact_id=artifact_id,
+            expected_referrer=matches[0],
         )
 
 

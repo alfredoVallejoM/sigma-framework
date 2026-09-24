@@ -399,10 +399,12 @@ class OciRegistryClientV1:
     ) -> dict[str, str]:
         result = dict(self.headers)
         if _origin(url) != _origin(self.base_url):
-            result.pop("Authorization", None)
-            result.pop("authorization", None)
-            result.pop("Proxy-Authorization", None)
-            result.pop("proxy-authorization", None)
+            result = {
+                key: value
+                for key, value in result.items()
+                if key.lower()
+                not in {"authorization", "proxy-authorization"}
+            }
         result.update(dict(extra or {}))
         return result
 

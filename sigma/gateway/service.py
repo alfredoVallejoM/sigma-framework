@@ -519,8 +519,10 @@ class GatewayServiceV1:
             )
             token.check()
         finally:
-            source.close()
-            self._release_spool(reserved)
+            try:
+                source.close()
+            finally:
+                self._release_spool(reserved)
         reader.require_consumed()
         response = GatewayResponseV1(
             200,
@@ -709,8 +711,10 @@ class GatewayServiceV1:
                 results.append(result)
             finally:
                 if close_source and isinstance(source, CanonicalSource):
-                    source.close()
-                    self._release_spool(reserved)
+                    try:
+                        source.close()
+                    finally:
+                        self._release_spool(reserved)
 
         reader.require_consumed()
         batch = BatchVerificationResultV1(tuple(results))

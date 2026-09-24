@@ -326,3 +326,78 @@ def test_ix0_layout_tolerates_unrelated_extra_files(tmp_path):
         expected_artifact_id=artifact.artifact_id,
     )
     assert verified.artifact_id == artifact.artifact_id
+
+
+def test_ix0_layout_can_select_referrer_by_ref_name(tmp_path):
+    root = tmp_path / "layout"
+    artifact = _artifact(b"ref-name-selection")
+    write_sigma_artifact_layout_v1(
+        root,
+        artifact,
+        subject_wire=_subject_wire(b"ref-name-selection"),
+        referrer_ref_name="sigma-proof",
+    )
+
+    verified = verify_sigma_artifact_layout_v1(
+        root,
+        referrer_ref_name="sigma-proof",
+    )
+    assert verified.artifact_id == artifact.artifact_id
+
+    with pytest.raises(
+        OciLayoutIntegrityError,
+        match="no matching Sigma referrer",
+    ):
+        verify_sigma_artifact_layout_v1(
+            root,
+            referrer_ref_name="missing-ref",
+        )
+
+
+def test_ix0_layout_rejects_subject_media_type_mismatch_before_publish(tmp_path):
+    root = tmp_path / "layout"
+    subject = _subject_wire(b"media-type-mismatch")
+
+    with pytest.raises(
+        OciLayoutIntegrityError,
+        match="mediaType differs",
+    ):
+        write_sigma_artifact_layout_v1(
+            root,
+            _artifact(b"media-type-mismatch"),
+            subject_wire=subject,
+            subject_media_type="application/vnd.oci.image.index.v1+json",
+        )
+
+    assert not root.exists()
+
+
+def test_ix0_layout_verify_rejects_subject_body_media_type_tampering(tmp_path):
+    root = tmp_path / "layout"
+    artifact = _artifact(b"subject-body-tamper")
+    written = write_sigma_artifact_layout_v1(
+        root,
+        artifact,
+        subject_wire=_subject_wire(b"subject-body-tamper"),
+    )
+    subject_path = _blob_path(
+        root,
+        written.subject_descriptor.digest,
+    )
+    subject = json.loads(subject_path.read_text(encoding="utf-8"))
+    subject["mediaType"] = "application/vnd.oci.image.index.v1+json"
+    tampered = json.dumps(
+        subject,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    subject_path.write_bytes(tampered)
+
+    with pytest.raises(
+        OciLayoutIntegrityError,
+        match="size differs|digest differs",
+    ):
+        verify_sigma_artifact_layout_v1(
+            root,
+            expected_artifact_id=artifact.artifact_id,
+        )

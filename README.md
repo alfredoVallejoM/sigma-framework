@@ -96,6 +96,25 @@ python -m pip install -e '.[test,quality]'
 No third-party package is required by the runtime v2 core. The optional
 `analysis` group contains dependencies for experimental statistics and plots.
 
+### Verification gateway (PX4 development)
+
+PX4 is implemented on the product-expansion track but its closure gate is still
+pending. An editable install exposes:
+
+```console
+sigma-gateway --store ./sigma-store
+```
+
+The daemon binds to `127.0.0.1:8080` by default. A non-loopback bind requires
+`--allow-nonlocal-bind`; PX4 V1 deliberately does not implement TLS or caller
+authentication, so exposed deployments should place it behind trusted outer
+infrastructure.
+
+Important resource controls include request/source/proof limits, bounded HTTP
+connections and verification concurrency, a global temporary-spool budget, and
+request deadlines. See `docs/product-expansion/PX4-GATEWAY-CONTRACT.md` and
+`PX4-HTTP-PROTOCOL.md` for the frozen implementation contract.
+
 ## Python API
 
 Hash bytes with an explicit preset:

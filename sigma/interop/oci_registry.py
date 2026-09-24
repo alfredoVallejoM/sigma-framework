@@ -963,7 +963,10 @@ class OciRegistryClientV1:
                 raise OciRegistryResourceLimitError(
                     "OCI referrers response exceeds configured byte limit"
                 )
-            for item in parse_sigma_referrers_index_v1(response.body):
+            for item in parse_sigma_referrers_index_v1(
+                response.body,
+                max_bytes=self.limits.max_referrers_bytes,
+            ):
                 previous = descriptors.get(item.digest)
                 if previous is not None and previous != item:
                     raise OciRegistryConflictError(

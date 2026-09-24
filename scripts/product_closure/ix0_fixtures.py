@@ -45,6 +45,7 @@ class GateOciRegistryTransport:
     page_size: int | None = None
     cross_origin_upload: bool = False
     manifest_content_type_override: str | None = None
+    referrers_content_type_override: str | None = None
     pagination_loop: bool = False
     lose_blob_completion_once: bool = False
     lose_conditional_manifest_once: bool = False
@@ -224,7 +225,14 @@ class GateOciRegistryTransport:
             separators=(",", ":"),
         ).encode("utf-8")
         response_headers: list[tuple[str, str]] = [
-            ("Content-Type", OCI_IMAGE_INDEX_MEDIA_TYPE)
+            (
+                "Content-Type",
+                (
+                    OCI_IMAGE_INDEX_MEDIA_TYPE
+                    if self.referrers_content_type_override is None
+                    else self.referrers_content_type_override
+                ),
+            )
         ]
         if requested_type is not None:
             response_headers.append(("OCI-Filters-Applied", "artifactType"))

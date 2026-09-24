@@ -14,7 +14,8 @@ Date: 2026-09-24
     I    batch item count
     B_i  source bytes of item i
     B_T  sum_i B_i
-    Q    concurrent admitted requests
+    Q    concurrent admitted verification requests
+    Q_h  concurrent HTTP connection/handler slots
     R_o  response bytes
     C    streaming read chunk bytes
     S_m  memory spool threshold
@@ -223,7 +224,15 @@ This avoids compute-amplification into an unreturnable result.
 
 ## 13. Concurrency
 
-Admitted:
+HTTP connection threads are bounded before handler-thread creation:
+
+    Q_h <= max_http_connections
+
+Default:
+
+    Q_h <= 32
+
+Verification requests are separately bounded:
 
     Q <= max_concurrent_requests
 
@@ -231,9 +240,12 @@ Default:
 
     Q <= 16
 
-The service does not block waiting for a slot.
+Neither layer creates an unbounded waiting queue.
 
-Overflow receives 503 before body read.
+HTTP-connection overflow receives canonical 503 before a new handler thread is
+created.
+
+Verification overflow receives 503 before body read.
 
 Worst gateway-owned simultaneous spool memory:
 

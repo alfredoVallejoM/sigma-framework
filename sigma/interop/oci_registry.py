@@ -558,16 +558,23 @@ class OciRegistryClientV1:
                 f"OCI begin blob upload returned HTTP {start.status}"
             )
         location = self._resolve_upload_location(start)
-        complete = self._request(
-            "PUT",
-            _with_query(location, digest=digest),
-            headers={
-                "Content-Length": str(len(data)),
-                "Content-Type": "application/octet-stream",
-            },
-            body=data,
-        )
+        try:
+            complete = self._request(
+                "PUT",
+                _with_query(location, digest=digest),
+                headers={
+                    "Content-Length": str(len(data)),
+                    "Content-Type": "application/octet-stream",
+                },
+                body=data,
+            )
+        except OciRegistryError:
+            if self._blob_exists(digest, expected_size=len(data)):
+                return OciBlobPutResultV1(digest, len(data), False)
+            raise
         if complete.status not in (201, 204):
+            if self._blob_exists(digest, expected_size=len(data)):
+                return OciBlobPutResultV1(digest, len(data), False)
             raise OciRegistryProtocolError(
                 f"OCI complete blob upload returned HTTP {complete.status}"
             )
@@ -605,17 +612,53 @@ class OciRegistryClientV1:
         }
         if conditional_etag is not None:
             headers["If-Match"] = conditional_etag
-        response = self._request(
-            "PUT",
-            self._manifest_url(selected_reference),
-            headers=headers,
-            body=manifest_wire,
-        )
+        try:
+            response = self._request(
+                "PUT",
+                self._manifest_url(selected_reference),
+                headers=headers,
+                body=manifest_wire,
+            )
+        except OciRegistryError:
+            if self._manifest_is_exact(
+                selected_reference,
+                manifest_wire,
+                media_type=media_type,
+            ):
+                return OciManifestPutResultV1(
+                    digest=digest,
+                    size=len(manifest_wire),
+                    reference=selected_reference,
+                    subject_acknowledged=False,
+                )
+            raise
         if response.status == 412:
+            if self._manifest_is_exact(
+                selected_reference,
+                manifest_wire,
+                media_type=media_type,
+            ):
+                return OciManifestPutResultV1(
+                    digest=digest,
+                    size=len(manifest_wire),
+                    reference=selected_reference,
+                    subject_acknowledged=False,
+                )
             raise OciRegistryConflictError(
                 "OCI referrers tag changed during conditional update"
             )
         if response.status != 201:
+            if self._manifest_is_exact(
+                selected_reference,
+                manifest_wire,
+                media_type=media_type,
+            ):
+                return OciManifestPutResultV1(
+                    digest=digest,
+                    size=len(manifest_wire),
+                    reference=selected_reference,
+                    subject_acknowledged=False,
+                )
             raise OciRegistryProtocolError(
                 f"OCI manifest PUT returned HTTP {response.status}"
             )
@@ -640,6 +683,23 @@ class OciRegistryClientV1:
             reference=selected_reference,
             subject_acknowledged=acknowledged,
         )
+
+    def _manifest_is_exact(
+        self,
+        reference: str,
+        expected_wire: bytes,
+        *,
+        media_type: str,
+    ) -> bool:
+        try:
+            actual, _ = self._get_manifest(
+                reference,
+                accept=media_type,
+                max_bytes=self.limits.max_manifest_bytes,
+            )
+        except OciRegistryNotFoundError:
+            return False
+        return actual == expected_wire
 
     def _get_manifest(
         self,

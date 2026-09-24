@@ -167,3 +167,39 @@ Evidence:
 
 PX3 permanece ACTIVE hasta ejecutar tests/quality y
 scripts/product_closure/px3_gate.py, y promover PX3-O01..O04.
+
+
+PX4 — Verification Gateway / Daemon — está **ACTIVE / IMPLEMENTED, GATE PENDING**.
+
+Implementación PX4:
+- GatewayServiceV1 con delegación exacta a SA1/SV2/SV3/Tree;
+- protocolo binario metadata-first para no base64/JSON-bufferizar sources;
+- cheap preflight con source=None antes de spool/hash;
+- spool replayable acotado memoria/disco;
+- artifact/policy/batch/proof parity surfaces;
+- GET artifact y parents desde bytes canónicos PX1;
+- cancellation token + timeout monotónico + socket read timeout;
+- BoundedSemaphore sin cola implícita;
+- JSON de error determinista;
+- audit estructurado sin headers/query/body;
+- parser HTTP con header budget durante parse;
+- rechazo de Transfer-Encoding y Content-Length ambiguo;
+- daemon HTTP/1.1 dependency-free;
+- entrypoint instalado `sigma-gateway`;
+- bind loopback por defecto y opt-in explícito para non-loopback;
+- benchmark local vs gateway in-process vs HTTP preparado.
+
+Frontera:
+- PX4 no implementa un verificador alternativo;
+- Authorization/Cookie/TLS/auth externa no entran en policy, receipt ni audit;
+- `/health` es liveness, no health de PX1/PX3 remoto;
+- PX3 no se invoca implícitamente desde verification.
+
+Evidence:
+- PX4-GATEWAY-CONTRACT.md;
+- PX4-HTTP-PROTOCOL.md;
+- PX4-COMPLEXITY-AUDIT.md;
+- PX4-IMPLEMENTATION-EVIDENCE.md.
+
+PX4 permanece ACTIVE hasta ejecutar tests/quality y
+scripts/product_closure/px4_gate.py, y promover PX4-O01..O04.

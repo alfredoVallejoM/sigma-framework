@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import threading
 import time
 from dataclasses import dataclass
@@ -742,6 +741,11 @@ class GatewayServiceV1:
         token: GatewayCancellationTokenV1,
     ) -> _GatewayOutcomeV1:
         token.check()
+        if "?" in path or "#" in path:
+            raise GatewayError(
+                code=GatewayErrorCodeV1.BAD_REQUEST,
+                safe_message="query strings and fragments are not accepted",
+            )
         if method == "GET" and path == "/health":
             if reader.content_length:
                 raise GatewayFramingError()
@@ -795,17 +799,32 @@ class GatewayServiceV1:
             raise TypeError("method and path must be str")
         if not isinstance(content_type, str):
             raise TypeError("content_type must be str")
-        if "?" in path or "#" in path:
-            response = error_response_v1(
-                GatewayError(
-                    code=GatewayErrorCodeV1.BAD_REQUEST,
-                    safe_message="query strings and fragments are not accepted",
-                )
-            )
-            return response
+        audit_endpoint = path.split("?", 1)[0].split("#", 1)[0]
 
         if not self._semaphore.acquire(blocking=False):
-            return error_response_v1(GatewayBusyError())
+            response = error_response_v1(GatewayBusyError())
+            sequence = self._next_sequence()
+            try:
+                self.audit_sink.emit(
+                    GatewayAuditRecordV1(
+                        sequence=sequence,
+                        method=method.upper(),
+                        endpoint=audit_endpoint,
+                        status=response.status,
+                        error_code=GatewayErrorCodeV1.BUSY.value,
+                        artifact_id_hex="",
+                        policy_id_hex="",
+                        decision="",
+                        bytes_in=0,
+                        bytes_out=len(response.body),
+                        elapsed_milliseconds=0,
+                        timed_out=False,
+                        cancelled=False,
+                    )
+                )
+            except Exception:
+                pass
+            return response
 
         selected_token = (
             GatewayCancellationTokenV1(
@@ -872,7 +891,7 @@ class GatewayServiceV1:
             record = GatewayAuditRecordV1(
                 sequence=sequence,
                 method=method.upper(),
-                endpoint=path,
+                endpoint=audit_endpoint,
                 status=(500 if "response" not in locals() else response.status),
                 error_code=error_code,
                 artifact_id_hex=(

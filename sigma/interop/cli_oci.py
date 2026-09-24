@@ -15,6 +15,7 @@ from .oci import (
     OciDescriptorV1,
     verify_sigma_artifact_referrer_v1,
 )
+from .oci_auth import OciBearerAuthV1
 from .oci_registry import OciRegistryClientV1
 
 
@@ -96,11 +97,46 @@ def _subject_from_args(
 
 def _registry_client(args: argparse.Namespace) -> OciRegistryClientV1:
     headers = _key_values(args.header, what="header")
+    username = getattr(args, "registry_user", None)
+    password_env = getattr(args, "registry_password_env", None)
+    anonymous_bearer = bool(
+        getattr(args, "registry_anonymous_bearer", False)
+    )
+    allow_insecure_realm = bool(
+        getattr(args, "allow_insecure_auth_realm", False)
+    )
+
+    if anonymous_bearer and (username is not None or password_env is not None):
+        raise ValueError(
+            "--registry-anonymous-bearer conflicts with username/password auth"
+        )
+    if (username is None) != (password_env is None):
+        raise ValueError(
+            "--registry-user and --registry-password-env must be used together"
+        )
+
+    bearer_auth = None
+    if anonymous_bearer:
+        bearer_auth = OciBearerAuthV1(
+            allow_insecure_realm=allow_insecure_realm,
+        )
+    elif username is not None and password_env is not None:
+        if password_env not in os.environ:
+            raise ValueError(
+                f"registry password environment variable is unset: {password_env}"
+            )
+        bearer_auth = OciBearerAuthV1(
+            username=username,
+            password=os.environ[password_env],
+            allow_insecure_realm=allow_insecure_realm,
+        )
+
     return OciRegistryClientV1(
         args.registry,
         args.repository,
         headers=headers,
         timeout=args.timeout,
+        bearer_auth=bearer_auth,
     )
 
 
@@ -331,6 +367,25 @@ def _registry_args(parser: argparse.ArgumentParser) -> None:
         help="registry HTTP header; values are never emitted in command output",
     )
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument(
+        "--registry-user",
+        help="username for optional Bearer token-service authentication",
+    )
+    parser.add_argument(
+        "--registry-password-env",
+        metavar="ENV_VAR",
+        help="environment variable containing the registry password",
+    )
+    parser.add_argument(
+        "--registry-anonymous-bearer",
+        action="store_true",
+        help="follow Bearer challenges without Basic credentials",
+    )
+    parser.add_argument(
+        "--allow-insecure-auth-realm",
+        action="store_true",
+        help="allow Bearer token exchange over HTTP; intended for local registries",
+    )
 
 
 def _registry_subject_args(

@@ -30,6 +30,7 @@ DEFAULT_GATEWAY_MAX_CONCURRENT_REQUESTS = 16
 DEFAULT_GATEWAY_TIMEOUT_SECONDS = 120.0
 DEFAULT_GATEWAY_READ_CHUNK_BYTES = 1 << 20
 DEFAULT_GATEWAY_MAX_RESPONSE_BYTES = 32 << 20
+DEFAULT_GATEWAY_MAX_HEADER_BYTES = 64 << 10
 DEFAULT_GATEWAY_MAX_TRAJECTORY_ROUNDS = 1_000_064
 
 
@@ -150,6 +151,7 @@ class GatewayLimitsV1:
     request_timeout_seconds: float = DEFAULT_GATEWAY_TIMEOUT_SECONDS
     read_chunk_bytes: int = DEFAULT_GATEWAY_READ_CHUNK_BYTES
     max_response_bytes: int = DEFAULT_GATEWAY_MAX_RESPONSE_BYTES
+    max_header_bytes: int = DEFAULT_GATEWAY_MAX_HEADER_BYTES
     max_trajectory_rounds: int = DEFAULT_GATEWAY_MAX_TRAJECTORY_ROUNDS
 
     def __post_init__(self) -> None:
@@ -164,6 +166,7 @@ class GatewayLimitsV1:
             "max_concurrent_requests",
             "read_chunk_bytes",
             "max_response_bytes",
+            "max_header_bytes",
             "max_trajectory_rounds",
         )
         for name in integer_fields:

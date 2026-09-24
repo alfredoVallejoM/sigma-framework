@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import contextlib
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
 
 from .runtime import (
+    GatewayBusyError,
     GatewayError,
     GatewayErrorCodeV1,
     GatewayResponseV1,
@@ -51,7 +53,46 @@ class GatewayThreadingHTTPServerV1(ThreadingHTTPServer):
         if not isinstance(service, GatewayServiceV1):
             raise TypeError("service must be GatewayServiceV1")
         self.gateway_service = service
+        self._connection_slots = threading.BoundedSemaphore(
+            service.limits.max_http_connections
+        )
         super().__init__(server_address, GatewayHTTPRequestHandlerV1)
+
+    def process_request(self, request, client_address) -> None:
+        if self._connection_slots.acquire(blocking=False):
+            super().process_request(request, client_address)
+            return
+
+        error = GatewayBusyError(
+            safe_message="gateway HTTP connection limit reached"
+        )
+        response = error_response_v1(error)
+        self.gateway_service.audit_transport_rejection(
+            method="",
+            path="",
+            response=response,
+            error_code=error.code,
+        )
+        raw = (
+            f"HTTP/1.1 {response.status} Service Unavailable\r\n"
+            f"Content-Type: {response.content_type}\r\n"
+            f"Content-Length: {len(response.body)}\r\n"
+            "Cache-Control: no-store\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ).encode("ascii") + response.body
+        try:
+            request.sendall(raw)
+        except OSError:
+            pass
+        finally:
+            self.shutdown_request(request)
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._connection_slots.release()
 
 
 class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):

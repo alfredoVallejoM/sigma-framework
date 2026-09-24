@@ -508,6 +508,39 @@ class CancelAfterFirstRead(io.BytesIO):
         return value
 
 
+
+def test_px4_global_spool_budget_rejects_before_source_read(tmp_path: Path):
+    data = b"spool-budget" * 100
+    artifact = _tree_artifact(data)
+    policy = _tree_policy(max_input_bytes=len(data))
+    store = LocalArtifactStoreV1(tmp_path / "store")
+    store.put_artifact(artifact)
+    service = GatewayServiceV1(
+        store,
+        limits=GatewayLimitsV1(
+            max_source_bytes=len(data) + 1,
+            max_total_spool_bytes=len(data) - 1,
+        ),
+        spool_temp_dir=tmp_path / "spool",
+    )
+    payload = encode_artifact_verify_request_v1(
+        artifact_id=artifact.artifact_id,
+        policy=policy,
+        source=data,
+    )
+    prefix = payload[: -len(data)]
+
+    response = service.handle(
+        method="POST",
+        path="/v1/artifacts/verify",
+        content_type=ARTIFACT_VERIFY_MEDIA_TYPE,
+        body_stream=PrefixThenBombStream(prefix),
+        content_length=len(payload),
+    )
+    assert response.status == 503
+    assert _json(response)["code"] == "busy"
+    assert service._spool_budget.used == 0
+
 def test_px4_cancelled_request_does_not_affect_concurrent_request(tmp_path: Path):
 
     data = b"concurrency" * 100
@@ -856,12 +889,21 @@ def test_px4_cli_requires_explicit_nonlocal_bind_acknowledgement(tmp_path: Path)
             "8192",
             "--max-concurrent-requests",
             "3",
+            "--max-http-connections",
+            "5",
+            "--max-total-spool-bytes",
+            "16384",
+            "--spool-temp-dir",
+            str(tmp_path / "spool"),
         ]
     )
     assert parsed.host == "127.0.0.1"
     assert parsed.max_header_bytes == 4096
     assert parsed.max_response_bytes == 8192
     assert parsed.max_concurrent_requests == 3
+    assert parsed.max_http_connections == 5
+    assert parsed.max_total_spool_bytes == 16384
+    assert parsed.spool_temp_dir == tmp_path / "spool"
 
 
 def test_px4_http_connection_limit_rejects_before_handler_thread(tmp_path: Path):

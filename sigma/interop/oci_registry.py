@@ -1185,7 +1185,12 @@ class OciRegistryClientV1:
         annotations: (
             Mapping[str, str] | tuple[tuple[str, str], ...] | None
         ) = None,
+        verify_subject: bool = False,
     ) -> OciAttachResultV1:
+        if not isinstance(verify_subject, bool):
+            raise TypeError("verify_subject must be bool")
+        if verify_subject:
+            self.verify_subject_descriptor(subject)
         binding = build_sigma_artifact_referrer_v1(
             artifact,
             subject=subject,

@@ -59,8 +59,8 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
             f"ORAS executable not found: {args.oras}"
         )
 
-    artifact_id: bytes | None = None
-    semantic_id: bytes | None = None
+    artifact_id_hex: str | None = None
+    semantic_id_hex: str | None = None
     if args.kind == "artifact":
         artifact_id = _id32(
             args.artifact_id,
@@ -75,6 +75,7 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
         payload_wire = binding.artifact_wire
         kind_name = "artifact"
         identity_hex = binding.artifact_id.hex()
+        artifact_id_hex = identity_hex
     else:
         kind = _KIND_BY_CLI[args.kind]
         semantic_id = _id32(
@@ -96,6 +97,7 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
             if binding.semantic_id is None
             else binding.semantic_id.hex()
         )
+        semantic_id_hex = identity_hex
 
     referrer_digest = binding.manifest_descriptor.digest
     payload_digest = binding.payload_descriptor.digest
@@ -168,16 +170,8 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
         "oras": oras,
         "kind": kind_name,
         "identity": identity_hex,
-        "artifact_id": (
-            None
-            if args.kind != "artifact"
-            else binding.artifact_id.hex()
-        ),
-        "semantic_id": (
-            None
-            if args.kind == "artifact"
-            else identity_hex
-        ),
+        "artifact_id": artifact_id_hex,
+        "semantic_id": semantic_id_hex,
         "referrer_digest": referrer_digest,
         "payload_digest": payload_digest,
         "subject_digest": subject_digest,

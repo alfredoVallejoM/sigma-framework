@@ -246,6 +246,10 @@ def sigma_artifact_payload_descriptor_v1(
 ) -> OciDescriptorV1:
     if not isinstance(artifact, SigmaArtifactV1):
         raise TypeError("artifact must be SigmaArtifactV1")
+    if artifact.trajectory_audit is not None:
+        raise OciArtifactBindingError(
+            "IX0 Artifact referrer requires canonical no-audit base envelope"
+        )
     wire = artifact.to_bytes()
     return OciDescriptorV1(
         media_type=SIGMA_ARTIFACT_MEDIA_TYPE,
@@ -405,6 +409,10 @@ def verify_sigma_artifact_referrer_v1(
         )
 
     artifact = SigmaArtifactV1.from_bytes(artifact_wire)
+    if artifact.trajectory_audit is not None:
+        raise OciArtifactBindingError(
+            "IX0 Artifact referrer payload must be canonical no-audit envelope"
+        )
     wire_digest = oci_sha256_digest_v1(artifact_wire)
     if (
         payload.digest != wire_digest

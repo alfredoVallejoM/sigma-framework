@@ -425,9 +425,11 @@ class OciRegistryClientV1:
                     body=body,
                     timeout=self.timeout,
                 )
-            except RemoteRetryableError:
+            except RemoteRetryableError as exc:
                 if attempt >= self.limits.max_retries:
-                    raise
+                    raise OciRegistryError(
+                        "OCI transport exhausted retry budget"
+                    ) from exc
                 attempt += 1
                 if self.limits.retry_backoff_seconds:
                     time.sleep(self.limits.retry_backoff_seconds * attempt)

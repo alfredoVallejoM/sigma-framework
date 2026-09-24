@@ -148,6 +148,14 @@ PX4 deliberately does not invent a JSON batch receipt format.
 
 ## 7. Proof delegation
 
+Proof request bodies are also metadata-first.
+
+PX4 reads and parses the canonical proof before reading the disclosed leaf/range
+value. If the proof is malformed, the value is not read. If the declared value
+length differs from the canonical proof geometry, PX4 returns verified=false
+without reading the value, matching the local verifier's length-mismatch result.
+
+
 Inclusion:
 
     InclusionProofV1.from_bytes
@@ -229,6 +237,7 @@ Defaults:
     max_metadata_bytes            = 4 MiB
     max_source_bytes              = 1 GiB
     max_memory_spool_bytes        = 1 MiB
+    max_total_spool_bytes         = 4 GiB
     max_proof_value_bytes         = 64 MiB
     max_batch_items               = 256
     max_batch_total_source_bytes  = 1 GiB
@@ -259,6 +268,34 @@ When source replay is needed, source bytes enter IncrementalSpoolSource:
 - spill to temporary storage afterwards;
 - total bounded by source limit;
 - replayable for Tree and Trajectory verification.
+
+## 12A. Global spool reservation
+
+Source spooling is subject to two independent limits:
+
+    per-request source bytes
+    global concurrently reserved spool bytes
+
+Default global budget:
+
+    4 GiB
+
+GatewayServiceV1 reserves the declared source length before reading source bytes.
+If the reservation would exceed max_total_spool_bytes:
+
+    HTTP 503
+    code = busy
+
+and the source body is not consumed.
+
+The reservation is released after verification in a nested finally, even if
+source close itself fails.
+
+A deployment can select the temporary filesystem with:
+
+    --spool-temp-dir
+
+The path is operational state and never enters receipts/audit/ArtifactId.
 
 ## 13. Exact source geometry
 
@@ -471,6 +508,9 @@ Unknown paths log:
     <unmatched>
 
 ## 22. Audit sink failure
+
+HTTP method names are normalized to a fixed allowlist or <other> before audit.
+Arbitrary method tokens therefore cannot be smuggled into structured logs.
 
 Audit is observability, not verification authority.
 

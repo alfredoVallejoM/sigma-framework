@@ -48,6 +48,19 @@ DEFAULT_OCI_MAX_REFERRERS_BYTES = 4 * 1024 * 1024
 DEFAULT_OCI_MAX_REFERRERS = 10_000
 DEFAULT_OCI_MAX_PAGES = 32
 DEFAULT_OCI_MAX_RETRIES = 4
+_DOCKER_MANIFEST_MEDIA_TYPE = (
+    "application/vnd.docker.distribution.manifest.v2+json"
+)
+_DOCKER_MANIFEST_LIST_MEDIA_TYPE = (
+    "application/vnd.docker.distribution.manifest.list.v2+json"
+)
+_COMMON_MANIFEST_MEDIA_TYPES = (
+    OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+    OCI_IMAGE_INDEX_MEDIA_TYPE,
+    _DOCKER_MANIFEST_MEDIA_TYPE,
+    _DOCKER_MANIFEST_LIST_MEDIA_TYPE,
+)
+_COMMON_MANIFEST_ACCEPT = ", ".join(_COMMON_MANIFEST_MEDIA_TYPES)
 
 
 class OciRegistryError(RuntimeError):
@@ -449,6 +462,39 @@ class OciRegistryClientV1:
             return response
 
     @staticmethod
+    def _response_media_type(
+        response: HttpResponseV1,
+    ) -> str | None:
+        value = response.header("Content-Type")
+        if value is None:
+            return None
+        media_type = value.split(";", 1)[0].strip().lower()
+        return media_type or None
+
+    @classmethod
+    def _require_response_media_type(
+        cls,
+        response: HttpResponseV1,
+        allowed: tuple[str, ...],
+        *,
+        what: str,
+        required: bool,
+    ) -> str | None:
+        actual = cls._response_media_type(response)
+        if actual is None:
+            if required:
+                raise OciRegistryProtocolError(
+                    f"{what} omitted required Content-Type"
+                )
+            return None
+        allowed_lower = tuple(item.lower() for item in allowed)
+        if actual not in allowed_lower:
+            raise OciRegistryProtocolError(
+                f"{what} returned unexpected Content-Type: {actual}"
+            )
+        return actual
+
+    @staticmethod
     def _require_digest_header(
         response: HttpResponseV1,
         expected_digest: str,
@@ -709,6 +755,7 @@ class OciRegistryClientV1:
         *,
         accept: str,
         max_bytes: int,
+        allowed_media_types: tuple[str, ...] | None = None,
     ) -> tuple[bytes, str | None]:
         response = self._request(
             "GET",
@@ -727,8 +774,20 @@ class OciRegistryClientV1:
             raise OciRegistryResourceLimitError(
                 "OCI manifest response exceeds configured limit"
             )
+        if allowed_media_types is not None:
+            self._require_response_media_type(
+                response,
+                allowed_media_types,
+                what="OCI manifest GET",
+                required=False,
+            )
         digest = oci_sha256_digest_v1(response.body)
         if _DIGEST_RE.fullmatch(reference):
+            if not reference.startswith("sha256:"):
+                raise OciRegistryProtocolError(
+                    "IX0 content verification supports sha256 manifest "
+                    "digest references only"
+                )
             if digest != reference:
                 raise OciRegistryProtocolError(
                     "OCI manifest bytes do not match requested digest"
@@ -739,6 +798,72 @@ class OciRegistryClientV1:
             what="OCI manifest GET",
         )
         return response.body, response.header("ETag")
+
+    def resolve_manifest_descriptor(
+        self,
+        reference: str,
+    ) -> OciDescriptorV1:
+        """Resolve a registry tag/digest to a verified OCI manifest descriptor."""
+
+        wire, _ = self._get_manifest(
+            reference,
+            accept=_COMMON_MANIFEST_ACCEPT,
+            max_bytes=self.limits.max_manifest_bytes,
+            allowed_media_types=_COMMON_MANIFEST_MEDIA_TYPES,
+        )
+        digest = oci_sha256_digest_v1(wire)
+
+        try:
+            value = _json_object(
+                wire,
+                what="OCI subject manifest",
+            )
+        except OciRegistryProtocolError:
+            value = {}
+        body_media_type = value.get("mediaType")
+        if body_media_type is not None:
+            if not isinstance(body_media_type, str) or not body_media_type:
+                raise OciRegistryProtocolError(
+                    "OCI subject manifest mediaType must be non-empty str"
+                )
+            media_type = body_media_type
+        elif "config" in value and "layers" in value:
+            media_type = OCI_IMAGE_MANIFEST_MEDIA_TYPE
+        elif "manifests" in value:
+            media_type = OCI_IMAGE_INDEX_MEDIA_TYPE
+        else:
+            raise OciRegistryProtocolError(
+                "cannot determine OCI subject manifest media type"
+            )
+
+        return OciDescriptorV1(
+            media_type=media_type,
+            digest=digest,
+            size=len(wire),
+        )
+
+    def verify_subject_descriptor(
+        self,
+        subject: OciDescriptorV1,
+    ) -> OciDescriptorV1:
+        """Verify that an explicit subject descriptor names registry content."""
+
+        if not isinstance(subject, OciDescriptorV1):
+            raise TypeError("subject must be OciDescriptorV1")
+        if not subject.digest.startswith("sha256:"):
+            raise OciRegistryProtocolError(
+                "IX0 subject preflight supports sha256 subjects only"
+            )
+        resolved = self.resolve_manifest_descriptor(subject.digest)
+        if (
+            resolved.digest != subject.digest
+            or resolved.size != subject.size
+            or resolved.media_type != subject.media_type
+        ):
+            raise OciRegistryConflictError(
+                "explicit OCI subject descriptor differs from registry content"
+            )
+        return resolved
 
     def _get_blob(
         self,
@@ -880,6 +1005,7 @@ class OciRegistryClientV1:
                 tag,
                 accept=OCI_IMAGE_INDEX_MEDIA_TYPE,
                 max_bytes=self.limits.max_referrers_bytes,
+                allowed_media_types=(OCI_IMAGE_INDEX_MEDIA_TYPE,),
             )
         except OciRegistryNotFoundError:
             return OciReferrersResultV1(
@@ -938,7 +1064,13 @@ class OciRegistryClientV1:
         )
         descriptors: dict[str, OciDescriptorV1] = {}
         pages = 0
+        seen_urls: set[str] = set()
         while True:
+            if url in seen_urls:
+                raise OciRegistryProtocolError(
+                    "OCI referrers pagination loop detected"
+                )
+            seen_urls.add(url)
             pages += 1
             if pages > self.limits.max_pages:
                 raise OciRegistryResourceLimitError(
@@ -963,6 +1095,12 @@ class OciRegistryClientV1:
                 raise OciRegistryResourceLimitError(
                     "OCI referrers response exceeds configured byte limit"
                 )
+            self._require_response_media_type(
+                response,
+                (OCI_IMAGE_INDEX_MEDIA_TYPE,),
+                what="OCI referrers GET",
+                required=True,
+            )
             for item in parse_sigma_referrers_index_v1(
                 response.body,
                 max_bytes=self.limits.max_referrers_bytes,
@@ -1118,6 +1256,7 @@ class OciRegistryClientV1:
             referrer_digest,
             accept=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
             max_bytes=self.limits.max_manifest_bytes,
+            allowed_media_types=(OCI_IMAGE_MANIFEST_MEDIA_TYPE,),
         )
         if oci_sha256_digest_v1(manifest_wire) != referrer_digest:
             raise OciRegistryProtocolError(

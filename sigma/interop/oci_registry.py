@@ -332,7 +332,8 @@ def oci_referrers_tag_v1(subject_digest: str) -> str:
     """Return the OCI Distribution 1.1 referrers-tag fallback for a digest."""
 
     match = _DIGEST_RE.fullmatch(_validate_digest(subject_digest))
-    assert match is not None
+    if match is None:
+        raise ValueError("invalid OCI digest")
     algorithm = _TAG_CHAR_RE.sub("-", match.group(1)[:32])
     encoded = _TAG_CHAR_RE.sub("-", match.group(2)[:64])
     return f"{algorithm}-{encoded}"

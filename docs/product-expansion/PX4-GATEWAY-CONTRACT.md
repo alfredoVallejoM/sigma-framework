@@ -383,6 +383,10 @@ Default:
 If exhausted, the server writes canonical HTTP 503 / code=busy directly from
 process_request and closes the socket without creating another handler thread.
 
+Pre-thread connection saturation is intentionally not sent to the audit sink
+from the accept loop. A potentially blocking sink must not become work in the
+path whose purpose is to reject excess connection work.
+
 This bounds clients stalled before GatewayServiceV1.handle, including partial
 request-line/header senders.
 
@@ -466,6 +470,18 @@ Representative status/code mapping:
 
 Valid verification rejection remains HTTP 200 because the request executed
 successfully and the local verifier rejected the evidence.
+
+## 20A. Response header injection boundary
+
+GatewayResponseV1 rejects CR or LF in:
+- Content-Type;
+- response header names;
+- response header values.
+
+Duplicate response header names are rejected case-insensitively.
+
+Thus later gateway extensions cannot turn a response object into HTTP header
+injection without first violating the runtime type invariant.
 
 ## 21. Structured audit schema
 

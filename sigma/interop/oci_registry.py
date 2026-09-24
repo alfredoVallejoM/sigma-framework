@@ -1121,6 +1121,7 @@ class OciRegistryClientV1:
             OciReferrersSourceV1.TAG_FALLBACK,
             1,
             fallback_valid=True,
+            artifact_type=artifact_type,
         )
 
     def _next_referrers_link(
@@ -1294,6 +1295,78 @@ class OciRegistryClientV1:
         )
         return True
 
+    @staticmethod
+    def _assert_referrer_descriptor_matches(
+        expected: OciDescriptorV1,
+        actual: OciDescriptorV1,
+    ) -> None:
+        if not isinstance(expected, OciDescriptorV1):
+            raise TypeError("expected must be OciDescriptorV1")
+        if not isinstance(actual, OciDescriptorV1):
+            raise TypeError("actual must be OciDescriptorV1")
+        if (
+            actual.media_type != expected.media_type
+            or actual.digest != expected.digest
+            or actual.size != expected.size
+            or actual.artifact_type != expected.artifact_type
+            or actual.annotations != expected.annotations
+        ):
+            raise OciRegistryConflictError(
+                "discovered OCI referrer descriptor differs from "
+                "downloaded manifest"
+            )
+
+    def _publish_referrer(
+        self,
+        *,
+        subject: OciDescriptorV1,
+        payload_wire: bytes,
+        payload_descriptor: OciDescriptorV1,
+        manifest_wire: bytes,
+        manifest_descriptor: OciDescriptorV1,
+    ) -> tuple[bool, bool, bool, bool, bool]:
+        if manifest_descriptor.artifact_type is None:
+            raise ValueError("referrer manifest descriptor requires artifact_type")
+        config_result = self.put_blob(OCI_EMPTY_CONFIG_BYTES)
+        if config_result.digest != OCI_EMPTY_CONFIG_DIGEST:
+            raise AssertionError("canonical OCI empty config digest drifted")
+        payload_result = self.put_blob(payload_wire)
+        if payload_result.digest != payload_descriptor.digest:
+            raise AssertionError("IX0 payload descriptor digest drifted")
+
+        manifest_result = self.put_manifest(
+            manifest_wire,
+            media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            reference=manifest_descriptor.digest,
+            expected_subject_digest=subject.digest,
+        )
+        fallback_updated = False
+        if not manifest_result.subject_acknowledged:
+            fallback_updated = self._update_referrers_tag(
+                subject.digest,
+                manifest_descriptor,
+            )
+
+        discovered = self.list_referrers(
+            subject.digest,
+            artifact_type=manifest_descriptor.artifact_type,
+        )
+        discovered_after_push = any(
+            item.digest == manifest_descriptor.digest
+            for item in discovered.descriptors
+        )
+        if not discovered_after_push:
+            raise OciRegistryProtocolError(
+                "pushed Sigma referrer is not discoverable"
+            )
+        return (
+            config_result.reused,
+            payload_result.reused,
+            manifest_result.subject_acknowledged,
+            fallback_updated,
+            discovered_after_push,
+        )
+
     def attach_artifact(
         self,
         artifact: SigmaArtifactV1,
@@ -1313,40 +1386,58 @@ class OciRegistryClientV1:
             subject=subject,
             annotations=annotations,
         )
-        config_result = self.put_blob(OCI_EMPTY_CONFIG_BYTES)
-        if config_result.digest != OCI_EMPTY_CONFIG_DIGEST:
-            raise AssertionError("canonical OCI empty config digest drifted")
-        payload_result = self.put_blob(binding.artifact_wire)
-        if payload_result.digest != binding.payload_descriptor.digest:
-            raise AssertionError("IX0 payload descriptor digest drifted")
-
-        manifest_result = self.put_manifest(
-            binding.manifest_wire,
-            media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
-            reference=binding.manifest_descriptor.digest,
-            expected_subject_digest=subject.digest,
+        (
+            config_reused,
+            payload_reused,
+            subject_acknowledged,
+            fallback_updated,
+            discovered_after_push,
+        ) = self._publish_referrer(
+            subject=subject,
+            payload_wire=binding.artifact_wire,
+            payload_descriptor=binding.payload_descriptor,
+            manifest_wire=binding.manifest_wire,
+            manifest_descriptor=binding.manifest_descriptor,
         )
-        fallback_updated = False
-        if not manifest_result.subject_acknowledged:
-            fallback_updated = self._update_referrers_tag(
-                subject.digest,
-                binding.manifest_descriptor,
-            )
-
-        discovered = self.list_referrers(subject.digest)
-        discovered_after_push = any(
-            item.digest == binding.manifest_descriptor.digest
-            for item in discovered.descriptors
-        )
-        if not discovered_after_push:
-            raise OciRegistryProtocolError(
-                "pushed Sigma referrer is not discoverable"
-            )
         return OciAttachResultV1(
             binding=binding,
-            config_reused=config_result.reused,
-            payload_reused=payload_result.reused,
-            subject_acknowledged=manifest_result.subject_acknowledged,
+            config_reused=config_reused,
+            payload_reused=payload_reused,
+            subject_acknowledged=subject_acknowledged,
+            fallback_tag_updated=fallback_updated,
+            discovered_after_push=discovered_after_push,
+        )
+
+    def attach_sidecar(
+        self,
+        binding: OciSigmaSidecarBindingV1,
+        *,
+        verify_subject: bool = False,
+    ) -> OciSidecarAttachResultV1:
+        if not isinstance(binding, OciSigmaSidecarBindingV1):
+            raise TypeError("binding must be OciSigmaSidecarBindingV1")
+        if not isinstance(verify_subject, bool):
+            raise TypeError("verify_subject must be bool")
+        if verify_subject:
+            self.verify_subject_descriptor(binding.subject)
+        (
+            config_reused,
+            payload_reused,
+            subject_acknowledged,
+            fallback_updated,
+            discovered_after_push,
+        ) = self._publish_referrer(
+            subject=binding.subject,
+            payload_wire=binding.payload_wire,
+            payload_descriptor=binding.payload_descriptor,
+            manifest_wire=binding.manifest_wire,
+            manifest_descriptor=binding.manifest_descriptor,
+        )
+        return OciSidecarAttachResultV1(
+            binding=binding,
+            config_reused=config_reused,
+            payload_reused=payload_reused,
+            subject_acknowledged=subject_acknowledged,
             fallback_tag_updated=fallback_updated,
             discovered_after_push=discovered_after_push,
         )
@@ -1403,23 +1494,112 @@ class OciRegistryClientV1:
                     "pulled referrer subject digest differs from expected"
                 )
         if expected_referrer is not None:
-            if not isinstance(expected_referrer, OciDescriptorV1):
-                raise TypeError(
-                    "expected_referrer must be OciDescriptorV1 or None"
-                )
-            actual = binding.manifest_descriptor
-            if (
-                actual.media_type != expected_referrer.media_type
-                or actual.digest != expected_referrer.digest
-                or actual.size != expected_referrer.size
-                or actual.artifact_type != expected_referrer.artifact_type
-                or actual.annotations != expected_referrer.annotations
-            ):
-                raise OciRegistryConflictError(
-                    "discovered OCI referrer descriptor differs from "
-                    "downloaded manifest"
-                )
+            self._assert_referrer_descriptor_matches(
+                expected_referrer,
+                binding.manifest_descriptor,
+            )
         return binding
+
+    def pull_sidecar_by_digest(
+        self,
+        referrer_digest: str,
+        *,
+        expected_kind: OciSigmaSidecarKindV1 | None = None,
+        expected_subject: OciDescriptorV1 | None = None,
+        expected_subject_digest: str | None = None,
+        expected_semantic_id: bytes | None = None,
+        expected_referrer: OciDescriptorV1 | None = None,
+    ) -> OciVerifiedSigmaSidecarV1:
+        _validate_digest(referrer_digest)
+        manifest_wire, _ = self._get_manifest(
+            referrer_digest,
+            accept=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            max_bytes=self.limits.max_manifest_bytes,
+            allowed_media_types=(OCI_IMAGE_MANIFEST_MEDIA_TYPE,),
+        )
+        if oci_sha256_digest_v1(manifest_wire) != referrer_digest:
+            raise OciRegistryProtocolError(
+                "sidecar referrer manifest digest mismatch"
+            )
+        payload_descriptor = self._payload_descriptor_from_referrer_manifest(
+            manifest_wire
+        )
+        payload_wire = self._get_blob(payload_descriptor)
+        verified = verify_sigma_sidecar_referrer_v1(
+            manifest_wire,
+            payload_wire,
+            expected_kind=expected_kind,
+            expected_subject=expected_subject,
+            expected_semantic_id=expected_semantic_id,
+        )
+        if expected_subject_digest is not None:
+            _validate_digest(expected_subject_digest)
+            if verified.binding.subject.digest != expected_subject_digest:
+                raise OciRegistryConflictError(
+                    "pulled sidecar subject digest differs from expected"
+                )
+        if expected_referrer is not None:
+            self._assert_referrer_descriptor_matches(
+                expected_referrer,
+                verified.binding.manifest_descriptor,
+            )
+        return verified
+
+    def pull_sidecar(
+        self,
+        subject_digest: str,
+        *,
+        kind: OciSigmaSidecarKindV1,
+        semantic_id: bytes,
+    ) -> OciVerifiedSigmaSidecarV1:
+        if not isinstance(kind, OciSigmaSidecarKindV1):
+            raise TypeError("kind must be OciSigmaSidecarKindV1")
+        if (
+            not isinstance(semantic_id, bytes)
+            or len(semantic_id) != 32
+        ):
+            raise ValueError(
+                "semantic_id must contain exactly 32 bytes"
+            )
+        identity_annotation = {
+            OciSigmaSidecarKindV1.MANIFEST: SIGMA_MANIFEST_ID_ANNOTATION,
+            OciSigmaSidecarKindV1.VERIFICATION_RECEIPT: (
+                SIGMA_RECEIPT_ID_ANNOTATION
+            ),
+        }.get(kind)
+        if identity_annotation is None:
+            raise ValueError(
+                "proof sidecars have no semantic ProofId; pull them by "
+                "referrer digest"
+            )
+
+        artifact_type = sidecar_artifact_type_v1(kind)
+        refs = self.list_referrers(
+            subject_digest,
+            artifact_type=artifact_type,
+        )
+        expected_hex = semantic_id.hex()
+        matches = tuple(
+            item
+            for item in refs.descriptors
+            if dict(item.annotations).get(identity_annotation)
+            == expected_hex
+        )
+        if not matches:
+            raise OciRegistryNotFoundError(
+                "no Sigma sidecar matches requested semantic identity"
+            )
+        unique_digests = {item.digest for item in matches}
+        if len(unique_digests) != 1:
+            raise OciRegistryConflictError(
+                "multiple Sigma sidecars claim the same semantic identity"
+            )
+        return self.pull_sidecar_by_digest(
+            matches[0].digest,
+            expected_kind=kind,
+            expected_semantic_id=semantic_id,
+            expected_referrer=matches[0],
+        )
 
     def pull_artifact(
         self,
@@ -1464,6 +1644,7 @@ __all__ = [
     "OciManifestPutResultV1",
     "OciReferrersResultV1",
     "OciReferrersSourceV1",
+    "OciSidecarAttachResultV1",
     "OciRegistryClientV1",
     "OciRegistryConflictError",
     "OciRegistryError",

@@ -933,11 +933,11 @@ class GatewayServiceV1:
                 timed_out=timed_out,
                 cancelled=cancelled,
             )
+            self._semaphore.release()
             try:
                 self.audit_sink.emit(record)
             except Exception:
                 pass
-            self._semaphore.release()
 
         return response
 

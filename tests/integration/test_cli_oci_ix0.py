@@ -355,3 +355,78 @@ def test_ix0_cli_rejects_conflicting_bearer_auth_modes(
         match="conflicts",
     ):
         _registry_client(args)
+
+
+def test_ix0_cli_layout_export_and_verify_round_trip(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    artifact = create_artifact_v1(
+        ArtifactProfileV1.TREE,
+        tree_root=build_tree(b"cli-layout"),
+    )
+    artifact_path = tmp_path / "artifact.sigart"
+    artifact_path.write_bytes(artifact.to_bytes())
+    subject_path = tmp_path / "subject.json"
+    subject_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 2,
+                "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+                "config": {
+                    "mediaType": "application/vnd.oci.empty.v1+json",
+                    "digest": (
+                        "sha256:"
+                        "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                    ),
+                    "size": 2,
+                },
+                "layers": [],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+    layout = tmp_path / "layout"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "layout-export",
+            str(artifact_path),
+            "--subject",
+            str(subject_path),
+            "--subject-ref-name",
+            "latest",
+            "--referrer-ref-name",
+            "sigma",
+            "--output",
+            str(layout),
+        ],
+    )
+    assert main() == 0
+    exported = json.loads(capsys.readouterr().out)
+    assert exported["artifact_id"] == artifact.artifact_id.hex()
+    assert layout.is_dir()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "layout-verify",
+            str(layout),
+            "--artifact-id",
+            artifact.artifact_id.hex(),
+        ],
+    )
+    assert main() == 0
+    verified = json.loads(capsys.readouterr().out)
+    assert verified["artifact_id"] == artifact.artifact_id.hex()
+    assert verified["offline_verified"] is True

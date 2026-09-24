@@ -759,8 +759,30 @@ class OciRegistryClientV1:
         )
 
     @staticmethod
+    def _referrers_index_annotations(
+        wire: bytes,
+    ) -> dict[str, str]:
+        value = _json_object(
+            wire,
+            what="OCI referrers index",
+        )
+        annotations = value.get("annotations")
+        if annotations is None:
+            return {}
+        if not isinstance(annotations, dict) or any(
+            not isinstance(key, str) or not isinstance(item, str)
+            for key, item in annotations.items()
+        ):
+            raise OciRegistryProtocolError(
+                "OCI referrers index annotations must be a string map"
+            )
+        return dict(annotations)
+
+    @staticmethod
     def _build_referrers_index(
         descriptors: tuple[OciDescriptorV1, ...],
+        *,
+        annotations: Mapping[str, str] | None = None,
     ) -> bytes:
         ordered = tuple(
             sorted(
@@ -772,11 +794,13 @@ class OciRegistryClientV1:
                 ),
             )
         )
-        payload = {
+        payload: dict[str, object] = {
             "schemaVersion": 2,
             "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
             "manifests": [item.to_dict() for item in ordered],
         }
+        if annotations:
+            payload["annotations"] = dict(sorted(annotations.items()))
         return json.dumps(
             payload,
             sort_keys=True,
@@ -914,9 +938,11 @@ class OciRegistryClientV1:
                 wire,
                 max_referrers=self.limits.max_referrers,
             )
+            index_annotations = self._referrers_index_annotations(wire)
         except OciRegistryNotFoundError:
             existing = ()
             etag = None
+            index_annotations = {}
 
         by_digest = {item.digest: item for item in existing}
         previous = by_digest.get(descriptor.digest)
@@ -931,7 +957,10 @@ class OciRegistryClientV1:
                 "referrers fallback tag is full"
             )
         updated = (*existing, descriptor)
-        updated_wire = self._build_referrers_index(updated)
+        updated_wire = self._build_referrers_index(
+            updated,
+            annotations=index_annotations,
+        )
         if len(updated_wire) > self.limits.max_referrers_bytes:
             raise OciRegistryResourceLimitError(
                 "updated referrers fallback exceeds byte limit"

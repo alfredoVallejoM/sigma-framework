@@ -209,10 +209,25 @@ def _token_url(challenge: OciBearerChallengeV1) -> str:
         parsed.query,
         keep_blank_values=True,
     )
-    if challenge.service is not None:
-        query.append(("service", challenge.service))
-    if challenge.scope is not None:
-        query.append(("scope", challenge.scope))
+    existing: dict[str, list[str]] = {}
+    for key, value in query:
+        existing.setdefault(key, []).append(value)
+
+    for key, challenge_value in (
+        ("service", challenge.service),
+        ("scope", challenge.scope),
+    ):
+        if challenge_value is None:
+            continue
+        prior = existing.get(key, [])
+        if prior:
+            if any(value != challenge_value for value in prior):
+                raise OciBearerAuthError(
+                    f"bearer realm contains conflicting {key} query"
+                )
+        else:
+            query.append((key, challenge_value))
+
     return urllib.parse.urlunsplit(
         (
             parsed.scheme,

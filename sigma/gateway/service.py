@@ -277,6 +277,40 @@ class GatewayServiceV1:
             self._sequence += 1
             return self._sequence
 
+    def audit_transport_rejection(
+        self,
+        *,
+        method: str,
+        path: str,
+        response: GatewayResponseV1,
+        error_code: GatewayErrorCodeV1,
+    ) -> None:
+        if not isinstance(method, str) or not isinstance(path, str):
+            raise TypeError("method and path must be str")
+        if not isinstance(response, GatewayResponseV1):
+            raise TypeError("response must be GatewayResponseV1")
+        if not isinstance(error_code, GatewayErrorCodeV1):
+            raise TypeError("error_code must be GatewayErrorCodeV1")
+        record = GatewayAuditRecordV1(
+            sequence=self._next_sequence(),
+            method=method.upper(),
+            endpoint=self._audit_endpoint(path),
+            status=response.status,
+            error_code=error_code.value,
+            artifact_id_hex="",
+            policy_id_hex="",
+            decision="",
+            bytes_in=0,
+            bytes_out=len(response.body),
+            elapsed_milliseconds=0,
+            timed_out=False,
+            cancelled=False,
+        )
+        try:
+            self.audit_sink.emit(record)
+        except Exception:
+            pass
+
     def _operational_artifact_preflight(
         self,
         artifact: SigmaArtifactV1,

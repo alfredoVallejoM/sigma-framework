@@ -1254,6 +1254,7 @@ class OciRegistryClientV1:
         referrer_digest: str,
         *,
         expected_subject: OciDescriptorV1 | None = None,
+        expected_subject_digest: str | None = None,
         expected_artifact_id: bytes | None = None,
     ) -> OciSigmaArtifactBindingV1:
         _validate_digest(referrer_digest)
@@ -1271,12 +1272,19 @@ class OciRegistryClientV1:
             manifest_wire
         )
         artifact_wire = self._get_blob(payload_descriptor)
-        return verify_sigma_artifact_referrer_v1(
+        binding = verify_sigma_artifact_referrer_v1(
             manifest_wire,
             artifact_wire,
             expected_subject=expected_subject,
             expected_artifact_id=expected_artifact_id,
         )
+        if expected_subject_digest is not None:
+            _validate_digest(expected_subject_digest)
+            if binding.subject.digest != expected_subject_digest:
+                raise OciRegistryConflictError(
+                    "pulled referrer subject digest differs from expected"
+                )
+        return binding
 
     def pull_artifact(
         self,

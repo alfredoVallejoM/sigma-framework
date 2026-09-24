@@ -358,6 +358,10 @@ def read_artifact_verify_metadata_v1(
     artifact_wire = reader.read_metadata(artifact_length)
     policy_wire = reader.read_metadata(policy_length)
     capabilities_wire = reader.read_metadata(capabilities_length)
+    if source_length > reader.limits.max_source_bytes:
+        raise GatewaySourceTooLargeError()
+    if source_length != reader.remaining:
+        raise GatewayFramingError()
     return ArtifactVerifyMetadataV1(
         artifact_id,
         artifact_wire,
@@ -400,6 +404,10 @@ def read_policy_evaluate_metadata_v1(
     evidence = reader.read_metadata(evidence_length)
     policy_wire = reader.read_metadata(policy_length)
     capabilities_wire = reader.read_metadata(capabilities_length)
+    if source_length > reader.limits.max_source_bytes:
+        raise GatewaySourceTooLargeError()
+    if source_length != reader.remaining:
+        raise GatewayFramingError()
     return PolicyEvaluateMetadataV1(
         identity,
         evidence,
@@ -452,6 +460,10 @@ def read_batch_item_metadata_v1(
     evidence = reader.read_metadata(evidence_length)
     policy_wire = reader.read_metadata(policy_length)
     capabilities_wire = reader.read_metadata(capabilities_length)
+    if source_length > reader.limits.max_source_bytes:
+        raise GatewaySourceTooLargeError()
+    if source_length > reader.remaining:
+        raise GatewayFramingError()
     return BatchVerifyItemMetadataV1(
         identity,
         evidence,

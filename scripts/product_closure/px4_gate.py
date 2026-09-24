@@ -801,6 +801,48 @@ def run_gate(
             server.server_close()
             thread.join(timeout=10)
 
+        # Bound connection threads before request parsing/service admission.
+        connection_service = GatewayServiceV1(
+            store,
+            limits=GatewayLimitsV1(max_http_connections=1),
+        )
+        connection_server = create_gateway_http_server_v1(
+            "127.0.0.1",
+            0,
+            connection_service,
+        )
+        connection_thread = threading.Thread(
+            target=connection_server.serve_forever,
+            daemon=True,
+        )
+        connection_thread.start()
+        if not connection_server._connection_slots.acquire(blocking=False):
+            raise AssertionError("PX4 connection-slot fixture could not reserve slot")
+        try:
+            connection_host, connection_port = connection_server.server_address
+            connection = http.client.HTTPConnection(
+                connection_host,
+                connection_port,
+                timeout=10,
+            )
+            connection.request("GET", "/health")
+            response = connection.getresponse()
+            body = response.read()
+            connection.close()
+            if (
+                response.status != 503
+                or json.loads(body.decode("ascii"))["code"] != "busy"
+            ):
+                raise AssertionError(
+                    "PX4 HTTP connection admission did not fail closed"
+                )
+            http_connection_limit_rejected = True
+        finally:
+            connection_server._connection_slots.release()
+            connection_server.shutdown()
+            connection_server.server_close()
+            connection_thread.join(timeout=10)
+
 
     return {
         "schema": "sigma-px4-verification-gateway-gate-v1",
@@ -826,6 +868,7 @@ def run_gate(
         "audit_secret_cases": audit_secret_cases,
         "credential_receipt_independent": credential_receipt_independent,
         "http_framing_hardening": http_framing_hardening,
+        "http_connection_limit_rejected": http_connection_limit_rejected,
         "artifact_stream_sha256": artifact_stream.hexdigest(),
         "receipt_stream_sha256": receipt_stream.hexdigest(),
         "batch_stream_sha256": batch_stream.hexdigest(),

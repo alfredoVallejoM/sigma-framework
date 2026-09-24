@@ -23,6 +23,7 @@ DEFAULT_GATEWAY_MAX_REQUEST_BYTES = (1 << 30) + (16 << 20)
 DEFAULT_GATEWAY_MAX_METADATA_BYTES = 4 << 20
 DEFAULT_GATEWAY_MAX_SOURCE_BYTES = 1 << 30
 DEFAULT_GATEWAY_MAX_MEMORY_SPOOL_BYTES = 1 << 20
+DEFAULT_GATEWAY_MAX_TOTAL_SPOOL_BYTES = 4 << 30
 DEFAULT_GATEWAY_MAX_PROOF_VALUE_BYTES = 64 << 20
 DEFAULT_GATEWAY_MAX_BATCH_ITEMS = 256
 DEFAULT_GATEWAY_MAX_BATCH_TOTAL_SOURCE_BYTES = 1 << 30
@@ -148,6 +149,7 @@ class GatewayLimitsV1:
     max_metadata_bytes: int = DEFAULT_GATEWAY_MAX_METADATA_BYTES
     max_source_bytes: int = DEFAULT_GATEWAY_MAX_SOURCE_BYTES
     max_memory_spool_bytes: int = DEFAULT_GATEWAY_MAX_MEMORY_SPOOL_BYTES
+    max_total_spool_bytes: int = DEFAULT_GATEWAY_MAX_TOTAL_SPOOL_BYTES
     max_proof_value_bytes: int = DEFAULT_GATEWAY_MAX_PROOF_VALUE_BYTES
     max_batch_items: int = DEFAULT_GATEWAY_MAX_BATCH_ITEMS
     max_batch_total_source_bytes: int = DEFAULT_GATEWAY_MAX_BATCH_TOTAL_SOURCE_BYTES
@@ -165,6 +167,7 @@ class GatewayLimitsV1:
             "max_metadata_bytes",
             "max_source_bytes",
             "max_memory_spool_bytes",
+            "max_total_spool_bytes",
             "max_proof_value_bytes",
             "max_batch_items",
             "max_batch_total_source_bytes",

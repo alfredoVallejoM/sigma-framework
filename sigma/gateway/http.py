@@ -15,6 +15,30 @@ from .runtime import (
 from .service import GatewayServiceV1
 
 
+class _HeaderLimitExceeded(RuntimeError):
+    pass
+
+
+class _HeaderBudgetReaderV1:
+    """Limit header bytes while http.client.parse_headers is reading them."""
+
+    def __init__(self, raw, limit: int) -> None:
+        self.raw = raw
+        self.remaining = limit
+
+    def readline(self, limit: int = -1) -> bytes:
+        if self.remaining < 0:
+            raise _HeaderLimitExceeded()
+        read_limit = self.remaining + 1
+        if limit >= 0:
+            read_limit = min(read_limit, limit)
+        line = self.raw.readline(read_limit)
+        if len(line) > self.remaining:
+            raise _HeaderLimitExceeded()
+        self.remaining -= len(line)
+        return line
+
+
 class GatewayThreadingHTTPServerV1(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -36,6 +60,62 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
     protocol_version: ClassVar[str] = "HTTP/1.1"
     server_version: ClassVar[str] = "SigmaGateway"
     sys_version: ClassVar[str] = ""
+
+    def parse_request(self) -> bool:
+        original = self.rfile
+        self.rfile = _HeaderBudgetReaderV1(
+            original,
+            self._gateway_server.gateway_service.limits.max_header_bytes,
+        )
+        try:
+            return super().parse_request()
+        except _HeaderLimitExceeded:
+            self.close_connection = True
+            error = GatewayError(
+                status=431,
+                code=GatewayErrorCodeV1.HEADER_TOO_LARGE,
+                safe_message="request headers exceed gateway limit",
+            )
+            response = error_response_v1(error)
+            self._gateway_server.gateway_service.audit_transport_rejection(
+                method=getattr(self, "command", ""),
+                path=getattr(self, "path", ""),
+                response=response,
+                error_code=error.code,
+            )
+            self._write_response(response)
+            return False
+        finally:
+            self.rfile = original
+
+    def send_error(
+        self,
+        code: int,
+        message: str | None = None,
+        explain: str | None = None,
+    ) -> None:
+        if code == 431:
+            error_code = GatewayErrorCodeV1.HEADER_TOO_LARGE
+            safe_message = "request headers exceed gateway limit"
+        elif code in (405, 501):
+            error_code = GatewayErrorCodeV1.METHOD_NOT_ALLOWED
+            safe_message = "HTTP method is not supported by gateway v1"
+        else:
+            error_code = GatewayErrorCodeV1.BAD_REQUEST
+            safe_message = "malformed HTTP request"
+        error = GatewayError(
+            status=code,
+            code=error_code,
+            safe_message=safe_message,
+        )
+        response = error_response_v1(error)
+        self._gateway_server.gateway_service.audit_transport_rejection(
+            method=getattr(self, "command", ""),
+            path=getattr(self, "path", ""),
+            response=response,
+            error_code=error.code,
+        )
+        self._write_response(response)
 
     @property
     def _gateway_server(self) -> GatewayThreadingHTTPServerV1:
@@ -76,16 +156,20 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
         message: str,
         retryable: bool = False,
     ) -> None:
-        self._write_response(
-            error_response_v1(
-                GatewayError(
-                    status=status,
-                    code=code,
-                    safe_message=message,
-                    retryable=retryable,
-                )
-            )
+        error = GatewayError(
+            status=status,
+            code=code,
+            safe_message=message,
+            retryable=retryable,
         )
+        response = error_response_v1(error)
+        self._gateway_server.gateway_service.audit_transport_rejection(
+            method=getattr(self, "command", ""),
+            path=getattr(self, "path", ""),
+            response=response,
+            error_code=error.code,
+        )
+        self._write_response(response)
 
     def _aggregate_header_bytes(self) -> int:
         total = 0
@@ -156,7 +240,14 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
         try:
             self._admission_preflight(required_length=True)
         except GatewayError as exc:
-            self._write_response(error_response_v1(exc))
+            response = error_response_v1(exc)
+            self._gateway_server.gateway_service.audit_transport_rejection(
+                method=getattr(self, "command", ""),
+                path=getattr(self, "path", ""),
+                response=response,
+                error_code=exc.code,
+            )
+            self._write_response(response)
             return False
         self.send_response_only(100)
         self.end_headers()
@@ -177,6 +268,12 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
             )
         except GatewayError as exc:
             response = error_response_v1(exc)
+            self._gateway_server.gateway_service.audit_transport_rejection(
+                method=getattr(self, "command", ""),
+                path=getattr(self, "path", ""),
+                response=response,
+                error_code=exc.code,
+            )
         except Exception:
             response = error_response_v1(
                 GatewayError(

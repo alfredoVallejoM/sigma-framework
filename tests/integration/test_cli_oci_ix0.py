@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import sys
 
+import pytest
+
 from sigma.artifact import ArtifactProfileV1, create_artifact_v1
 from sigma.interop import (
     OCI_IMAGE_MANIFEST_MEDIA_TYPE,
     OciDescriptorV1,
     build_sigma_artifact_referrer_v1,
 )
+from sigma.interop.cli_oci import _write_bytes_atomic
 from sigma.product_cli import build_parser, main
 from sigma.tree import build_tree
 
@@ -76,3 +79,32 @@ def test_ix0_cli_offline_verify(tmp_path, monkeypatch, capsys):
     assert result["artifact_id"] == artifact.artifact_id.hex()
     assert result["subject_digest"] == subject.digest
     assert result["referrer_digest"] == binding.manifest_descriptor.digest
+
+
+def test_ix0_cli_atomic_write_creates_parent_and_replaces(tmp_path):
+    target = tmp_path / "nested" / "artifact.sigart"
+    _write_bytes_atomic(target, b"new-bytes")
+    assert target.read_bytes() == b"new-bytes"
+    assert list(target.parent.glob(".*.tmp")) == []
+
+
+def test_ix0_cli_atomic_write_preserves_existing_file_on_replace_failure(
+    tmp_path,
+    monkeypatch,
+):
+    target = tmp_path / "artifact.sigart"
+    target.write_bytes(b"old-bytes")
+
+    def fail_replace(source, destination):
+        del source, destination
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(
+        "sigma.interop.cli_oci.os.replace",
+        fail_replace,
+    )
+    with pytest.raises(OSError, match="replace failed"):
+        _write_bytes_atomic(target, b"new-bytes")
+
+    assert target.read_bytes() == b"old-bytes"
+    assert list(tmp_path.glob(".*.tmp")) == []

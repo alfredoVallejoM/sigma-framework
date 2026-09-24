@@ -15,6 +15,7 @@ from sigma.tree import InclusionProofV1, ManifestV1, RangeProofV1
 from .oci import (
     OCI_IMAGE_MANIFEST_MEDIA_TYPE,
     OciDescriptorV1,
+    oci_sha256_digest_v1,
     verify_sigma_artifact_referrer_v1,
 )
 from .oci_auth import OciBearerAuthV1
@@ -29,7 +30,9 @@ from .oci_sidecars import (
 )
 from .oci_layout import (
     verify_sigma_artifact_layout_v1,
+    verify_sigma_sidecar_layout_v1,
     write_sigma_artifact_layout_v1,
+    write_sigma_sidecar_layout_v1,
 )
 from .oci_registry import OciRegistryClientV1
 
@@ -615,6 +618,88 @@ def _sidecar_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _sidecar_layout_export(args: argparse.Namespace) -> int:
+    kind = _sidecar_kind(args.kind)
+    subject_wire = args.subject.read_bytes()
+    subject = OciDescriptorV1(
+        media_type=args.subject_media_type,
+        digest=oci_sha256_digest_v1(subject_wire),
+        size=len(subject_wire),
+    )
+    binding = _build_sidecar_from_path(
+        kind,
+        args.payload,
+        subject=subject,
+        annotations=_key_values(
+            args.annotation,
+            what="annotation",
+        ),
+    )
+    result = write_sigma_sidecar_layout_v1(
+        args.output,
+        binding,
+        subject_wire=subject_wire,
+        subject_ref_name=args.subject_ref_name,
+        referrer_ref_name=args.referrer_ref_name,
+    )
+    print(
+        json.dumps(
+            {
+                "kind": kind.value,
+                "semantic_id": (
+                    None
+                    if binding.semantic_id is None
+                    else binding.semantic_id.hex()
+                ),
+                "layout": str(result.root),
+                "payload_digest": binding.payload_descriptor.digest,
+                "referrer_digest": binding.manifest_descriptor.digest,
+                "subject_digest": binding.subject.digest,
+                "index_descriptor_count": result.index_descriptor_count,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _sidecar_layout_verify(args: argparse.Namespace) -> int:
+    kind = _sidecar_kind(args.kind)
+    verified = verify_sigma_sidecar_layout_v1(
+        args.layout,
+        kind=kind,
+        expected_semantic_id=_hex_id32(
+            args.semantic_id,
+            name="sidecar semantic id",
+        ),
+        referrer_digest=args.referrer_digest,
+        referrer_ref_name=args.referrer_ref_name,
+    )
+    print(
+        json.dumps(
+            {
+                "kind": verified.binding.kind.value,
+                "semantic_id": (
+                    None
+                    if verified.binding.semantic_id is None
+                    else verified.binding.semantic_id.hex()
+                ),
+                "layout": str(args.layout),
+                "payload_digest": (
+                    verified.binding.payload_descriptor.digest
+                ),
+                "referrer_digest": (
+                    verified.binding.manifest_descriptor.digest
+                ),
+                "subject_digest": verified.binding.subject.digest,
+                "offline_verified": True,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def _layout_export(args: argparse.Namespace) -> int:
     artifact = SigmaArtifactV1.from_bytes(args.artifact.read_bytes())
     annotations = _key_values(args.annotation, what="annotation")
@@ -888,6 +973,59 @@ def add_oci_commands(commands) -> None:
     sidecar_verify.add_argument("payload", type=Path)
     sidecar_verify.add_argument("--semantic-id")
     sidecar_verify.set_defaults(handler=_sidecar_verify)
+
+    sidecar_layout_export = actions.add_parser(
+        "sidecar-layout-export",
+        help="write a typed Sigma sidecar into a self-contained OCI layout",
+    )
+    sidecar_layout_export.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    sidecar_layout_export.add_argument("payload", type=Path)
+    sidecar_layout_export.add_argument(
+        "--subject",
+        type=Path,
+        required=True,
+    )
+    sidecar_layout_export.add_argument(
+        "--subject-media-type",
+        default=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+    )
+    sidecar_layout_export.add_argument("--subject-ref-name")
+    sidecar_layout_export.add_argument("--referrer-ref-name")
+    sidecar_layout_export.add_argument(
+        "--annotation",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+    )
+    sidecar_layout_export.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+    )
+    sidecar_layout_export.set_defaults(
+        handler=_sidecar_layout_export
+    )
+
+    sidecar_layout_verify = actions.add_parser(
+        "sidecar-layout-verify",
+        help="verify a typed Sigma sidecar from an OCI Image Layout",
+    )
+    sidecar_layout_verify.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    sidecar_layout_verify.add_argument("layout", type=Path)
+    sidecar_layout_verify.add_argument("--semantic-id")
+    sidecar_layout_verify.add_argument("--referrer-digest")
+    sidecar_layout_verify.add_argument("--referrer-ref-name")
+    sidecar_layout_verify.set_defaults(
+        handler=_sidecar_layout_verify
+    )
 
     layout_export = actions.add_parser(
         "layout-export",

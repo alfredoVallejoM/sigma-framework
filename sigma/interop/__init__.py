@@ -47,8 +47,11 @@ from .oci_layout import (
     OciLayoutLimitsV1,
     OciLayoutResourceLimitError,
     OciLayoutWriteResultV1,
+    OciSidecarLayoutWriteResultV1,
     verify_sigma_artifact_layout_v1,
+    verify_sigma_sidecar_layout_v1,
     write_sigma_artifact_layout_v1,
+    write_sigma_sidecar_layout_v1,
 )
 from .oci_sidecars import (
     SIGMA_INCLUSION_PROOF_MEDIA_TYPE,
@@ -194,4 +197,7 @@ __all__ = [
     "verify_sigma_sidecar_referrer_v1",
     "parse_oci_referrers_index_v1",
     "OciSidecarAttachResultV1",
+    "OciSidecarLayoutWriteResultV1",
+    "verify_sigma_sidecar_layout_v1",
+    "write_sigma_sidecar_layout_v1",
 ]

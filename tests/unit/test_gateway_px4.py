@@ -3,6 +3,7 @@ from __future__ import annotations
 import http.client
 import io
 import json
+import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -617,6 +618,125 @@ def test_px4_http_health_version_and_stored_artifact(tmp_path: Path):
         server.server_close()
         thread.join(timeout=5)
 
+
+
+def test_px4_http_authorization_never_changes_policy_receipt(tmp_path: Path):
+    data = b"receipt-header-independence" * 20
+    digest = _v3_digest(data)
+    policy = VerificationPolicyV1()
+    identity = b"header-independent-receipt"
+    payload = encode_policy_evaluate_request_v1(
+        artifact_identity=identity,
+        evidence_wire=digest.to_bytes(),
+        policy=policy,
+        source=data,
+    )
+    local_decision = verify_with_policy_v1(
+        digest.to_bytes(),
+        policy=policy,
+        source=data,
+    )
+    local_receipt = receipt_from_decision_v1(
+        identity,
+        policy,
+        local_decision,
+        verifier_package="sigma-framework",
+        verifier_version=PACKAGE_VERSION,
+        verifier_build=b"",
+        claimed_unix_time=None,
+    )
+    expected = decision_result_json_v1(
+        local_decision,
+        receipt_wire=local_receipt.to_bytes(),
+        receipt_id=local_receipt.receipt_id,
+    )
+
+    server = create_gateway_http_server_v1(
+        "127.0.0.1",
+        0,
+        GatewayServiceV1(LocalArtifactStoreV1(tmp_path / "store")),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        bodies = []
+        for secret in ("alpha-secret", "beta-secret"):
+            connection = http.client.HTTPConnection(host, port, timeout=5)
+            connection.request(
+                "POST",
+                "/v1/policies/evaluate",
+                body=payload,
+                headers={
+                    "Content-Type": POLICY_EVALUATE_MEDIA_TYPE,
+                    "Authorization": f"Bearer {secret}",
+                    "Cookie": f"session={secret}",
+                },
+            )
+            response = connection.getresponse()
+            bodies.append(response.read())
+            assert response.status == 200
+            connection.close()
+        assert bodies == [expected, expected]
+        assert b"alpha-secret" not in expected
+        assert b"beta-secret" not in expected
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_px4_http_rejects_duplicate_content_length(tmp_path: Path):
+    service = GatewayServiceV1(LocalArtifactStoreV1(tmp_path / "store"))
+    server = create_gateway_http_server_v1("127.0.0.1", 0, service)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        with socket.create_connection((host, port), timeout=5) as connection:
+            request = (
+                "POST /v1/artifacts/verify HTTP/1.1\r\n"
+                f"Host: {host}:{port}\r\n"
+                f"Content-Type: {ARTIFACT_VERIFY_MEDIA_TYPE}\r\n"
+                "Content-Length: 0\r\n"
+                "Content-Length: 1\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+            ).encode("ascii")
+            connection.sendall(request)
+            response = connection.recv(4096)
+        assert response.startswith(b"HTTP/1.1 400")
+        assert b"multiple Content-Length" in response
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_px4_declared_source_length_must_match_request_remainder(tmp_path: Path):
+    data = b"framing-geometry"
+    artifact = _tree_artifact(data)
+    policy = _tree_policy()
+    store = LocalArtifactStoreV1(tmp_path / "store")
+    store.put_artifact(artifact)
+    payload = bytearray(
+        encode_artifact_verify_request_v1(
+            artifact_id=artifact.artifact_id,
+            policy=policy,
+            source=data,
+        )
+    )
+    declared = int.from_bytes(payload[56:64], "big")
+    payload[56:64] = (declared + 1).to_bytes(8, "big")
+    response = GatewayServiceV1(store).handle(
+        method="POST",
+        path="/v1/artifacts/verify",
+        content_type=ARTIFACT_VERIFY_MEDIA_TYPE,
+        body_stream=io.BytesIO(bytes(payload)),
+        content_length=len(payload),
+    )
+    assert response.status == 400
+    assert _json(response)["code"] == "bad-request"
 
 def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
 

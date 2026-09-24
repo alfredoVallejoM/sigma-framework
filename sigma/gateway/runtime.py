@@ -41,6 +41,7 @@ class GatewayErrorCodeV1(str, Enum):
     METHOD_NOT_ALLOWED = "method-not-allowed"
     LENGTH_REQUIRED = "length-required"
     HEADER_TOO_LARGE = "header-too-large"
+    EXPECTATION_FAILED = "expectation-failed"
     UNSUPPORTED_MEDIA_TYPE = "unsupported-media-type"
     NOT_FOUND = "not-found"
     REQUEST_TOO_LARGE = "request-too-large"

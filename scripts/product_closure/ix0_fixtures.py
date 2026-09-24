@@ -42,6 +42,7 @@ class GateOciRegistryTransport:
     """Small OCI registry model supporting both native and fallback referrers."""
 
     native_referrers: bool = True
+    apply_artifact_type_filter: bool = True
     page_size: int | None = None
     cross_origin_upload: bool = False
     manifest_content_type_override: str | None = None
@@ -197,7 +198,11 @@ class GateOciRegistryTransport:
         subject_digest = urllib.parse.unquote(path.split(marker, 1)[1])
         values = list(self.referrers.get(subject_digest, {}).values())
         requested_type = query.get("artifactType", [None])[0]
-        if requested_type is not None:
+        filter_applied = (
+            requested_type is not None
+            and self.apply_artifact_type_filter
+        )
+        if filter_applied:
             values = [
                 item
                 for item in values
@@ -234,7 +239,7 @@ class GateOciRegistryTransport:
                 ),
             )
         ]
-        if requested_type is not None:
+        if filter_applied:
             response_headers.append(("OCI-Filters-Applied", "artifactType"))
         if has_next:
             next_query = dict(query)

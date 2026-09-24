@@ -171,7 +171,7 @@ scripts/product_closure/px3_gate.py, y promover PX3-O01..O04.
 
 ## Estado IX
 
-IX0 — OCI / ORAS Adapter — está **ACTIVE / IX0-A SOURCE IMPLEMENTED**.
+IX0 — OCI / ORAS Adapter — está **ACTIVE / IX0-A+IX0-B SOURCE IMPLEMENTED**.
 
 Implementación IX0-A:
 - nuevo namespace `sigma.interop`;
@@ -189,14 +189,28 @@ Frontera:
 - IX0 no reinterpreta el locator PX3 como referrer semántico;
 - tags, annotations, registry URL, OCI digest y serialización JSON no entran en ArtifactId.
 
-Pendiente IX0-B:
-- attach/push/pull/refs contra registry real;
-- differential con ORAS;
-- gate IX0-RT-001;
-- ejecución de IX0-ID-001 y del corpus adversarial.
+IX0-B implementado:
+- cliente OCI Distribution acotado;
+- blob HEAD/upload/completion;
+- attach de referrer con `OCI-Subject`;
+- fallback obligatorio al referrers-tag schema;
+- discovery paginado y acotado;
+- pull por referrer digest y por ArtifactId;
+- stripping de credenciales en cross-origin upload/redirect;
+- `sigma oci attach|refs|pull|verify`;
+- fixture determinista de registry nativo/fallback;
+- gate local `ix0_gate.py`;
+- diferencial de registry real con ORAS 1.3 en `ix0_oras_diff.py`.
+
+Pendiente de cierre ejecutado:
+- pytest/Ruff/Mypy;
+- gate local IX0;
+- IX0-RT-001 / IX0-ID-001;
+- un round-trip de registry real + ORAS.
 
 Evidence:
-- `IX0-IMPLEMENTATION-EVIDENCE.md`.
+- `IX0-IMPLEMENTATION-EVIDENCE.md`;
+- `IX0-COMPLEXITY-AUDIT.md`.
 
-IX0 no se promociona a COMPLETE hasta ejecutar IX0-O01..O04 y capturar evidencia
-de round-trip real.
+IX0 no se promociona a COMPLETE sólo por disponer de código: la ejecución real
+sigue siendo obligatoria.

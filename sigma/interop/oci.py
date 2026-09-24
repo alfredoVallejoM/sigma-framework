@@ -464,11 +464,8 @@ def build_sigma_artifact_referrer_v1(
             digest=oci_sha256_digest_v1(manifest_wire),
             size=len(manifest_wire),
             artifact_type=SIGMA_ARTIFACT_REFERRER_TYPE,
-            annotations=(
-                (
-                    SIGMA_ARTIFACT_ID_ANNOTATION,
-                    artifact.artifact_id.hex(),
-                ),
+            annotations=tuple(
+                sorted(manifest_annotations.items())
             ),
         ),
     )
@@ -616,11 +613,8 @@ def verify_sigma_artifact_referrer_v1(
             digest=oci_sha256_digest_v1(manifest_wire),
             size=len(manifest_wire),
             artifact_type=SIGMA_ARTIFACT_REFERRER_TYPE,
-            annotations=(
-                (
-                    SIGMA_ARTIFACT_ID_ANNOTATION,
-                    artifact.artifact_id.hex(),
-                ),
+            annotations=tuple(
+                sorted(canonical_manifest_annotations.items())
             ),
         ),
     )

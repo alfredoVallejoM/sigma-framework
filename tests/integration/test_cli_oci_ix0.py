@@ -670,3 +670,80 @@ def test_ix0_cli_sidecar_digest_pull_can_also_check_semantic_identity(
     json.loads(capsys.readouterr().out)
     assert captured["expected_semantic_id"] == semantic_id
     assert captured["expected_subject_digest"] == subject.digest
+
+
+def test_ix0_cli_sidecar_layout_export_and_verify_round_trip(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    manifest = ManifestV1()
+    payload_path = tmp_path / "manifest.bin"
+    payload_path.write_bytes(manifest.to_bytes())
+    subject_path = tmp_path / "subject.json"
+    subject_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 2,
+                "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+                "config": {
+                    "mediaType": "application/vnd.oci.empty.v1+json",
+                    "digest": (
+                        "sha256:"
+                        "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                    ),
+                    "size": 2,
+                },
+                "layers": [],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+    layout = tmp_path / "sidecar-layout"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "sidecar-layout-export",
+            "--kind",
+            "manifest",
+            str(payload_path),
+            "--subject",
+            str(subject_path),
+            "--referrer-ref-name",
+            "manifest-sidecar",
+            "--output",
+            str(layout),
+        ],
+    )
+    assert main() == 0
+    exported = json.loads(capsys.readouterr().out)
+    expected_id = manifest_identity_v1(manifest).hex()
+    assert exported["semantic_id"] == expected_id
+    assert layout.is_dir()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "sidecar-layout-verify",
+            "--kind",
+            "manifest",
+            str(layout),
+            "--semantic-id",
+            expected_id,
+            "--referrer-ref-name",
+            "manifest-sidecar",
+        ],
+    )
+    assert main() == 0
+    verified = json.loads(capsys.readouterr().out)
+    assert verified["semantic_id"] == expected_id
+    assert verified["offline_verified"] is True

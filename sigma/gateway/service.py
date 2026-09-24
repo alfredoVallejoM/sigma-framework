@@ -293,7 +293,7 @@ class GatewayServiceV1:
             raise TypeError("error_code must be GatewayErrorCodeV1")
         record = GatewayAuditRecordV1(
             sequence=self._next_sequence(),
-            method=method.upper(),
+            method=self._audit_method(method),
             endpoint=self._audit_endpoint(path),
             status=response.status,
             error_code=error_code.value,
@@ -775,6 +775,13 @@ class GatewayServiceV1:
             artifact.artifact_id.hex(),
         )
 
+    @staticmethod
+    def _audit_method(method: str) -> str:
+        value = method.upper()
+        if value in {"GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"}:
+            return value
+        return "<other>"
+
     @classmethod
     def _audit_endpoint(cls, path: str) -> str:
         clean = path.split("?", 1)[0].split("#", 1)[0]
@@ -888,7 +895,7 @@ class GatewayServiceV1:
                 self.audit_sink.emit(
                     GatewayAuditRecordV1(
                         sequence=sequence,
-                        method=method.upper(),
+                        method=self._audit_method(method),
                         endpoint=audit_endpoint,
                         status=response.status,
                         error_code=GatewayErrorCodeV1.BUSY.value,

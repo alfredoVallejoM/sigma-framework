@@ -769,6 +769,31 @@ def test_px4_cli_requires_explicit_nonlocal_bind_acknowledgement(tmp_path: Path)
     assert parsed.max_response_bytes == 8192
     assert parsed.max_concurrent_requests == 3
 
+
+def test_px4_http_connection_limit_rejects_before_handler_thread(tmp_path: Path):
+    service = GatewayServiceV1(
+        LocalArtifactStoreV1(tmp_path / "store"),
+        limits=GatewayLimitsV1(max_http_connections=1),
+    )
+    server = create_gateway_http_server_v1("127.0.0.1", 0, service)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    assert server._connection_slots.acquire(blocking=False)
+    try:
+        host, port = server.server_address
+        connection = http.client.HTTPConnection(host, port, timeout=5)
+        connection.request("GET", "/health")
+        response = connection.getresponse()
+        body = response.read()
+        connection.close()
+        assert response.status == 503
+        assert json.loads(body.decode("ascii"))["code"] == "busy"
+    finally:
+        server._connection_slots.release()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
 def test_px4_http_header_limit_and_chunked_requests_fail_closed(tmp_path: Path):
 
     limits = GatewayLimitsV1(max_header_bytes=512)

@@ -29,6 +29,7 @@ from .oci import (
     SIGMA_ARTIFACT_ID_ANNOTATION,
     SIGMA_ARTIFACT_REFERRER_TYPE,
     OciDescriptorV1,
+    OciManifestError,
     OciSigmaArtifactBindingV1,
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
@@ -149,6 +150,8 @@ class OciReferrersResultV1:
     descriptors: tuple[OciDescriptorV1, ...]
     source: OciReferrersSourceV1
     pages: int
+    filter_applied: bool | None = None
+    fallback_valid: bool = True
 
 
 @dataclass(frozen=True)
@@ -1013,11 +1016,21 @@ class OciRegistryClientV1:
                 (),
                 OciReferrersSourceV1.TAG_FALLBACK,
                 1,
+                fallback_valid=True,
             )
-        descriptors = self._parse_all_referrers_index(
-            wire,
-            max_referrers=self.limits.max_referrers,
-        )
+        try:
+            descriptors = self._parse_all_referrers_index(
+                wire,
+                max_referrers=self.limits.max_referrers,
+            )
+        except (OciRegistryProtocolError, OciManifestError):
+            return OciReferrersResultV1(
+                subject_digest,
+                (),
+                OciReferrersSourceV1.TAG_FALLBACK,
+                1,
+                fallback_valid=False,
+            )
         sigma = tuple(
             item
             for item in descriptors
@@ -1028,6 +1041,7 @@ class OciRegistryClientV1:
             tuple(sorted(sigma, key=lambda item: item.digest)),
             OciReferrersSourceV1.TAG_FALLBACK,
             1,
+            fallback_valid=True,
         )
 
     def _next_referrers_link(
@@ -1064,6 +1078,7 @@ class OciRegistryClientV1:
         )
         descriptors: dict[str, OciDescriptorV1] = {}
         pages = 0
+        filter_applied = True
         seen_urls: set[str] = set()
         while True:
             if url in seen_urls:
@@ -1101,6 +1116,17 @@ class OciRegistryClientV1:
                 what="OCI referrers GET",
                 required=True,
             )
+            filters_header = response.header("OCI-Filters-Applied")
+            page_filter_applied = (
+                filters_header is not None
+                and "artifactType"
+                in {
+                    item.strip()
+                    for item in filters_header.split(",")
+                    if item.strip()
+                }
+            )
+            filter_applied = filter_applied and page_filter_applied
             for item in parse_sigma_referrers_index_v1(
                 response.body,
                 max_bytes=self.limits.max_referrers_bytes,
@@ -1124,6 +1150,8 @@ class OciRegistryClientV1:
             tuple(sorted(descriptors.values(), key=lambda item: item.digest)),
             OciReferrersSourceV1.API,
             pages,
+            filter_applied=filter_applied,
+            fallback_valid=True,
         )
 
     def _update_referrers_tag(

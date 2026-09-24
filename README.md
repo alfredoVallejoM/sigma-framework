@@ -113,7 +113,7 @@ infrastructure.
 Important resource controls include request/source/proof limits, bounded HTTP
 connections and verification concurrency, a global temporary-spool budget, and
 request deadlines. See `docs/product-expansion/PX4-GATEWAY-CONTRACT.md` and
-`PX4-HTTP-PROTOCOL.md` for the frozen implementation contract.
+`docs/product-expansion/PX4-HTTP-PROTOCOL.md` for the frozen implementation contract.
 
 ## Python API
 

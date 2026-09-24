@@ -33,8 +33,17 @@ from .oci import (
     OciSigmaArtifactBindingV1,
     build_sigma_artifact_referrer_v1,
     oci_sha256_digest_v1,
-    parse_sigma_referrers_index_v1,
+    parse_oci_referrers_index_v1,
     verify_sigma_artifact_referrer_v1,
+)
+from .oci_sidecars import (
+    SIGMA_MANIFEST_ID_ANNOTATION,
+    SIGMA_RECEIPT_ID_ANNOTATION,
+    OciSigmaSidecarBindingV1,
+    OciSigmaSidecarKindV1,
+    OciVerifiedSigmaSidecarV1,
+    sidecar_artifact_type_v1,
+    verify_sigma_sidecar_referrer_v1,
 )
 from .oci_auth import (
     OciAuthTransportV1,
@@ -158,11 +167,22 @@ class OciReferrersResultV1:
     pages: int
     filter_applied: bool | None = None
     fallback_valid: bool = True
+    artifact_type: str = SIGMA_ARTIFACT_REFERRER_TYPE
 
 
 @dataclass(frozen=True)
 class OciAttachResultV1:
     binding: OciSigmaArtifactBindingV1
+    config_reused: bool
+    payload_reused: bool
+    subject_acknowledged: bool
+    fallback_tag_updated: bool
+    discovered_after_push: bool
+
+
+@dataclass(frozen=True)
+class OciSidecarAttachResultV1:
+    binding: OciSigmaSidecarBindingV1
     config_reused: bool
     payload_reused: bool
     subject_acknowledged: bool
@@ -1057,6 +1077,8 @@ class OciRegistryClientV1:
     def _fallback_referrers(
         self,
         subject_digest: str,
+        *,
+        artifact_type: str,
     ) -> OciReferrersResultV1:
         tag = oci_referrers_tag_v1(subject_digest)
         try:
@@ -1077,6 +1099,7 @@ class OciRegistryClientV1:
                 OciReferrersSourceV1.TAG_FALLBACK,
                 1,
                 fallback_valid=True,
+                artifact_type=artifact_type,
             )
         except (OciRegistryProtocolError, OciManifestError):
             return OciReferrersResultV1(
@@ -1085,11 +1108,12 @@ class OciRegistryClientV1:
                 OciReferrersSourceV1.TAG_FALLBACK,
                 1,
                 fallback_valid=False,
+                artifact_type=artifact_type,
             )
         sigma = tuple(
             item
             for item in descriptors
-            if item.artifact_type == SIGMA_ARTIFACT_REFERRER_TYPE
+            if item.artifact_type == artifact_type
         )
         return OciReferrersResultV1(
             subject_digest,
@@ -1121,15 +1145,19 @@ class OciRegistryClientV1:
     def list_referrers(
         self,
         subject_digest: str,
+        *,
+        artifact_type: str = SIGMA_ARTIFACT_REFERRER_TYPE,
     ) -> OciReferrersResultV1:
         _validate_digest(subject_digest)
+        if not isinstance(artifact_type, str) or "/" not in artifact_type:
+            raise ValueError("artifact_type must be an OCI media type")
         initial = self._api_url(
             "referrers/"
             + urllib.parse.quote(subject_digest, safe="-._~:+=")
         )
         url = _with_query(
             initial,
-            artifactType=SIGMA_ARTIFACT_REFERRER_TYPE,
+            artifactType=artifact_type,
         )
         descriptors: dict[str, OciDescriptorV1] = {}
         pages = 0
@@ -1156,7 +1184,10 @@ class OciRegistryClientV1:
                     raise OciRegistryProtocolError(
                         "OCI referrers pagination disappeared"
                     )
-                return self._fallback_referrers(subject_digest)
+                return self._fallback_referrers(
+                    subject_digest,
+                    artifact_type=artifact_type,
+                )
             if response.status != 200:
                 raise OciRegistryProtocolError(
                     f"OCI referrers GET returned HTTP {response.status}"
@@ -1182,10 +1213,12 @@ class OciRegistryClientV1:
                 }
             )
             filter_applied = filter_applied and page_filter_applied
-            for item in parse_sigma_referrers_index_v1(
+            for item in parse_oci_referrers_index_v1(
                 response.body,
                 max_bytes=self.limits.max_referrers_bytes,
             ):
+                if item.artifact_type != artifact_type:
+                    continue
                 previous = descriptors.get(item.digest)
                 if previous is not None and previous != item:
                     raise OciRegistryConflictError(
@@ -1207,6 +1240,7 @@ class OciRegistryClientV1:
             pages,
             filter_applied=filter_applied,
             fallback_valid=True,
+            artifact_type=artifact_type,
         )
 
     def _update_referrers_tag(

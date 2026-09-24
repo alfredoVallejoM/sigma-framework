@@ -54,9 +54,9 @@ from .protocol import (
     read_artifact_verify_metadata_v1,
     read_batch_header_v1,
     read_batch_item_metadata_v1,
-    read_inclusion_verify_v1,
+    read_inclusion_verify_head_v1,
     read_policy_evaluate_metadata_v1,
-    read_range_verify_v1,
+    read_range_verify_head_v1,
 )
 from .runtime import (
     GatewayAuditRecordV1,
@@ -663,16 +663,27 @@ class GatewayServiceV1:
         reader: GatewayBodyReaderV1,
         token: GatewayCancellationTokenV1,
     ) -> _GatewayOutcomeV1:
-        metadata = read_inclusion_verify_v1(reader)
+        head = read_inclusion_verify_head_v1(reader)
         try:
-            proof = InclusionProofV1.from_bytes(metadata.proof_wire)
+            proof = InclusionProofV1.from_bytes(head.proof_wire)
         except (TypeError, ValueError) as exc:
             raise GatewayError(
                 code=GatewayErrorCodeV1.MALFORMED_PROOF,
                 safe_message="inclusion proof is malformed",
             ) from exc
         token.check()
-        verified = verify_inclusion(metadata.leaf, proof)
+        if head.leaf_length != proof.leaf_byte_length:
+            return _GatewayOutcomeV1(
+                GatewayResponseV1(
+                    200,
+                    "application/json",
+                    _proof_result_json(False),
+                ),
+                decision="rejected",
+            )
+        leaf = reader.read_exact(head.leaf_length)
+        reader.require_consumed()
+        verified = verify_inclusion(leaf, proof)
         token.check()
         return _GatewayOutcomeV1(
             GatewayResponseV1(
@@ -688,16 +699,27 @@ class GatewayServiceV1:
         reader: GatewayBodyReaderV1,
         token: GatewayCancellationTokenV1,
     ) -> _GatewayOutcomeV1:
-        metadata = read_range_verify_v1(reader)
+        head = read_range_verify_head_v1(reader)
         try:
-            proof = RangeProofV1.from_bytes(metadata.proof_wire)
+            proof = RangeProofV1.from_bytes(head.proof_wire)
         except (TypeError, ValueError) as exc:
             raise GatewayError(
                 code=GatewayErrorCodeV1.MALFORMED_PROOF,
                 safe_message="range proof is malformed",
             ) from exc
         token.check()
-        verified = verify_range(metadata.range_bytes, proof)
+        if head.value_length != proof.length:
+            return _GatewayOutcomeV1(
+                GatewayResponseV1(
+                    200,
+                    "application/json",
+                    _proof_result_json(False),
+                ),
+                decision="rejected",
+            )
+        range_bytes = reader.read_exact(head.value_length)
+        reader.require_consumed()
+        verified = verify_range(range_bytes, proof)
         token.check()
         return _GatewayOutcomeV1(
             GatewayResponseV1(

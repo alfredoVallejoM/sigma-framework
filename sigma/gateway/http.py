@@ -117,6 +117,12 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
         )
         self._write_response(response)
 
+    def setup(self) -> None:
+        super().setup()
+        self.connection.settimeout(
+            self._gateway_server.gateway_service.limits.request_timeout_seconds
+        )
+
     @property
     def _gateway_server(self) -> GatewayThreadingHTTPServerV1:
         server = self.server
@@ -275,12 +281,17 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
                 error_code=exc.code,
             )
         except Exception:
-            response = error_response_v1(
-                GatewayError(
-                    status=500,
-                    code=GatewayErrorCodeV1.INTERNAL,
-                    safe_message="internal gateway transport error",
-                )
+            error = GatewayError(
+                status=500,
+                code=GatewayErrorCodeV1.INTERNAL,
+                safe_message="internal gateway transport error",
+            )
+            response = error_response_v1(error)
+            self._gateway_server.gateway_service.audit_transport_rejection(
+                method=getattr(self, "command", ""),
+                path=getattr(self, "path", ""),
+                response=response,
+                error_code=error.code,
             )
         self._write_response(response)
 

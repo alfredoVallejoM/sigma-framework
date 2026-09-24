@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from sigma.artifact import SigmaArtifactV1
@@ -14,6 +16,32 @@ from .oci import (
     verify_sigma_artifact_referrer_v1,
 )
 from .oci_registry import OciRegistryClientV1
+
+
+def _write_bytes_atomic(path: Path, data: bytes) -> None:
+    if not isinstance(path, Path):
+        raise TypeError("path must be Path")
+    if not isinstance(data, bytes):
+        raise TypeError("data must be bytes")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=path.parent,
+    )
+    temporary_path = Path(temporary)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    except BaseException:
+        try:
+            temporary_path.unlink()
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def _key_values(values: list[str] | None, *, what: str) -> dict[str, str]:
@@ -237,17 +265,15 @@ def _pull(args: argparse.Namespace) -> int:
             expected_id,
         )
 
-    args.output_artifact.parent.mkdir(
-        parents=True,
-        exist_ok=True,
+    _write_bytes_atomic(
+        args.output_artifact,
+        binding.artifact_wire,
     )
-    args.output_artifact.write_bytes(binding.artifact_wire)
     if args.output_manifest is not None:
-        args.output_manifest.parent.mkdir(
-            parents=True,
-            exist_ok=True,
+        _write_bytes_atomic(
+            args.output_manifest,
+            binding.manifest_wire,
         )
-        args.output_manifest.write_bytes(binding.manifest_wire)
 
     print(
         json.dumps(

@@ -691,3 +691,122 @@ def test_ix0_pull_can_check_subject_digest_without_full_descriptor():
             result.binding.manifest_descriptor.digest,
             expected_subject_digest="sha256:" + "99" * 32,
         )
+
+
+def test_ix0_native_referrers_filters_locally_when_registry_ignores_filter():
+    transport = GateOciRegistryTransport(
+        native_referrers=True,
+        apply_artifact_type_filter=False,
+    )
+    client = _client(transport)
+    subject = make_subject_descriptor(b"ignored-filter-subject")
+    sigma = client.attach_artifact(
+        _artifact(b"ignored-filter-artifact"),
+        subject=subject,
+    )
+
+    other_wire = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "artifactType": "application/vnd.example.other.v1",
+            "config": {
+                "mediaType": "application/vnd.oci.empty.v1+json",
+                "digest": (
+                    "sha256:"
+                    "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                ),
+                "size": 2,
+            },
+            "layers": [],
+            "subject": subject.to_dict(),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    other_digest = client.put_manifest(
+        other_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        expected_subject_digest=subject.digest,
+    ).digest
+    assert other_digest in transport.referrers[subject.digest]
+
+    refs = client.list_referrers(subject.digest)
+    assert refs.filter_applied is False
+    assert [item.digest for item in refs.descriptors] == [
+        sigma.binding.manifest_descriptor.digest
+    ]
+
+
+def test_ix0_invalid_fallback_tag_is_reported_as_empty_invalid_query():
+    transport = GateOciRegistryTransport(native_referrers=False)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"invalid-fallback-subject")
+    tag = oci_referrers_tag_v1(subject.digest)
+    wrong_wire = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.empty.v1+json",
+                "digest": (
+                    "sha256:"
+                    "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                ),
+                "size": 2,
+            },
+            "layers": [],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    client.put_manifest(
+        wrong_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        reference=tag,
+    )
+
+    refs = client.list_referrers(subject.digest)
+    assert refs.source is OciReferrersSourceV1.TAG_FALLBACK
+    assert refs.descriptors == ()
+    assert refs.fallback_valid is False
+
+
+def test_ix0_attach_refuses_to_overwrite_invalid_fallback_tag():
+    transport = GateOciRegistryTransport(native_referrers=False)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"invalid-fallback-push-subject")
+    tag = oci_referrers_tag_v1(subject.digest)
+    wrong_wire = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.empty.v1+json",
+                "digest": (
+                    "sha256:"
+                    "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                ),
+                "size": 2,
+            },
+            "layers": [],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    original = client.put_manifest(
+        wrong_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        reference=tag,
+    ).digest
+
+    with pytest.raises(
+        OciRegistryProtocolError,
+        match="unexpected Content-Type|not an image index",
+    ):
+        client.attach_artifact(
+            _artifact(b"must-not-overwrite"),
+            subject=subject,
+        )
+
+    assert transport.tags[tag] == original

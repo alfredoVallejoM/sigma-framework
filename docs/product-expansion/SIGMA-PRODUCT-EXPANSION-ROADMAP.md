@@ -576,6 +576,39 @@ Requirements:
 - offline verification after pull;
 - ORAS CLI/reference differential fixtures.
 
+## Current implementation status
+
+IX0 está ACTIVE y IX0-A + IX0-B están implementados a nivel de source.
+
+IX0-A:
+- `OciDescriptorV1`;
+- canonical Sigma Artifact referrer manifest;
+- strict bounded parsing;
+- offline verification;
+- explicit OCI digest / ArtifactId separation.
+
+IX0-B:
+- `OciRegistryClientV1`;
+- bounded blob and manifest publication;
+- native OCI 1.1 referrers discovery;
+- referrers-tag fallback;
+- bounded pagination, retries and response bodies;
+- direct pull by referrer digest;
+- ArtifactId-driven discovery;
+- cross-origin credential stripping;
+- `sigma oci attach|refs|pull|verify`;
+- deterministic registry fixtures;
+- local IX0 campaign gate;
+- live ORAS 1.3 differential probe.
+
+Important boundary:
+- PX3 `OciRegistryBackendV1` remains storage plumbing;
+- IX0 owns OCI artifact/referrer semantics;
+- neither registry state nor OCI metadata enters ArtifactId.
+
+IX0 remains ACTIVE rather than COMPLETE until source tests/gates and a real
+registry + ORAS differential execute successfully.
+
 # 11. IX1 — Sigstore / Rekor
 
 Do not replace Sigstore.

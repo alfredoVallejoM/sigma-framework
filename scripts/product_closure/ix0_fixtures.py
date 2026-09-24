@@ -44,6 +44,8 @@ class GateOciRegistryTransport:
     native_referrers: bool = True
     page_size: int | None = None
     cross_origin_upload: bool = False
+    manifest_content_type_override: str | None = None
+    pagination_loop: bool = False
     lose_blob_completion_once: bool = False
     lose_conditional_manifest_once: bool = False
     retry_once: dict[tuple[str, str], int] = field(default_factory=dict)
@@ -104,14 +106,28 @@ class GateOciRegistryTransport:
         if digest is None:
             return self._response(404, url)
         wire = self.manifests[digest]
+        content_type = self.manifest_content_type_override
+        if content_type is None:
+            try:
+                decoded = json.loads(wire.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                decoded = None
+            if isinstance(decoded, dict) and isinstance(
+                decoded.get("mediaType"),
+                str,
+            ):
+                content_type = str(decoded["mediaType"])
+        response_headers = [
+            ("Docker-Content-Digest", digest),
+            ("Content-Length", str(len(wire))),
+            ("ETag", f'"{digest}"'),
+        ]
+        if content_type is not None:
+            response_headers.append(("Content-Type", content_type))
         return self._response(
             200,
             url,
-            headers=_headers(
-                Docker_Content_Digest=digest,
-                Content_Length=str(len(wire)),
-                ETag=f'"{digest}"',
-            ),
+            headers=tuple(response_headers),
             body=wire,
         )
 
@@ -229,6 +245,8 @@ class GateOciRegistryTransport:
                     "",
                 )
             )
+            if self.pagination_loop:
+                next_url = url
             response_headers.append(("Link", f'<{next_url}>; rel="next"'))
         return self._response(
             200,

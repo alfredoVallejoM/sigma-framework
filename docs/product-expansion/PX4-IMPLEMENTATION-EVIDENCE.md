@@ -570,6 +570,21 @@ loopback; non-loopback requires --allow-nonlocal-bind.
 
 Status: RESOLVED IN IMPLEMENTATION.
 
+### AR-PX4-17 — ThreadingHTTPServer could spawn unbounded pre-service threads
+
+Finding:
+the verification semaphore is acquired inside GatewayServiceV1, after the HTTP
+server has already created a handler thread. Clients stalled during request
+parsing could therefore consume threads outside max_concurrent_requests.
+
+Resolution:
+GatewayThreadingHTTPServerV1 now owns a second BoundedSemaphore controlled by
+max_http_connections. Exhaustion returns canonical 503 before thread creation.
+The gate/unit suite reserves the only slot and requires a new connection to be
+rejected without a handler thread.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
 ## 33. Current disposition
 
 Implementation for planned PX4 V1: COMPLETE.

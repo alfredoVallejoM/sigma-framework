@@ -66,11 +66,20 @@ if [[ "${IX0_LAYOUT_DIFF:-0}" == "1" ]]; then
     --layout "$IX0_LAYOUT"
     --output "$LAYOUT_JSON"
   )
+  if [[ -n "${IX0_LAYOUT_KIND:-}" ]]; then
+    layout_args+=(--kind "$IX0_LAYOUT_KIND")
+  fi
   if [[ -n "${IX0_LAYOUT_ARTIFACT_ID:-}" ]]; then
     layout_args+=(--artifact-id "$IX0_LAYOUT_ARTIFACT_ID")
   fi
+  if [[ -n "${IX0_LAYOUT_SEMANTIC_ID:-}" ]]; then
+    layout_args+=(--semantic-id "$IX0_LAYOUT_SEMANTIC_ID")
+  fi
   if [[ -n "${IX0_LAYOUT_REFERRER_DIGEST:-}" ]]; then
     layout_args+=(--referrer-digest "$IX0_LAYOUT_REFERRER_DIGEST")
+  fi
+  if [[ -n "${IX0_LAYOUT_REFERRER_REF_NAME:-}" ]]; then
+    layout_args+=(--referrer-ref-name "$IX0_LAYOUT_REFERRER_REF_NAME")
   fi
   "${layout_args[@]}"
 else

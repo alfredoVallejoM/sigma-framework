@@ -883,6 +883,10 @@ class GatewayServiceV1:
             value = value[: -len(suffix)]
         if "/" in value or len(value) != 64:
             return None
+        if value != value.lower() or any(
+            character not in "0123456789abcdef" for character in value
+        ):
+            return None
         try:
             raw = bytes.fromhex(value)
         except ValueError:

@@ -60,7 +60,11 @@ class GatewayThreadingHTTPServerV1(ThreadingHTTPServer):
 
     def process_request(self, request, client_address) -> None:
         if self._connection_slots.acquire(blocking=False):
-            super().process_request(request, client_address)
+            try:
+                super().process_request(request, client_address)
+            except BaseException:
+                self._connection_slots.release()
+                raise
             return
 
         error = GatewayBusyError(

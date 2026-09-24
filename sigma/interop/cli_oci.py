@@ -370,6 +370,7 @@ def _layout_verify(args: argparse.Namespace) -> int:
         args.layout,
         expected_artifact_id=expected_id,
         referrer_digest=args.referrer_digest,
+        referrer_ref_name=args.referrer_ref_name,
     )
     print(
         json.dumps(
@@ -556,6 +557,7 @@ def add_oci_commands(commands) -> None:
     layout_verify.add_argument("layout", type=Path)
     layout_verify.add_argument("--artifact-id")
     layout_verify.add_argument("--referrer-digest")
+    layout_verify.add_argument("--referrer-ref-name")
     layout_verify.set_defaults(handler=_layout_verify)
 
     verify = actions.add_parser(

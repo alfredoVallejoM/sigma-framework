@@ -21,6 +21,7 @@ from .runtime import (
     GatewayMetadataTooLargeError,
     GatewayRequestTooLargeError,
     GatewaySourceTooLargeError,
+    GatewayTimeoutError,
     canonical_json_bytes,
 )
 
@@ -160,6 +161,8 @@ class GatewayBodyReaderV1:
     def _stream_read(self, length: int) -> bytes:
         try:
             chunk = self.stream.read(length)
+        except TimeoutError as exc:
+            raise GatewayTimeoutError() from exc
         except (OSError, ConnectionError) as exc:
             raise GatewayCancelledError() from exc
         if not isinstance(chunk, bytes):

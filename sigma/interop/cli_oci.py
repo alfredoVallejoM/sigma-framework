@@ -9,6 +9,8 @@ import tempfile
 from pathlib import Path
 
 from sigma.artifact import SigmaArtifactV1
+from sigma.trajectory import VerificationReceiptV1
+from sigma.tree import InclusionProofV1, ManifestV1, RangeProofV1
 
 from .oci import (
     OCI_IMAGE_MANIFEST_MEDIA_TYPE,
@@ -16,6 +18,15 @@ from .oci import (
     verify_sigma_artifact_referrer_v1,
 )
 from .oci_auth import OciBearerAuthV1
+from .oci_sidecars import (
+    OciSigmaSidecarKindV1,
+    build_sigma_inclusion_proof_referrer_v1,
+    build_sigma_manifest_referrer_v1,
+    build_sigma_range_proof_referrer_v1,
+    build_sigma_receipt_referrer_v1,
+    sidecar_artifact_type_v1,
+    verify_sigma_sidecar_referrer_v1,
+)
 from .oci_layout import (
     verify_sigma_artifact_layout_v1,
     write_sigma_artifact_layout_v1,
@@ -61,16 +72,43 @@ def _key_values(values: list[str] | None, *, what: str) -> dict[str, str]:
     return result
 
 
-def _artifact_id(value: str | None) -> bytes | None:
+_SIDECAR_KIND_BY_CLI = {
+    "manifest": OciSigmaSidecarKindV1.MANIFEST,
+    "receipt": OciSigmaSidecarKindV1.VERIFICATION_RECEIPT,
+    "inclusion-proof": OciSigmaSidecarKindV1.INCLUSION_PROOF,
+    "range-proof": OciSigmaSidecarKindV1.RANGE_PROOF,
+}
+
+
+def _sidecar_kind(value: str) -> OciSigmaSidecarKindV1:
+    try:
+        return _SIDECAR_KIND_BY_CLI[value]
+    except KeyError as exc:
+        raise ValueError(f"unsupported sidecar kind: {value}") from exc
+
+
+def _hex_id32(
+    value: str | None,
+    *,
+    name: str,
+) -> bytes | None:
     if value is None:
         return None
     try:
         raw = bytes.fromhex(value)
     except ValueError as exc:
-        raise ValueError("ArtifactId must be 64 hexadecimal characters") from exc
+        raise ValueError(
+            f"{name} must be 64 hexadecimal characters"
+        ) from exc
     if len(raw) != 32:
-        raise ValueError("ArtifactId must be 64 hexadecimal characters")
+        raise ValueError(
+            f"{name} must be 64 hexadecimal characters"
+        )
     return raw
+
+
+def _artifact_id(value: str | None) -> bytes | None:
+    return _hex_id32(value, name="ArtifactId")
 
 
 def _subject_from_args(
@@ -336,6 +374,247 @@ def _pull(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_sidecar_from_path(
+    kind: OciSigmaSidecarKindV1,
+    payload_path: Path,
+    *,
+    subject: OciDescriptorV1,
+    annotations: dict[str, str],
+):
+    wire = payload_path.read_bytes()
+    if kind is OciSigmaSidecarKindV1.MANIFEST:
+        return build_sigma_manifest_referrer_v1(
+            ManifestV1.from_bytes(wire),
+            subject=subject,
+            annotations=annotations,
+        )
+    if kind is OciSigmaSidecarKindV1.VERIFICATION_RECEIPT:
+        return build_sigma_receipt_referrer_v1(
+            VerificationReceiptV1.from_bytes(wire),
+            subject=subject,
+            annotations=annotations,
+        )
+    if kind is OciSigmaSidecarKindV1.INCLUSION_PROOF:
+        return build_sigma_inclusion_proof_referrer_v1(
+            InclusionProofV1.from_bytes(wire),
+            subject=subject,
+            annotations=annotations,
+        )
+    if kind is OciSigmaSidecarKindV1.RANGE_PROOF:
+        return build_sigma_range_proof_referrer_v1(
+            RangeProofV1.from_bytes(wire),
+            subject=subject,
+            annotations=annotations,
+        )
+    raise AssertionError("unknown sidecar kind")
+
+
+def _sidecar_attach(args: argparse.Namespace) -> int:
+    client = _registry_client(args)
+    subject = _registry_subject(
+        args,
+        client,
+        required=True,
+    )
+    if subject is None:
+        raise ValueError("OCI subject is required")
+    kind = _sidecar_kind(args.kind)
+    binding = _build_sidecar_from_path(
+        kind,
+        args.payload,
+        subject=subject,
+        annotations=_key_values(
+            args.annotation,
+            what="annotation",
+        ),
+    )
+    result = client.attach_sidecar(
+        binding,
+        verify_subject=args.verify_subject
+        and args.subject_reference is None,
+    )
+    print(
+        json.dumps(
+            {
+                "kind": kind.value,
+                "semantic_id": (
+                    None
+                    if binding.semantic_id is None
+                    else binding.semantic_id.hex()
+                ),
+                "payload_digest": binding.payload_descriptor.digest,
+                "referrer_digest": binding.manifest_descriptor.digest,
+                "subject_digest": binding.subject.digest,
+                "subject_acknowledged": result.subject_acknowledged,
+                "fallback_tag_updated": result.fallback_tag_updated,
+                "payload_reused": result.payload_reused,
+                "discovered_after_push": result.discovered_after_push,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _sidecar_refs(args: argparse.Namespace) -> int:
+    client = _registry_client(args)
+    subject_digest = _registry_subject_digest(
+        args,
+        client,
+        required=True,
+    )
+    if subject_digest is None:
+        raise ValueError("OCI subject digest is required")
+    kind = _sidecar_kind(args.kind)
+    result = client.list_referrers(
+        subject_digest,
+        artifact_type=sidecar_artifact_type_v1(kind),
+    )
+    print(
+        json.dumps(
+            {
+                "kind": kind.value,
+                "subject_digest": subject_digest,
+                "source": result.source.value,
+                "pages": result.pages,
+                "filter_applied": result.filter_applied,
+                "fallback_valid": result.fallback_valid,
+                "referrers": [
+                    item.to_dict()
+                    for item in result.descriptors
+                ],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _sidecar_pull(args: argparse.Namespace) -> int:
+    client = _registry_client(args)
+    kind = _sidecar_kind(args.kind)
+    semantic_id = _hex_id32(
+        args.semantic_id,
+        name="sidecar semantic id",
+    )
+    if args.referrer_digest is not None:
+        expected_subject = None
+        expected_subject_digest = None
+        if (
+            args.subject_reference is not None
+            or args.subject_size is not None
+            or args.subject_media_type is not None
+        ):
+            expected_subject = _registry_subject(
+                args,
+                client,
+                required=False,
+            )
+        else:
+            expected_subject_digest = _registry_subject_digest(
+                args,
+                client,
+                required=False,
+            )
+        verified = client.pull_sidecar_by_digest(
+            args.referrer_digest,
+            expected_kind=kind,
+            expected_subject=expected_subject,
+            expected_subject_digest=expected_subject_digest,
+            expected_semantic_id=semantic_id,
+        )
+    else:
+        if semantic_id is None:
+            raise ValueError(
+                "--semantic-id is required when no referrer digest is supplied"
+            )
+        subject_digest = _registry_subject_digest(
+            args,
+            client,
+            required=True,
+        )
+        if subject_digest is None:
+            raise ValueError("OCI subject digest is required")
+        verified = client.pull_sidecar(
+            subject_digest,
+            kind=kind,
+            semantic_id=semantic_id,
+        )
+
+    _write_bytes_atomic(
+        args.output_payload,
+        verified.binding.payload_wire,
+    )
+    if args.output_manifest is not None:
+        _write_bytes_atomic(
+            args.output_manifest,
+            verified.binding.manifest_wire,
+        )
+    print(
+        json.dumps(
+            {
+                "kind": verified.binding.kind.value,
+                "semantic_id": (
+                    None
+                    if verified.binding.semantic_id is None
+                    else verified.binding.semantic_id.hex()
+                ),
+                "payload_output": str(args.output_payload),
+                "manifest_output": (
+                    None
+                    if args.output_manifest is None
+                    else str(args.output_manifest)
+                ),
+                "payload_digest": (
+                    verified.binding.payload_descriptor.digest
+                ),
+                "referrer_digest": (
+                    verified.binding.manifest_descriptor.digest
+                ),
+                "subject_digest": verified.binding.subject.digest,
+                "offline_verified": True,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _sidecar_verify(args: argparse.Namespace) -> int:
+    kind = _sidecar_kind(args.kind)
+    verified = verify_sigma_sidecar_referrer_v1(
+        args.manifest.read_bytes(),
+        args.payload.read_bytes(),
+        expected_kind=kind,
+        expected_semantic_id=_hex_id32(
+            args.semantic_id,
+            name="sidecar semantic id",
+        ),
+    )
+    print(
+        json.dumps(
+            {
+                "kind": verified.binding.kind.value,
+                "semantic_id": (
+                    None
+                    if verified.binding.semantic_id is None
+                    else verified.binding.semantic_id.hex()
+                ),
+                "payload_digest": (
+                    verified.binding.payload_descriptor.digest
+                ),
+                "referrer_digest": (
+                    verified.binding.manifest_descriptor.digest
+                ),
+                "subject_digest": verified.binding.subject.digest,
+                "offline_verified": True,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def _layout_export(args: argparse.Namespace) -> int:
     artifact = SigmaArtifactV1.from_bytes(args.artifact.read_bytes())
     annotations = _key_values(args.annotation, what="annotation")
@@ -528,6 +807,88 @@ def add_oci_commands(commands) -> None:
     pull.add_argument("--output-artifact", type=Path, required=True)
     pull.add_argument("--output-manifest", type=Path)
     pull.set_defaults(handler=_pull)
+
+    sidecar_attach = actions.add_parser(
+        "sidecar-attach",
+        help="attach a typed Sigma Manifest/Receipt/Tree-proof OCI referrer",
+    )
+    _registry_args(sidecar_attach)
+    _registry_subject_args(
+        sidecar_attach,
+        allow_digest_only=False,
+    )
+    sidecar_attach.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    sidecar_attach.add_argument("payload", type=Path)
+    sidecar_attach.add_argument(
+        "--annotation",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+    )
+    sidecar_attach.set_defaults(handler=_sidecar_attach)
+
+    sidecar_refs = actions.add_parser(
+        "sidecar-refs",
+        help="list one typed Sigma sidecar referrer class",
+    )
+    _registry_args(sidecar_refs)
+    _registry_subject_args(
+        sidecar_refs,
+        allow_digest_only=True,
+    )
+    sidecar_refs.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    sidecar_refs.set_defaults(handler=_sidecar_refs)
+
+    sidecar_pull = actions.add_parser(
+        "sidecar-pull",
+        help="pull and verify a typed Sigma OCI sidecar",
+    )
+    _registry_args(sidecar_pull)
+    sidecar_pull.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    selector = sidecar_pull.add_mutually_exclusive_group(required=True)
+    selector.add_argument("--referrer-digest")
+    selector.add_argument("--semantic-id")
+    sidecar_pull.add_argument("--subject-reference")
+    sidecar_pull.add_argument("--subject-digest")
+    sidecar_pull.add_argument("--subject-size", type=int)
+    sidecar_pull.add_argument("--subject-media-type")
+    sidecar_pull.add_argument(
+        "--verify-subject",
+        action="store_true",
+    )
+    sidecar_pull.add_argument(
+        "--output-payload",
+        type=Path,
+        required=True,
+    )
+    sidecar_pull.add_argument("--output-manifest", type=Path)
+    sidecar_pull.set_defaults(handler=_sidecar_pull)
+
+    sidecar_verify = actions.add_parser(
+        "sidecar-verify",
+        help="verify an extracted typed Sigma OCI sidecar offline",
+    )
+    sidecar_verify.add_argument(
+        "--kind",
+        choices=tuple(_SIDECAR_KIND_BY_CLI),
+        required=True,
+    )
+    sidecar_verify.add_argument("manifest", type=Path)
+    sidecar_verify.add_argument("payload", type=Path)
+    sidecar_verify.add_argument("--semantic-id")
+    sidecar_verify.set_defaults(handler=_sidecar_verify)
 
     layout_export = actions.add_parser(
         "layout-export",

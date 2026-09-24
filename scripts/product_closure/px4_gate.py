@@ -638,6 +638,39 @@ def run_gate(
             error_stream.update(hashlib.sha256(first.body).digest())
             deterministic_errors += 1
 
+        # Canonical routing and audit-field normalization.
+        route_artifact = _tree_artifact(b"px4-route-canonicality", 250_000)
+        store.put_artifact(route_artifact)
+        uppercase_route = service.handle(
+            method="GET",
+            path=f"/v1/artifacts/{route_artifact.artifact_id.hex().upper()}",
+            content_type="",
+            body_stream=io.BytesIO(b""),
+            content_length=0,
+        )
+        if (
+            uppercase_route.status != 404
+            or _json_body(uppercase_route)["code"] != "not-found"
+        ):
+            raise AssertionError("PX4 accepted non-canonical ArtifactId path alias")
+        canonical_artifact_route_enforced = True
+
+        secret_method = "SECRET-METHOD-TOKEN"
+        before_audit = len(audit.records)
+        secret_method_response = service.handle(
+            method=secret_method,
+            path="/health",
+            content_type="",
+            body_stream=io.BytesIO(b""),
+            content_length=0,
+        )
+        if secret_method_response.status != 404:
+            raise AssertionError("PX4 arbitrary method fixture status diverged")
+        method_record = audit.records[before_audit]
+        if method_record.method != "<other>" or secret_method.encode() in method_record.to_json_bytes():
+            raise AssertionError("PX4 arbitrary HTTP method leaked into audit")
+        audit_method_normalized = True
+
         # Actual localhost HTTP adapter campaign.
         http_audit = MemoryGatewayAuditSinkV1()
         http_service = GatewayServiceV1(
@@ -934,6 +967,8 @@ def run_gate(
         "timeout_requests_isolated": timeout_isolated,
         "error_schema_cases": error_schema_cases,
         "deterministic_error_cases": deterministic_errors,
+        "canonical_artifact_route_enforced": canonical_artifact_route_enforced,
+        "audit_method_normalized": audit_method_normalized,
         "http_cases": http_cases,
         "http_local_parity": http_parity,
         "audit_secret_cases": audit_secret_cases,

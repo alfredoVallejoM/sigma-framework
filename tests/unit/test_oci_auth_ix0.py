@@ -232,3 +232,35 @@ def test_ix0_bearer_auth_repr_does_not_expose_password():
         password="super-secret-password",
     )
     assert "super-secret-password" not in repr(auth)
+
+
+def test_ix0_bearer_rejects_conflicting_realm_query_parameters():
+    challenge = parse_bearer_challenge_v1(
+        'Bearer realm="https://auth.example/token?service=one",'
+        'service="two"'
+    )
+    assert challenge is not None
+
+    class UnusedTransport:
+        def request(
+            self,
+            method,
+            url,
+            *,
+            headers=None,
+            body=None,
+            timeout=30.0,
+        ):
+            del method, url, headers, body, timeout
+            raise AssertionError("conflicting realm must reject before transport")
+
+    with pytest.raises(
+        OciBearerAuthError,
+        match="conflicting service",
+    ):
+        exchange_bearer_challenge_v1(
+            challenge,
+            auth=OciBearerAuthV1(),
+            transport=UnusedTransport(),
+            timeout=1.0,
+        )

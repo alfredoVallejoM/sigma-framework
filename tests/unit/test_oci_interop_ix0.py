@@ -1,0 +1,273 @@
+from __future__ import annotations
+
+import hashlib
+import json
+
+import pytest
+
+from sigma.artifact import ArtifactProfileV1, create_artifact_v1
+from sigma.interop import (
+    OCI_IMAGE_INDEX_MEDIA_TYPE,
+    OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+    SIGMA_ARTIFACT_ID_ANNOTATION,
+    SIGMA_ARTIFACT_REFERRER_TYPE,
+    OciArtifactBindingError,
+    OciDescriptorV1,
+    OciManifestError,
+    build_sigma_artifact_referrer_v1,
+    oci_sha256_digest_v1,
+    parse_sigma_referrers_index_v1,
+    verify_sigma_artifact_referrer_v1,
+)
+from sigma.tree import build_tree
+
+
+def _artifact(payload: bytes = b"ix0-oci-artifact"):
+    return create_artifact_v1(
+        ArtifactProfileV1.TREE,
+        tree_root=build_tree(payload),
+    )
+
+
+def _subject(payload: bytes = b'{"schemaVersion":2}'):
+    return OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest=oci_sha256_digest_v1(payload),
+        size=len(payload),
+    )
+
+
+def _json_mutation(wire: bytes, mutate):
+    decoded = json.loads(wire.decode("utf-8"))
+    mutate(decoded)
+    return json.dumps(
+        decoded,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def test_ix0_referrer_round_trip_verifies_fully_offline():
+    artifact = _artifact()
+    subject = _subject()
+
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=subject,
+    )
+    verified = verify_sigma_artifact_referrer_v1(
+        binding.manifest_wire,
+        binding.artifact_wire,
+        expected_subject=subject,
+        expected_artifact_id=artifact.artifact_id,
+    )
+
+    assert verified.artifact_id == artifact.artifact_id
+    assert verified.artifact_wire == artifact.to_bytes()
+    assert verified.subject == subject
+    assert verified.payload_descriptor.digest == (
+        "sha256:" + hashlib.sha256(artifact.to_bytes()).hexdigest()
+    )
+    assert verified.manifest_descriptor.digest == oci_sha256_digest_v1(
+        binding.manifest_wire
+    )
+
+
+def test_ix0_oci_digest_and_sigma_artifact_id_are_distinct_namespaces():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+
+    assert binding.payload_descriptor.digest.startswith("sha256:")
+    assert binding.manifest_descriptor.digest.startswith("sha256:")
+    assert len(artifact.artifact_id) == 32
+    assert binding.payload_descriptor.digest != artifact.artifact_id.hex()
+    assert binding.manifest_descriptor.digest != artifact.artifact_id.hex()
+    assert dict(binding.payload_descriptor.annotations)[
+        SIGMA_ARTIFACT_ID_ANNOTATION
+    ] == artifact.artifact_id.hex()
+
+
+def test_ix0_registry_metadata_mutation_does_not_change_artifact_id():
+    artifact = _artifact()
+    one = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(b"subject-one"),
+        annotations={"org.opencontainers.image.title": "one"},
+    )
+    two = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(b"subject-two"),
+        annotations={"org.opencontainers.image.title": "two"},
+    )
+
+    assert one.artifact_id == two.artifact_id == artifact.artifact_id
+    assert one.artifact_wire == two.artifact_wire == artifact.to_bytes()
+    assert one.manifest_descriptor.digest != two.manifest_descriptor.digest
+
+
+def test_ix0_manifest_json_reencoding_changes_only_oci_identity():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+    decoded = json.loads(binding.manifest_wire.decode("utf-8"))
+    pretty = json.dumps(decoded, indent=2, sort_keys=False).encode("utf-8")
+
+    verified = verify_sigma_artifact_referrer_v1(
+        pretty,
+        artifact.to_bytes(),
+        expected_artifact_id=artifact.artifact_id,
+    )
+
+    assert verified.artifact_id == artifact.artifact_id
+    assert verified.manifest_descriptor.digest != binding.manifest_descriptor.digest
+
+
+def test_ix0_rejects_payload_digest_tampering():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+    tampered = _json_mutation(
+        binding.manifest_wire,
+        lambda value: value["layers"][0].__setitem__(
+            "digest",
+            "sha256:" + "00" * 32,
+        ),
+    )
+
+    with pytest.raises(
+        OciArtifactBindingError,
+        match="payload descriptor",
+    ):
+        verify_sigma_artifact_referrer_v1(
+            tampered,
+            artifact.to_bytes(),
+        )
+
+
+def test_ix0_rejects_artifact_id_annotation_tampering():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+    tampered = _json_mutation(
+        binding.manifest_wire,
+        lambda value: value["annotations"].__setitem__(
+            SIGMA_ARTIFACT_ID_ANNOTATION,
+            "00" * 32,
+        ),
+    )
+
+    with pytest.raises(
+        OciArtifactBindingError,
+        match="manifest annotation",
+    ):
+        verify_sigma_artifact_referrer_v1(
+            tampered,
+            artifact.to_bytes(),
+        )
+
+
+def test_ix0_expected_subject_is_fail_closed():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(b"subject-a"),
+    )
+
+    with pytest.raises(
+        OciArtifactBindingError,
+        match="expected subject",
+    ):
+        verify_sigma_artifact_referrer_v1(
+            binding.manifest_wire,
+            artifact.to_bytes(),
+            expected_subject=_subject(b"subject-b"),
+        )
+
+
+def test_ix0_referrers_index_filters_sigma_artifact_type():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+    other = OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest="sha256:" + "22" * 32,
+        size=100,
+        artifact_type="application/vnd.example.other.v1",
+    )
+    index = {
+        "schemaVersion": 2,
+        "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+        "manifests": [
+            other.to_dict(),
+            binding.manifest_descriptor.to_dict(),
+        ],
+    }
+    wire = json.dumps(
+        index,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+    assert parse_sigma_referrers_index_v1(wire) == (
+        binding.manifest_descriptor,
+    )
+
+
+def test_ix0_rejects_unknown_descriptor_fields_and_duplicate_json_keys():
+    with pytest.raises(
+        OciManifestError,
+        match="unsupported OCI descriptor field",
+    ):
+        OciDescriptorV1.from_dict(
+            {
+                "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+                "digest": "sha256:" + "11" * 32,
+                "size": 1,
+                "urls": ["https://example.invalid/blob"],
+            }
+        )
+
+    duplicate = (
+        b'{"schemaVersion":2,"schemaVersion":2,'
+        + b'"mediaType":"application/vnd.oci.image.index.v1+json",'
+        + b'"manifests":[]}'
+    )
+    with pytest.raises(
+        OciManifestError,
+        match="duplicate JSON object key",
+    ):
+        parse_sigma_referrers_index_v1(duplicate)
+
+
+def test_ix0_rejects_reserved_artifact_id_annotation_from_caller():
+    with pytest.raises(
+        OciManifestError,
+        match="reserved",
+    ):
+        build_sigma_artifact_referrer_v1(
+            _artifact(),
+            subject=_subject(),
+            annotations={SIGMA_ARTIFACT_ID_ANNOTATION: "00" * 32},
+        )
+
+
+def test_ix0_sigma_referrer_artifact_type_is_explicit():
+    artifact = _artifact()
+    binding = build_sigma_artifact_referrer_v1(
+        artifact,
+        subject=_subject(),
+    )
+    assert binding.manifest_descriptor.artifact_type == (
+        SIGMA_ARTIFACT_REFERRER_TYPE
+    )

@@ -177,9 +177,12 @@ Implementación PX4:
 - cheap preflight con source=None antes de spool/hash;
 - spool replayable acotado memoria/disco;
 - artifact/policy/batch/proof parity surfaces;
+- proof metadata-first: malformed/length-mismatch no lee disclosed value;
 - GET artifact y parents desde bytes canónicos PX1;
 - cancellation token + timeout monotónico + socket read timeout;
 - BoundedSemaphore sin cola implícita;
+- connection/thread cap antes de crear handlers HTTP;
+- presupuesto global de spool temporal (4 GiB default) + spool dir configurable;
 - JSON de error determinista;
 - audit estructurado sin headers/query/body;
 - parser HTTP con header budget durante parse;

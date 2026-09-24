@@ -251,20 +251,13 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
                     safe_message="Content-Length is required",
                 )
             return 0
-        try:
-            value = int(raw, 10)
-        except ValueError as exc:
-            raise GatewayError(
-                status=400,
-                code=GatewayErrorCodeV1.BAD_REQUEST,
-                safe_message="Content-Length is invalid",
-            ) from exc
-        if value < 0:
+        if not raw or any(character not in "0123456789" for character in raw):
             raise GatewayError(
                 status=400,
                 code=GatewayErrorCodeV1.BAD_REQUEST,
                 safe_message="Content-Length is invalid",
             )
+        value = int(raw, 10)
         return value
 
     def _admission_preflight(self, *, required_length: bool) -> int:
@@ -275,6 +268,29 @@ class GatewayHTTPRequestHandlerV1(BaseHTTPRequestHandler):
                 code=GatewayErrorCodeV1.HEADER_TOO_LARGE,
                 safe_message="request headers exceed gateway limit",
             )
+
+        content_types = self.headers.get_all("Content-Type") or []
+        if len(content_types) > 1:
+            raise GatewayError(
+                status=400,
+                code=GatewayErrorCodeV1.BAD_REQUEST,
+                safe_message="multiple Content-Type headers are not accepted",
+            )
+
+        expectations = self.headers.get_all("Expect") or []
+        if (
+            len(expectations) > 1
+            or (
+                expectations
+                and expectations[0].strip().lower() != "100-continue"
+            )
+        ):
+            raise GatewayError(
+                status=417,
+                code=GatewayErrorCodeV1.EXPECTATION_FAILED,
+                safe_message="HTTP expectation is not supported",
+            )
+
         length = self._content_length(required=required_length)
         if length > service.limits.max_request_bytes:
             raise GatewayError(

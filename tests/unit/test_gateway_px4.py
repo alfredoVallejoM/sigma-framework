@@ -422,6 +422,24 @@ def test_px4_get_artifact_and_parents_use_canonical_artifact_bytes(tmp_path: Pat
     }
 
 
+
+def test_px4_artifact_route_rejects_noncanonical_uppercase_id(tmp_path: Path):
+    store = LocalArtifactStoreV1(tmp_path / "store")
+    artifact = _tree_artifact(b"canonical-route")
+    store.put_artifact(artifact)
+    upper = artifact.artifact_id.hex().upper()
+    assert upper != artifact.artifact_id.hex()
+
+    response = GatewayServiceV1(store).handle(
+        method="GET",
+        path=f"/v1/artifacts/{upper}",
+        content_type="",
+        body_stream=io.BytesIO(b""),
+        content_length=0,
+    )
+    assert response.status == 404
+    assert _json(response)["code"] == "not-found"
+
 def test_px4_policy_preflight_rejects_without_hashing_or_reading_source(
     tmp_path: Path,
     monkeypatch,

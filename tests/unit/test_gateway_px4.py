@@ -4,6 +4,7 @@ import http.client
 import io
 import json
 import socket
+import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -422,6 +423,42 @@ def test_px4_get_artifact_and_parents_use_canonical_artifact_bytes(tmp_path: Pat
     }
 
 
+
+
+def test_px4_parent_get_fails_closed_on_mutable_index_divergence(tmp_path: Path):
+    store = LocalArtifactStoreV1(tmp_path / "store")
+    parent = _tree_artifact(b"canonical-parent")
+    child = create_artifact_v1(
+        ArtifactProfileV1.TREE,
+        tree_root=build_tree(b"canonical-child"),
+        parent_artifact_ids=(parent.artifact_id,),
+    )
+    store.put_artifact(parent)
+    store.put_artifact(child)
+
+    connection = sqlite3.connect(store.database_path)
+    try:
+        connection.execute(
+            "DELETE FROM artifact_parents WHERE child_id=?",
+            (child.artifact_id,),
+        )
+        connection.execute(
+            "INSERT INTO artifact_parents(child_id, parent_id) VALUES(?, ?)",
+            (child.artifact_id, bytes.fromhex("44" * 32)),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    response = GatewayServiceV1(store).handle(
+        method="GET",
+        path=f"/v1/artifacts/{child.artifact_id.hex()}/parents",
+        content_type="",
+        body_stream=io.BytesIO(b""),
+        content_length=0,
+    )
+    assert response.status == 500
+    assert _json(response)["code"] == "internal"
 
 def test_px4_artifact_route_rejects_noncanonical_uppercase_id(tmp_path: Path):
     store = LocalArtifactStoreV1(tmp_path / "store")

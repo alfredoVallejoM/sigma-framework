@@ -26,6 +26,7 @@ from sigma.gateway import (
     RANGE_VERIFY_MEDIA_TYPE,
     GatewayCancellationTokenV1,
     GatewayLimitsV1,
+    GatewayResponseV1,
     GatewayServiceV1,
     MemoryGatewayAuditSinkV1,
     artifact_result_json_v1,
@@ -101,6 +102,22 @@ def _raw_http_request(host: str, port: int, payload: bytes) -> bytes:
                 break
             chunks.append(part)
     return b"".join(chunks)
+
+
+def test_px4_response_type_rejects_header_injection():
+    with pytest.raises(ValueError, match="content_type"):
+        GatewayResponseV1(
+            200,
+            "application/json\r\nX-Evil: 1",
+            b"{}",
+        )
+    with pytest.raises(ValueError, match="headers"):
+        GatewayResponseV1(
+            200,
+            "application/json",
+            b"{}",
+            (("X-Test", "ok\r\nX-Evil: 1"),),
+        )
 
 def test_px4_artifact_gateway_exactly_matches_local_api(tmp_path: Path):
     data = b"px4-artifact-parity" * 100

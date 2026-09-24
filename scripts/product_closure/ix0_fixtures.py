@@ -9,11 +9,7 @@ from dataclasses import dataclass, field
 from typing import Mapping
 
 from sigma.artifact.remote_http import HttpResponseV1
-from sigma.interop.oci import (
-    OCI_IMAGE_INDEX_MEDIA_TYPE,
-    SIGMA_ARTIFACT_REFERRER_TYPE,
-    oci_sha256_digest_v1,
-)
+from sigma.interop.oci import OCI_IMAGE_INDEX_MEDIA_TYPE, oci_sha256_digest_v1
 
 
 def _headers(**values: str) -> tuple[tuple[str, str], ...]:

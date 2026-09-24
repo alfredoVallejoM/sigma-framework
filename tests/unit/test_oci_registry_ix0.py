@@ -14,6 +14,7 @@ from sigma.interop import (
     OCI_IMAGE_MANIFEST_MEDIA_TYPE,
     SIGMA_ARTIFACT_REFERRER_TYPE,
     OciDescriptorV1,
+    OciPlatformV1,
     OciRegistryClientV1,
     OciRegistryConflictError,
     OciRegistryLimitsV1,
@@ -458,3 +459,235 @@ def test_ix0_fallback_conditional_response_loss_reconciles_exact_index():
         item.digest == result.binding.manifest_descriptor.digest
         for item in refs.descriptors
     )
+
+
+def _subject_manifest_wire() -> bytes:
+    return json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+            "config": {
+                "mediaType": "application/vnd.oci.empty.v1+json",
+                "digest": (
+                    "sha256:"
+                    "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+                ),
+                "size": 2,
+            },
+            "layers": [],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def test_ix0_resolves_subject_tag_and_can_preflight_attach():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject_wire = _subject_manifest_wire()
+    client.put_manifest(
+        subject_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        reference="latest",
+    )
+
+    subject = client.resolve_manifest_descriptor("latest")
+    assert subject.digest.startswith("sha256:")
+    assert subject.size == len(subject_wire)
+    assert subject.media_type == OCI_IMAGE_MANIFEST_MEDIA_TYPE
+    assert client.verify_subject_descriptor(subject) == subject
+
+    artifact = _artifact(b"preflight-subject")
+    result = client.attach_artifact(
+        artifact,
+        subject=subject,
+        verify_subject=True,
+    )
+    assert result.discovered_after_push is True
+
+
+def test_ix0_subject_preflight_rejects_wrong_size_or_media_type():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject_wire = _subject_manifest_wire()
+    stored = client.put_manifest(
+        subject_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        reference="subject",
+    )
+    valid = OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest=stored.digest,
+        size=len(subject_wire),
+    )
+
+    with pytest.raises(
+        OciRegistryConflictError,
+        match="differs from registry content",
+    ):
+        client.verify_subject_descriptor(
+            OciDescriptorV1(
+                media_type=valid.media_type,
+                digest=valid.digest,
+                size=valid.size + 1,
+            )
+        )
+
+    with pytest.raises(
+        OciRegistryConflictError,
+        match="differs from registry content",
+    ):
+        client.verify_subject_descriptor(
+            OciDescriptorV1(
+                media_type=OCI_IMAGE_INDEX_MEDIA_TYPE,
+                digest=valid.digest,
+                size=valid.size,
+            )
+        )
+
+
+def test_ix0_manifest_content_type_mismatch_rejects_resolution():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject_wire = _subject_manifest_wire()
+    client.put_manifest(
+        subject_wire,
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        reference="latest",
+    )
+    transport.manifest_content_type_override = "application/json"
+
+    with pytest.raises(
+        OciRegistryProtocolError,
+        match="unexpected Content-Type",
+    ):
+        client.resolve_manifest_descriptor("latest")
+
+
+def test_ix0_referrers_requires_oci_index_content_type():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"content-type-subject")
+    client.attach_artifact(
+        _artifact(b"content-type-artifact"),
+        subject=subject,
+    )
+    transport.referrers_content_type_override = "application/json"
+
+    with pytest.raises(
+        OciRegistryProtocolError,
+        match="unexpected Content-Type",
+    ):
+        client.list_referrers(subject.digest)
+
+
+def test_ix0_referrers_missing_content_type_fails_closed():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"missing-content-type-subject")
+    client.attach_artifact(
+        _artifact(b"missing-content-type-artifact"),
+        subject=subject,
+    )
+    transport.referrers_content_type_override = ""
+
+    with pytest.raises(
+        OciRegistryProtocolError,
+        match="required Content-Type",
+    ):
+        client.list_referrers(subject.digest)
+
+
+def test_ix0_referrers_pagination_loop_is_rejected_immediately():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"loop-subject")
+    for index in range(2):
+        client.attach_artifact(
+            _artifact(f"loop-{index}".encode()),
+            subject=subject,
+        )
+
+    transport.page_size = 1
+    transport.pagination_loop = True
+    with pytest.raises(
+        OciRegistryProtocolError,
+        match="pagination loop",
+    ):
+        client.list_referrers(subject.digest)
+
+
+def test_ix0_fallback_preserves_rich_standard_descriptor_fields():
+    transport = GateOciRegistryTransport(native_referrers=False)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"rich-fallback-subject")
+    rich = OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest="sha256:" + "77" * 32,
+        size=777,
+        artifact_type="application/vnd.example.rich.v1",
+        annotations=(("example.rich", "yes"),),
+        urls=("https://mirror.example/referrer",),
+        data="e30=",
+        platform=OciPlatformV1(
+            architecture="amd64",
+            os="linux",
+            os_version="6.8",
+            os_features=("feature-a",),
+            variant="v3",
+        ),
+    )
+    tag = oci_referrers_tag_v1(subject.digest)
+    initial = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+            "manifests": [rich.to_dict()],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    client.put_manifest(
+        initial,
+        media_type=OCI_IMAGE_INDEX_MEDIA_TYPE,
+        reference=tag,
+    )
+
+    client.attach_artifact(
+        _artifact(b"rich-fallback-artifact"),
+        subject=subject,
+    )
+
+    stored_digest = transport.tags[tag]
+    stored = json.loads(transport.manifests[stored_digest].decode("utf-8"))
+    stored_rich = next(
+        item
+        for item in stored["manifests"]
+        if item["digest"] == rich.digest
+    )
+    assert OciDescriptorV1.from_dict(stored_rich) == rich
+
+
+def test_ix0_pull_can_check_subject_digest_without_full_descriptor():
+    transport = GateOciRegistryTransport(native_referrers=True)
+    client = _client(transport)
+    subject = make_subject_descriptor(b"digest-only-subject")
+    result = client.attach_artifact(
+        _artifact(b"digest-only-artifact"),
+        subject=subject,
+    )
+
+    pulled = client.pull_referrer_by_digest(
+        result.binding.manifest_descriptor.digest,
+        expected_subject_digest=subject.digest,
+    )
+    assert pulled.subject.digest == subject.digest
+
+    with pytest.raises(
+        OciRegistryConflictError,
+        match="subject digest differs",
+    ):
+        client.pull_referrer_by_digest(
+            result.binding.manifest_descriptor.digest,
+            expected_subject_digest="sha256:" + "99" * 32,
+        )

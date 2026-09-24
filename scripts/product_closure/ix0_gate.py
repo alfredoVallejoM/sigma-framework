@@ -25,11 +25,15 @@ from scripts.product_closure.ix0_fixtures import (
 )
 from sigma.artifact import ArtifactDescriptorV1, ArtifactProfileV1, create_artifact_v1
 from sigma.interop import (
+    OCI_IMAGE_INDEX_MEDIA_TYPE,
+    OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+    OciDescriptorV1,
     OciRegistryClientV1,
     OciRegistryConflictError,
     OciRegistryLimitsV1,
     OciRegistryProtocolError,
     OciRegistryResourceLimitError,
+    oci_referrers_tag_v1,
 )
 from sigma.tree import build_tree
 
@@ -308,6 +312,63 @@ def run_gate(
     else:
         raise AssertionError("IX0 page limit did not fail closed")
 
+    loss_artifact, loss_wire = _artifact(rng, 70_000)
+    loss_transport = GateOciRegistryTransport(
+        native_referrers=True,
+        lose_blob_completion_once=True,
+    )
+    loss_client = _client(loss_transport)
+    loss_subject = make_subject_descriptor(b"IX0-ACCEPTED-RESPONSE-LOSS")
+    loss_result = loss_client.attach_artifact(
+        loss_artifact,
+        subject=loss_subject,
+    )
+    if loss_client.pull_referrer_by_digest(
+        loss_result.binding.manifest_descriptor.digest
+    ).artifact_wire != loss_wire:
+        raise AssertionError("IX0 blob completion loss reconciliation diverged")
+
+    fallback_loss_transport = GateOciRegistryTransport(
+        native_referrers=False,
+        lose_conditional_manifest_once=True,
+    )
+    fallback_loss_client = _client(fallback_loss_transport)
+    fallback_loss_subject = make_subject_descriptor(
+        b"IX0-FALLBACK-RESPONSE-LOSS"
+    )
+    fallback_tag = oci_referrers_tag_v1(fallback_loss_subject.digest)
+    preexisting = OciDescriptorV1(
+        media_type=OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+        digest="sha256:" + "66" * 32,
+        size=66,
+        artifact_type="application/vnd.example.preexisting.v1",
+    )
+    fallback_index = json.dumps(
+        {
+            "schemaVersion": 2,
+            "mediaType": OCI_IMAGE_INDEX_MEDIA_TYPE,
+            "manifests": [preexisting.to_dict()],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    fallback_loss_client.put_manifest(
+        fallback_index,
+        media_type=OCI_IMAGE_INDEX_MEDIA_TYPE,
+        reference=fallback_tag,
+    )
+    fallback_loss_artifact, fallback_loss_wire = _artifact(rng, 70_001)
+    fallback_loss_result = fallback_loss_client.attach_artifact(
+        fallback_loss_artifact,
+        subject=fallback_loss_subject,
+    )
+    if fallback_loss_client.pull_referrer_by_digest(
+        fallback_loss_result.binding.manifest_descriptor.digest
+    ).artifact_wire != fallback_loss_wire:
+        raise AssertionError(
+            "IX0 fallback response-loss reconciliation diverged"
+        )
+
     return {
         "status": "PASS",
         "native_roundtrips": native_verified,
@@ -317,6 +378,8 @@ def run_gate(
         "retry_recoveries": retry_recovered,
         "ambiguity_rejections": ambiguity_rejected,
         "pagination_pages": paged.pages,
+        "accepted_response_loss_reconciled": True,
+        "fallback_conditional_loss_reconciled": True,
         "campaign_sha256": stream.hexdigest(),
         "live_registry_oras_required_for_complete": True,
         "identity_rule": (

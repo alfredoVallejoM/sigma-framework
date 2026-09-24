@@ -585,6 +585,47 @@ rejected without a handler thread.
 
 Status: RESOLVED IN IMPLEMENTATION.
 
+### AR-PX4-18 — proof value buffered before proof validation
+
+Finding:
+proof endpoints initially read the complete disclosed leaf/range value before
+parsing the proof.
+
+Resolution:
+staged proof-head readers parse canonical proof metadata first. Malformed proofs
+and valid proofs with incompatible declared value length return before disclosed
+value read. Unit and gate use a prefix-only stream that raises if value bytes are
+requested.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-19 — arbitrary HTTP method token could enter audit
+
+Finding:
+the method field was copied from the request and therefore remained one
+user-controlled string in an otherwise fixed audit schema.
+
+Resolution:
+audit methods are normalized to GET/POST/HEAD/PUT/DELETE/PATCH/OPTIONS or
+<other>. A secret-like custom method is required not to appear in serialized
+audit.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
+### AR-PX4-20 — per-request spool bounds allowed large aggregate disk reservation
+
+Finding:
+max_source_bytes and max_concurrent_requests bounded each request but could still
+reserve their product in temporary storage.
+
+Resolution:
+GatewayServiceV1 now has a global max_total_spool_bytes budget (4 GiB default).
+Declared source length is reserved before source read; exhaustion returns
+503/busy. Reservation release is protected by nested finally. CLI exposes both
+the global budget and --spool-temp-dir.
+
+Status: RESOLVED IN IMPLEMENTATION.
+
 ## 33. Current disposition
 
 Implementation for planned PX4 V1: COMPLETE.

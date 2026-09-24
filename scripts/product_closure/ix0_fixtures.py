@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import urllib.parse
@@ -43,6 +44,13 @@ class GateOciRegistryTransport:
 
     native_referrers: bool = True
     apply_artifact_type_filter: bool = True
+    bearer_required: bool = False
+    bearer_token: str = "gate-bearer-token"
+    bearer_realm: str = "https://auth.example/token"
+    bearer_service: str = "registry.example"
+    bearer_scope: str = "repository:team/sigma:pull,push"
+    bearer_username: str | None = None
+    bearer_password: str | None = None
     page_size: int | None = None
     cross_origin_upload: bool = False
     manifest_content_type_override: str | None = None
@@ -56,6 +64,9 @@ class GateOciRegistryTransport:
     tags: dict[str, str] = field(default_factory=dict)
     referrers: dict[str, dict[str, dict[str, object]]] = field(default_factory=dict)
     requests: list[tuple[str, str, dict[str, str], bytes | None]] = field(
+        default_factory=list
+    )
+    token_requests: list[tuple[str, dict[str, str]]] = field(
         default_factory=list
     )
     _upload_counter: int = 0
@@ -284,6 +295,55 @@ class GateOciRegistryTransport:
         parsed = urllib.parse.urlsplit(url)
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
+
+        realm = urllib.parse.urlsplit(self.bearer_realm)
+        if (
+            parsed.scheme == realm.scheme
+            and parsed.netloc == realm.netloc
+            and path == realm.path
+            and method == "GET"
+        ):
+            self.token_requests.append((url, normalized_headers))
+            if self.bearer_username is not None:
+                credential = (
+                    f"{self.bearer_username}:{self.bearer_password or ''}"
+                ).encode("utf-8")
+                expected = "Basic " + base64.b64encode(
+                    credential
+                ).decode("ascii")
+                if normalized_headers.get("Authorization") != expected:
+                    return self._response(401, url)
+            payload = json.dumps(
+                {
+                    "token": self.bearer_token,
+                    "expires_in": 300,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            return self._response(
+                200,
+                url,
+                headers=(("Content-Type", "application/json"),),
+                body=payload,
+            )
+
+        if (
+            self.bearer_required
+            and parsed.hostname == "registry.example"
+            and normalized_headers.get("Authorization")
+            != "Bearer " + self.bearer_token
+        ):
+            challenge = (
+                f'Bearer realm="{self.bearer_realm}",'
+                f'service="{self.bearer_service}",'
+                f'scope="{self.bearer_scope}"'
+            )
+            return self._response(
+                401,
+                url,
+                headers=(("WWW-Authenticate", challenge),),
+            )
 
         retry = self._maybe_retry(method, path, url)
         if retry is not None:

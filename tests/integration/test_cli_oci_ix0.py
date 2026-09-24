@@ -224,3 +224,134 @@ def test_ix0_cli_pull_accepts_digest_only_expected_subject(
     assert result["offline_verified"] is True
     assert captured["expected_subject"] is None
     assert captured["expected_subject_digest"] == subject.digest
+
+
+def test_ix0_cli_builds_private_registry_auth_from_environment(
+    monkeypatch,
+    capsys,
+):
+    subject_digest = "sha256:" + "55" * 32
+    captured = {}
+
+    class FakeClient:
+        def list_referrers(self, digest):
+            assert digest == subject_digest
+            return SimpleNamespace(
+                subject_digest=digest,
+                source=OciReferrersSourceV1.API,
+                pages=1,
+                filter_applied=True,
+                fallback_valid=True,
+                descriptors=(),
+            )
+
+    def client_factory(*args, **kwargs):
+        del args
+        captured.update(kwargs)
+        return FakeClient()
+
+    monkeypatch.setenv(
+        "SIGMA_IX0_TEST_PASSWORD",
+        "never-print-this-password",
+    )
+    monkeypatch.setattr(
+        "sigma.interop.cli_oci.OciRegistryClientV1",
+        client_factory,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "refs",
+            "--registry",
+            "https://registry.example",
+            "--repository",
+            "team/sigma",
+            "--registry-user",
+            "alice",
+            "--registry-password-env",
+            "SIGMA_IX0_TEST_PASSWORD",
+            "--subject-digest",
+            subject_digest,
+        ],
+    )
+
+    assert main() == 0
+    output = capsys.readouterr().out
+    assert "never-print-this-password" not in output
+    auth = captured["bearer_auth"]
+    assert auth.username == "alice"
+    assert auth.password == "never-print-this-password"
+    assert "never-print-this-password" not in repr(auth)
+
+
+def test_ix0_cli_rejects_missing_registry_password_environment(
+    monkeypatch,
+    capsys,
+):
+    monkeypatch.delenv(
+        "SIGMA_IX0_MISSING_PASSWORD",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "sigma",
+            "oci",
+            "refs",
+            "--registry",
+            "https://registry.example",
+            "--repository",
+            "team/sigma",
+            "--registry-user",
+            "alice",
+            "--registry-password-env",
+            "SIGMA_IX0_MISSING_PASSWORD",
+            "--subject-digest",
+            "sha256:" + "66" * 32,
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert "SIGMA_IX0_MISSING_PASSWORD" in captured.err
+
+
+def test_ix0_cli_rejects_conflicting_bearer_auth_modes(
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "SIGMA_IX0_TEST_PASSWORD",
+        "secret",
+    )
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "oci",
+            "refs",
+            "--registry",
+            "https://registry.example",
+            "--repository",
+            "team/sigma",
+            "--registry-user",
+            "alice",
+            "--registry-password-env",
+            "SIGMA_IX0_TEST_PASSWORD",
+            "--registry-anonymous-bearer",
+            "--subject-digest",
+            "sha256:" + "77" * 32,
+        ]
+    )
+
+    from sigma.interop.cli_oci import _registry_client
+
+    with pytest.raises(
+        ValueError,
+        match="conflicts",
+    ):
+        _registry_client(args)

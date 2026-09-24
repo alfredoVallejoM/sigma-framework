@@ -857,9 +857,8 @@ def add_oci_commands(commands) -> None:
         choices=tuple(_SIDECAR_KIND_BY_CLI),
         required=True,
     )
-    selector = sidecar_pull.add_mutually_exclusive_group(required=True)
-    selector.add_argument("--referrer-digest")
-    selector.add_argument("--semantic-id")
+    sidecar_pull.add_argument("--referrer-digest")
+    sidecar_pull.add_argument("--semantic-id")
     sidecar_pull.add_argument("--subject-reference")
     sidecar_pull.add_argument("--subject-digest")
     sidecar_pull.add_argument("--subject-size", type=int)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import BinaryIO, Callable
 
 from sigma.artifact import (
@@ -83,6 +84,30 @@ _POLICY_RESULT_SCHEMA = "sigma-gateway-policy-evaluation-v1"
 _PROOF_RESULT_SCHEMA = "sigma-gateway-proof-verification-v1"
 _PARENTS_RESULT_SCHEMA = "sigma-gateway-artifact-parents-v1"
 _BATCH_RESULT_BUDGET_PER_ITEM = 16 << 10
+
+
+class _SpoolBudgetV1:
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.used = 0
+        self._lock = threading.Lock()
+
+    def acquire(self, amount: int) -> bool:
+        if amount < 0:
+            raise ValueError("spool reservation must be non-negative")
+        with self._lock:
+            if self.used + amount > self.limit:
+                return False
+            self.used += amount
+            return True
+
+    def release(self, amount: int) -> None:
+        if amount < 0:
+            raise ValueError("spool release must be non-negative")
+        with self._lock:
+            if amount > self.used:
+                raise RuntimeError("spool budget release exceeds reservation")
+            self.used -= amount
 
 
 class _DeclaredLengthSourceV1(CanonicalSource):
@@ -250,6 +275,7 @@ class GatewayServiceV1:
         limits: GatewayLimitsV1 | None = None,
         audit_sink: GatewayAuditSinkV1 | None = None,
         verifier_build: bytes = b"",
+        spool_temp_dir: str | Path | None = None,
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         if not isinstance(store, LocalArtifactStoreV1):
@@ -265,6 +291,14 @@ class GatewayServiceV1:
             raise ValueError("verifier_build must be bytes of length <=255")
         self.audit_sink = selected_sink
         self.verifier_build = verifier_build
+        self._spool_temp_dir = (
+            None if spool_temp_dir is None else Path(spool_temp_dir)
+        )
+        if self._spool_temp_dir is not None:
+            self._spool_temp_dir.mkdir(parents=True, exist_ok=True)
+        self._spool_budget = _SpoolBudgetV1(
+            self.limits.max_total_spool_bytes
+        )
         self._monotonic = monotonic
         self._semaphore = threading.BoundedSemaphore(
             self.limits.max_concurrent_requests
@@ -310,6 +344,31 @@ class GatewayServiceV1:
             self.audit_sink.emit(record)
         except Exception:
             pass
+
+    def _spool_source(
+        self,
+        reader: GatewayBodyReaderV1,
+        length: int,
+        *,
+        effective_max_source_bytes: int,
+    ) -> tuple[CanonicalSource, int]:
+        if not self._spool_budget.acquire(length):
+            raise GatewayBusyError(
+                safe_message="gateway temporary spool budget exhausted"
+            )
+        try:
+            source = reader.spool_source(
+                length,
+                effective_max_source_bytes=effective_max_source_bytes,
+                temp_dir=self._spool_temp_dir,
+            )
+        except BaseException:
+            self._spool_budget.release(length)
+            raise
+        return source, length
+
+    def _release_spool(self, reserved: int) -> None:
+        self._spool_budget.release(reserved)
 
     def _operational_artifact_preflight(
         self,
@@ -446,7 +505,8 @@ class GatewayServiceV1:
                 result.policy.kind.value,
             )
 
-        source = reader.spool_source(
+        source, reserved = self._spool_source(
+            reader,
             metadata.source_length,
             effective_max_source_bytes=policy.max_input_bytes,
         )
@@ -460,6 +520,7 @@ class GatewayServiceV1:
             token.check()
         finally:
             source.close()
+            self._release_spool(reserved)
         reader.require_consumed()
         response = GatewayResponseV1(
             200,
@@ -553,7 +614,8 @@ class GatewayServiceV1:
                 decision=decision,
             )
 
-        source = reader.spool_source(
+        source, reserved = self._spool_source(
+            reader,
             metadata.source_length,
             effective_max_source_bytes=policy.max_input_bytes,
         )
@@ -567,6 +629,7 @@ class GatewayServiceV1:
             token.check()
         finally:
             source.close()
+            self._release_spool(reserved)
         reader.require_consumed()
         return self._policy_receipt_outcome(
             artifact_identity=metadata.artifact_identity,
@@ -608,6 +671,7 @@ class GatewayServiceV1:
 
             source: CanonicalSource | bytes | None = None
             close_source = False
+            reserved = 0
             if metadata.source_present:
                 if preflight.code is VerificationDecisionCodeV1.SOURCE_REQUIRED:
                     if metadata.source_length > self.limits.max_source_bytes:
@@ -616,7 +680,8 @@ class GatewayServiceV1:
                         source = _DeclaredLengthSourceV1(metadata.source_length)
                         reader.discard_exact(metadata.source_length)
                     else:
-                        source = reader.spool_source(
+                        source, reserved = self._spool_source(
+                            reader,
                             metadata.source_length,
                             effective_max_source_bytes=metadata.policy.max_input_bytes,
                         )
@@ -645,6 +710,7 @@ class GatewayServiceV1:
             finally:
                 if close_source and isinstance(source, CanonicalSource):
                     source.close()
+                    self._release_spool(reserved)
 
         reader.require_consumed()
         batch = BatchVerificationResultV1(tuple(results))

@@ -274,20 +274,32 @@ class GatewayResponseV1:
             or not 100 <= self.status <= 599
         ):
             raise ValueError("gateway HTTP status is invalid")
-        if not isinstance(self.content_type, str) or not self.content_type:
-            raise ValueError("gateway content_type must be non-empty str")
+        if (
+            not isinstance(self.content_type, str)
+            or not self.content_type
+            or "\r" in self.content_type
+            or "\n" in self.content_type
+        ):
+            raise ValueError("gateway content_type must be safe non-empty str")
         if not isinstance(self.body, bytes):
             raise TypeError("gateway body must be bytes")
         if (
             not isinstance(self.headers, tuple)
             or tuple(sorted(set(self.headers))) != self.headers
             or any(
-                not isinstance(key, str) or not isinstance(value, str)
+                not isinstance(key, str)
+                or not isinstance(value, str)
+                or "\r" in key
+                or "\n" in key
+                or "\r" in value
+                or "\n" in value
                 for key, value in self.headers
             )
             or len({key.lower() for key, _ in self.headers}) != len(self.headers)
         ):
-            raise ValueError("gateway headers must be sorted unique-name str pairs")
+            raise ValueError(
+                "gateway headers must be safe sorted unique-name str pairs"
+            )
 
 
 def error_response_v1(error: GatewayError) -> GatewayResponseV1:

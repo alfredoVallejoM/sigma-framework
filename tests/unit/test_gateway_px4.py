@@ -622,6 +622,25 @@ def test_px4_concurrency_limit_fails_closed_without_touching_body(tmp_path: Path
     assert _json(response)["code"] == "busy"
 
 
+
+def test_px4_audit_normalizes_arbitrary_http_method(tmp_path: Path):
+    audit = MemoryGatewayAuditSinkV1()
+    service = GatewayServiceV1(
+        LocalArtifactStoreV1(tmp_path / "store"),
+        audit_sink=audit,
+    )
+    secret_method = "SECRET-BEARER-METHOD"
+    response = service.handle(
+        method=secret_method,
+        path="/health",
+        content_type="",
+        body_stream=io.BytesIO(b""),
+        content_length=0,
+    )
+    assert response.status == 404
+    assert audit.records[-1].method == "<other>"
+    assert secret_method.encode() not in audit.records[-1].to_json_bytes()
+
 def test_px4_http_daemon_redacts_query_and_headers_from_audit(tmp_path: Path):
 
     audit = MemoryGatewayAuditSinkV1()

@@ -1,4 +1,4 @@
-"""ORAS 1.3 differential for a Sigma IX0-C OCI Image Layout."""
+"""ORAS 1.3 byte differential for Sigma IX0 OCI Image Layout objects."""
 
 from __future__ import annotations
 
@@ -9,7 +9,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from sigma.interop import verify_sigma_artifact_layout_v1
+from sigma.interop import (
+    OciSigmaSidecarKindV1,
+    verify_sigma_artifact_layout_v1,
+    verify_sigma_sidecar_layout_v1,
+)
+
+_KIND_BY_CLI = {
+    "manifest": OciSigmaSidecarKindV1.MANIFEST,
+    "receipt": OciSigmaSidecarKindV1.VERIFICATION_RECEIPT,
+    "inclusion-proof": OciSigmaSidecarKindV1.INCLUSION_PROOF,
+    "range-proof": OciSigmaSidecarKindV1.RANGE_PROOF,
+}
 
 
 def _run(command: list[str]) -> subprocess.CompletedProcess[bytes]:
@@ -21,18 +32,22 @@ def _run(command: list[str]) -> subprocess.CompletedProcess[bytes]:
     )
 
 
-def _artifact_id(value: str | None) -> bytes | None:
+def _id32(
+    value: str | None,
+    *,
+    name: str,
+) -> bytes | None:
     if value is None:
         return None
     try:
         raw = bytes.fromhex(value)
     except ValueError as exc:
         raise ValueError(
-            "ArtifactId must be 64 hexadecimal characters"
+            f"{name} must be 64 hexadecimal characters"
         ) from exc
     if len(raw) != 32:
         raise ValueError(
-            "ArtifactId must be 64 hexadecimal characters"
+            f"{name} must be 64 hexadecimal characters"
         )
     return raw
 
@@ -44,11 +59,44 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
             f"ORAS executable not found: {args.oras}"
         )
 
-    binding = verify_sigma_artifact_layout_v1(
-        args.layout,
-        expected_artifact_id=_artifact_id(args.artifact_id),
-        referrer_digest=args.referrer_digest,
-    )
+    artifact_id: bytes | None = None
+    semantic_id: bytes | None = None
+    if args.kind == "artifact":
+        artifact_id = _id32(
+            args.artifact_id,
+            name="ArtifactId",
+        )
+        binding = verify_sigma_artifact_layout_v1(
+            args.layout,
+            expected_artifact_id=artifact_id,
+            referrer_digest=args.referrer_digest,
+            referrer_ref_name=args.referrer_ref_name,
+        )
+        payload_wire = binding.artifact_wire
+        kind_name = "artifact"
+        identity_hex = binding.artifact_id.hex()
+    else:
+        kind = _KIND_BY_CLI[args.kind]
+        semantic_id = _id32(
+            args.semantic_id,
+            name="sidecar semantic id",
+        )
+        verified = verify_sigma_sidecar_layout_v1(
+            args.layout,
+            kind=kind,
+            expected_semantic_id=semantic_id,
+            referrer_digest=args.referrer_digest,
+            referrer_ref_name=args.referrer_ref_name,
+        )
+        binding = verified.binding
+        payload_wire = binding.payload_wire
+        kind_name = binding.kind.value
+        identity_hex = (
+            None
+            if binding.semantic_id is None
+            else binding.semantic_id.hex()
+        )
+
     referrer_digest = binding.manifest_descriptor.digest
     payload_digest = binding.payload_descriptor.digest
     subject_digest = binding.subject.digest
@@ -58,7 +106,7 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
     ) as temp:
         root = Path(temp)
         oras_manifest = root / "referrer.json"
-        oras_payload = root / "artifact.sigart"
+        oras_payload = root / "payload.bin"
         oras_subject = root / "subject.json"
 
         _run(
@@ -88,9 +136,9 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
                 f"{args.layout}@{payload_digest}",
             ]
         )
-        if oras_payload.read_bytes() != binding.artifact_wire:
+        if oras_payload.read_bytes() != payload_wire:
             raise AssertionError(
-                "ORAS layout payload bytes differ from Sigma artifact"
+                "ORAS layout payload bytes differ from Sigma payload"
             )
 
         _run(
@@ -118,7 +166,18 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
     return {
         "status": "PASS",
         "oras": oras,
-        "artifact_id": binding.artifact_id.hex(),
+        "kind": kind_name,
+        "identity": identity_hex,
+        "artifact_id": (
+            None
+            if args.kind != "artifact"
+            else binding.artifact_id.hex()
+        ),
+        "semantic_id": (
+            None
+            if args.kind == "artifact"
+            else identity_hex
+        ),
         "referrer_digest": referrer_digest,
         "payload_digest": payload_digest,
         "subject_digest": subject_digest,
@@ -132,11 +191,29 @@ def run_diff(args: argparse.Namespace) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--layout", type=Path, required=True)
+    parser.add_argument(
+        "--kind",
+        choices=(
+            "artifact",
+            "manifest",
+            "receipt",
+            "inclusion-proof",
+            "range-proof",
+        ),
+        default="artifact",
+    )
     parser.add_argument("--artifact-id")
+    parser.add_argument("--semantic-id")
     parser.add_argument("--referrer-digest")
+    parser.add_argument("--referrer-ref-name")
     parser.add_argument("--oras", default="oras")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+
+    if args.kind == "artifact" and args.semantic_id is not None:
+        parser.error("--semantic-id is only valid for sidecar kinds")
+    if args.kind != "artifact" and args.artifact_id is not None:
+        parser.error("--artifact-id is only valid for artifact layouts")
 
     report = run_diff(args)
     encoded = json.dumps(
